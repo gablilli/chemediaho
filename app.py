@@ -76,8 +76,13 @@ def get_grades(student_id, token):
 
 def calculate_avr(grades):
     grades_avr = {}
+    print(json.dumps(grades, indent=4))
     for grade in grades["grades"]:
         if grade["noAverage"] is True:
+            continue
+        if grade["color"] == "blue":
+            continue
+        if grade["decimalValue"] is None:
             continue
         if grades_avr.get(grade["subjectDesc"]) is None:
             grades_avr[grade["subjectDesc"]] = {"count": 0, "avr": 0, "grades": []}
