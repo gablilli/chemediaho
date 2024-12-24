@@ -76,23 +76,31 @@ def get_grades(student_id, token):
 
 def calculate_avr(grades):
     grades_avr = {}
-    print(json.dumps(grades, indent=4))
     for grade in grades["grades"]:
-        if grade["noAverage"] is True:
+        period = grade["periodPos"]
+        if grade["noAverage"] is True or grade["color"] == "blue" or grade["decimalValue"] is None:
             continue
-        if grade["color"] == "blue":
-            continue
-        if grade["decimalValue"] is None:
-            continue
-        if grades_avr.get(grade["subjectDesc"]) is None:
-            grades_avr[grade["subjectDesc"]] = {"count": 0, "avr": 0, "grades": []}
-        grades_avr[grade["subjectDesc"]]["count"] += 1
+        if period not in grades_avr:
+            grades_avr[period] = {}
+        if grades_avr[period].get(grade["subjectDesc"]) is None:
+            grades_avr[period][grade["subjectDesc"]] = {"count": 0, "avr": 0, "grades": []}
+        grades_avr[period][grade["subjectDesc"]]["count"] += 1
         if grade["decimalValue"] is None:
             grade["decimalValue"] = 0
-        grades_avr[grade["subjectDesc"]]["grades"].append(grade["decimalValue"])
-    for subject in grades_avr:
-        grades_avr[subject]["avr"] = sum(grades_avr[subject]["grades"]) / grades_avr[subject]["count"]
+        grades_avr[period][grade["subjectDesc"]]["grades"].append(grade["decimalValue"])
+    for period in grades_avr:
+        for subject in grades_avr[period]:
+            grades_avr[period][subject]["avr"] = sum(grades_avr[period][subject]["grades"]) / grades_avr[period][subject]["count"]
+    for period in grades_avr:
+        period_grades = []
+        for subject in grades_avr[period]:
+            period_grades.extend(grades_avr[period][subject]["grades"])
+        grades_avr[period]["period_avr"] = sum(period_grades) / len(period_grades) if period_grades else 0
+    grades_avr["all_avr"] = sum([grades_avr[period]["period_avr"] for period in grades_avr]) / len(grades_avr) if grades_avr else 0
+    print(json.dumps(grades_avr, indent=4))
     return grades_avr   
     
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=5000)
+    # app.run(debug=True)
+
