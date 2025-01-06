@@ -23,7 +23,7 @@ def login_route():
         return f"An error occurred: {e}", 500
     except Exception as e:
         return f"An error occurred: {e}", 500
-        
+    
 
 def login(user_id, user_pass):
     url = "https://web.spaggiari.eu/rest/v1/auth/login"
@@ -70,10 +70,10 @@ def get_grades(student_id, token):
     }
     response = requests.get(url, headers=headers)
     if response.status_code == 200:
+        # print(json.dumps(response.json(), indent=4))
         return response.json()
     else:
         response.raise_for_status()
-
 def calculate_avr(grades):
     grades_avr = {}
     for grade in grades["grades"]:
@@ -84,21 +84,36 @@ def calculate_avr(grades):
             grades_avr[period] = {}
         if grades_avr[period].get(grade["subjectDesc"]) is None:
             grades_avr[period][grade["subjectDesc"]] = {"count": 0, "avr": 0, "grades": []}
+        
         grades_avr[period][grade["subjectDesc"]]["count"] += 1
-        if grade["decimalValue"] is None:
-            grade["decimalValue"] = 0
-        grades_avr[period][grade["subjectDesc"]]["grades"].append(grade["decimalValue"])
+        
+        # Append grade as a dictionary with additional fields
+        grades_avr[period][grade["subjectDesc"]]["grades"].append({
+            "decimalValue": grade["decimalValue"],
+            "evtDate": grade["evtDate"],
+            "notesForFamily": grade["notesForFamily"],
+            "componentDesc": grade["componentDesc"],
+            "teacherName": grade["teacherName"]
+        })
+    
+    # Calculate average per subject
     for period in grades_avr:
         for subject in grades_avr[period]:
-            grades_avr[period][subject]["avr"] = sum(grades_avr[period][subject]["grades"]) / grades_avr[period][subject]["count"]
+            subject_grades = [g['decimalValue'] for g in grades_avr[period][subject]['grades']]
+            grades_avr[period][subject]["avr"] = sum(subject_grades) / len(subject_grades) if subject_grades else 0
+    
+    # Calculate period averages
     for period in grades_avr:
         period_grades = []
         for subject in grades_avr[period]:
-            period_grades.extend(grades_avr[period][subject]["grades"])
+            period_grades.extend([g['decimalValue'] for g in grades_avr[period][subject]['grades']])
         grades_avr[period]["period_avr"] = sum(period_grades) / len(period_grades) if period_grades else 0
+    
+    # Calculate overall average
     grades_avr["all_avr"] = sum([grades_avr[period]["period_avr"] for period in grades_avr]) / len(grades_avr) if grades_avr else 0
-    print(json.dumps(grades_avr, indent=4))
-    return grades_avr   
+    
+    # print(json.dumps(grades_avr, indent=4))
+    return grades_avr
     
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=5000)
