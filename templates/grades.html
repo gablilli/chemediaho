@@ -18,16 +18,29 @@
   </head>
   <body>
     <div class="container my-3">
-      <h1 class="text-center mb-4" >Grades <p class="fw-bold {% if grades_avr['all_avr']  < 5 %} text-danger {% elif grades_avr['all_avr']  >= 5 and grades_avr['all_avr']  < 6 %} text-warning {% else %} text-success {% endif %}">{{ grades_avr["all_avr"] | round(1) }}</p></h1>
+      <h1 class="text-center mb-4">
+        Grades
+        <p
+          class="fw-bold {% if grades_avr['all_avr']  < 5 %} text-danger {% elif grades_avr['all_avr']  >= 5 and grades_avr['all_avr']  < 6 %} text-warning {% else %} text-success {% endif %}"
+        >
+          {{ grades_avr["all_avr"] | round(1) }}
+        </p>
+      </h1>
       <div class="table-responsive">
         {% for period, subjects in grades_avr.items() if period != 'all_avr' %}
-        <h2 class="text-center my-4">Period {{ period }} <p class="fw-bold {% if grades_avr[period]['period_avr'] < 5 %} text-danger {% elif grades_avr[period]['period_avr'] >= 5 and grades_avr[period]['period_avr'] < 6 %} text-warning {% else %} text-success {% endif %}">{{ grades_avr[period]['period_avr'] | round(1) }}</p></h2>
+        <h2 class="text-center my-4">
+          Period {{ period }}
+          <p
+            class="fw-bold {% if grades_avr[period]['period_avr'] < 5 %} text-danger {% elif grades_avr[period]['period_avr'] >= 5 and grades_avr[period]['period_avr'] < 6 %} text-warning {% else %} text-success {% endif %}"
+          >
+            {{ grades_avr[period]['period_avr'] | round(1) }}
+          </p>
+        </h2>
         <table class="table table-bordered align-middle">
           <thead class="table-light">
             <tr>
               <th scope="col">Subject</th>
               <th scope="col">Grades</th>
-
               <th scope="col" class="text-center">Average</th>
             </tr>
           </thead>
@@ -38,26 +51,86 @@
               class="{% if data.avr < 5 %} table-danger {% elif data.avr >= 5 and data.avr < 6 %} table-warning {% else %} table-success {% endif %}"
             >
               <td class="fw-bold">{{ subject }}</td>
-              <td>{{ data.grades | join(', ') }}</td>
+              <td>
+                {% for grade in data.grades %}
+                <button
+                  type="button"
+                  class="btn {% if grade.decimalValue < 5 %} btn-danger {% elif grade.decimalValue >= 5 and grade.decimalValue < 6 %} btn-warning {% else %} btn-success {% endif %} btn-sm mb-1"
+                  data-bs-toggle="modal"
+                  data-bs-target="#gradeModal"
+                  data-grade='{
+                    "decimalValue": "{{ grade.decimalValue }}",
+                    "evtDate": "{{ grade.evtDate }}",
+                    "notesForFamily": "{{ grade.notesForFamily }}",
+                    "componentDesc": "{{ grade.componentDesc }}",
+                    "teacherName": "{{ grade.teacherName }}"
+                  }'
+                >
+                  {{ grade.decimalValue }}
+                </button>
+                {% endfor %}
+              </td>
               <td class="fw-bold text-center">{{ (data.avr) | round(1) }}</td>
             </tr>
             {% endif %} {% endfor %}
-            <!-- <tr
-            class="table-group-divider {% if grades_avr[period]['period_avr'] < 5 %} table-danger {% elif grades_avr[period]['period_avr'] >= 5 and grades_avr[period]['period_avr'] < 6 %} table-warning {% else %} table-success {% endif %}"
-          >
-            <td class="fw-bold" colspan="2">Total</td>
-            <td class="fw-bold text-center">
-              {{ grades_avr[period]['period_avr'] | round(1) }}
-            </td>
-          </tr> -->
           </tbody>
         </table>
         {% endfor %}
       </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.slim.min.js" integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js" integrity="sha384-9/reFTGAW83EW2RDu2S0VKaIzap3H66lZH81PoYlFhbGU+6BZp6G7niu735Sk7lN" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.min.js" integrity="sha384-+sLIOodYLS7CIrQpBjl+C7nPvqq+FbNUBDunl/OZv93DB7Ln/533i8e/mZXLi/P+" crossorigin="anonymous"></script>
+    <!-- Grade Details Modal -->
+    <div
+      class="modal fade"
+      id="gradeModal"
+      tabindex="-1"
+      aria-labelledby="gradeModalLabel"
+      aria-hidden="true"
+    >
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="gradeModalLabel">Grade Details</h5>
+            <button
+              type="button"
+              class="btn-close"
+              data-bs-dismiss="modal"
+              aria-label="Close"
+            ></button>
+          </div>
+          <div class="modal-body">
+            <p><strong>Grade:</strong> <span id="modalGrade"></span></p>
+            <p><strong>Date:</strong> <span id="modalDate"></span></p>
+            <p><strong>Component:</strong> <span id="modalComponent"></span></p>
+            <p><strong>Teacher:</strong> <span id="modalTeacher"></span></p>
+            <p><strong>Notes:</strong> <span id="modalNotes"></span></p>
+          </div>
+          <div class="modal-footer">
+            <button
+              type="button"
+              class="btn btn-secondary"
+              data-bs-dismiss="modal"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+      // JavaScript to populate modal with grade details
+      const gradeModal = document.getElementById('gradeModal');
+      gradeModal.addEventListener('show.bs.modal', (event) => {
+        const button = event.relatedTarget;
+        const gradeData = JSON.parse(button.getAttribute('data-grade'));
+        document.getElementById('modalGrade').textContent = gradeData.decimalValue;
+        document.getElementById('modalDate').textContent = gradeData.evtDate;
+        document.getElementById('modalComponent').textContent = gradeData.componentDesc;
+        document.getElementById('modalTeacher').textContent = gradeData.teacherName;
+        document.getElementById('modalNotes').textContent = gradeData.notesForFamily || 'No notes';
+      });
+    </script>
   </body>
 </html>
