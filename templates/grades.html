@@ -11,6 +11,16 @@
     />
     <title>Your Grades - ClasseViva</title>
     <style>
+      :root {
+        --gradient-primary: linear-gradient(-45deg, #667eea, #764ba2, #f093fb, #4facfe);
+        --gradient-text: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        --gradient-modal-header: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        --gradient-excellent: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+        --gradient-good: linear-gradient(135deg, #0575E6 0%, #00F260 100%);
+        --gradient-pass: linear-gradient(135deg, #FFB75E 0%, #ED8F03 100%);
+        --gradient-fail: linear-gradient(135deg, #ee0979 0%, #ff6a00 100%);
+      }
+
       @keyframes gradient {
         0% { background-position: 0% 50%; }
         50% { background-position: 100% 50%; }
@@ -36,7 +46,7 @@
         margin: 0;
         padding: 0;
         min-height: 100vh;
-        background: linear-gradient(-45deg, #667eea, #764ba2, #f093fb, #4facfe);
+        background: var(--gradient-primary);
         background-size: 400% 400%;
         animation: gradient 15s ease infinite;
         font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -87,19 +97,19 @@
       }
 
       .circle-grade.grade-excellent {
-        background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+        background: var(--gradient-excellent);
       }
 
       .circle-grade.grade-good {
-        background: linear-gradient(135deg, #0575E6 0%, #00F260 100%);
+        background: var(--gradient-good);
       }
 
       .circle-grade.grade-pass {
-        background: linear-gradient(135deg, #FFB75E 0%, #ED8F03 100%);
+        background: var(--gradient-pass);
       }
 
       .circle-grade.grade-fail {
-        background: linear-gradient(135deg, #ee0979 0%, #ff6a00 100%);
+        background: var(--gradient-fail);
       }
 
       .circle-grade-small {
@@ -141,7 +151,7 @@
       .period-title {
         font-size: 28px;
         font-weight: 700;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: var(--gradient-text);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         background-clip: text;
@@ -205,19 +215,19 @@
       }
 
       .grade-badge.excellent {
-        background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+        background: var(--gradient-excellent);
       }
 
       .grade-badge.good {
-        background: linear-gradient(135deg, #0575E6 0%, #00F260 100%);
+        background: var(--gradient-good);
       }
 
       .grade-badge.pass {
-        background: linear-gradient(135deg, #FFB75E 0%, #ED8F03 100%);
+        background: var(--gradient-pass);
       }
 
       .grade-badge.fail {
-        background: linear-gradient(135deg, #ee0979 0%, #ff6a00 100%);
+        background: var(--gradient-fail);
       }
 
       .subject-average {
@@ -233,7 +243,7 @@
       }
 
       .modal-header {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: var(--gradient-modal-header);
         color: white;
         border-radius: 20px 20px 0 0;
         padding: 20px 30px;
