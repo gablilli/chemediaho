@@ -1,9 +1,69 @@
-# CVVSimpleAvgrage
-A simple Flask Web Page to see Classevivas Grades Avrages even if the school has disabled them
+# che media ho?
 
-# Installtion and Usage
-[See wiki](https://github.com/LucaCraft89/CVVSimpleAvgrage/wiki/Installation)
+una semplice web app flask per visualizzare la media dei voti di classeviva anche se la scuola ha disattivato la funzione ufficiale.
 
-## References
-- [Classeviva-Official-Endpoints](https://github.com/Lioydiano/Classeviva-Official-Endpoints) 
+## installazione
 
+### prerequisiti
+
+* python 3.6 o superiore
+* un account classeviva attivo
+
+### 1️⃣ clona il repository
+
+```bash
+git clone https://github.com/gablilli/chemediaho.git
+cd chemediaho
+```
+
+### 2️⃣ installa le dipendenze
+
+```bash
+pip install -r requirements.txt
+```
+
+### 3️⃣ avvia l’app
+
+esegui lo script principale:
+
+```bash
+python CVVSimpleAvgrage.py
+```
+
+poi apri il browser su **[http://127.0.0.1:5000](http://127.0.0.1:5000)**, inserisci le tue credenziali di classeviva e… buona media! 🧮
+
+
+## installazione con docker
+
+### prerequisiti
+
+* docker e docker compose installati
+  👉 guida ufficiale: [https://docs.docker.com/engine/install/](https://docs.docker.com/engine/install/)
+
+### 4️⃣ crea e avvia il container
+
+dalla cartella del progetto:
+
+```bash
+docker compose up -d
+```
+
+> nota: i log non sono ancora implementati.
+
+una volta avviato, l’interfaccia web sarà disponibile sulla porta **5000** di tutte le interfacce del computer.
+
+se usi ubuntu o hai **ufw** attivo, abilita la porta:
+
+```bash
+sudo ufw allow 5000
+```
+
+## risoluzione problemi
+
+se qualcosa non funziona, controlla eventuali errori nel terminale e assicurati che l’installazione non abbia restituito messaggi di errore.
+
+---
+
+## grazie a
+
+* [classeviva-official-endpoints](https://github.com/Lioydiano/Classeviva-Official-Endpoints) — per aver reso possibile tutto questo ❤️
