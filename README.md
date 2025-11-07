@@ -24,10 +24,10 @@ pip install -r requirements.txt
 
 ### 3️⃣ avvia l’app
 
-esegui lo script principale:
+esegui lo script principale dentro la cartella:
 
 ```bash
-python CVVSimpleAvgrage.py
+python app.py
 ```
 
 poi apri il browser su **[http://127.0.0.1:5000](http://127.0.0.1:5000)**, inserisci le tue credenziali di classeviva e… buona media! 🧮
@@ -40,7 +40,7 @@ poi apri il browser su **[http://127.0.0.1:5000](http://127.0.0.1:5000)**, inser
 * docker e docker compose installati
   👉 guida ufficiale: [https://docs.docker.com/engine/install/](https://docs.docker.com/engine/install/)
 
-### 4️⃣ crea e avvia il container
+### crea e avvia il container
 
 dalla cartella del progetto:
 
