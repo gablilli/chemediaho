@@ -11,6 +11,12 @@
     />
     <title>Login - ClasseViva Grades</title>
     <style>
+      :root {
+        --gradient-primary: linear-gradient(-45deg, #667eea, #764ba2, #f093fb, #4facfe);
+        --gradient-button: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        --gradient-text: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      }
+
       @keyframes gradient {
         0% { background-position: 0% 50%; }
         50% { background-position: 100% 50%; }
@@ -37,7 +43,7 @@
         margin: 0;
         padding: 0;
         min-height: 100vh;
-        background: linear-gradient(-45deg, #667eea, #764ba2, #f093fb, #4facfe);
+        background: var(--gradient-primary);
         background-size: 400% 400%;
         animation: gradient 15s ease infinite;
         display: flex;
@@ -67,7 +73,7 @@
         font-size: 32px;
         font-weight: 700;
         margin-bottom: 12px;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: var(--gradient-text);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         background-clip: text;
@@ -110,7 +116,7 @@
         font-weight: 600;
         border: none;
         border-radius: 12px;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: var(--gradient-button);
         color: white;
         cursor: pointer;
         transition: all 0.3s ease;
