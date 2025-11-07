@@ -9,53 +9,312 @@
       integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH"
       crossorigin="anonymous"
     />
-    <title>Grades</title>
+    <title>Your Grades - ClasseViva</title>
     <style>
+      @keyframes gradient {
+        0% { background-position: 0% 50%; }
+        50% { background-position: 100% 50%; }
+        100% { background-position: 0% 50%; }
+      }
+
+      @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(20px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+
+      @keyframes scaleIn {
+        from { transform: scale(0.8); opacity: 0; }
+        to { transform: scale(1); opacity: 1; }
+      }
+
+      @keyframes pulse {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.05); }
+      }
+
       body {
-        overflow-x: auto;
+        margin: 0;
+        padding: 0;
+        min-height: 100vh;
+        background: linear-gradient(-45deg, #667eea, #764ba2, #f093fb, #4facfe);
+        background-size: 400% 400%;
+        animation: gradient 15s ease infinite;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      }
+
+      .container {
+        animation: fadeIn 0.6s ease-out;
+      }
+
+      .header-section {
+        text-align: center;
+        padding: 40px 20px;
+        margin-bottom: 30px;
+      }
+
+      .page-title {
+        font-size: 48px;
+        font-weight: 700;
+        color: white;
+        margin-bottom: 20px;
+        text-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+      }
+
+      .overall-average {
+        display: inline-block;
+        animation: scaleIn 0.8s ease-out 0.3s both;
+      }
+
+      .circle-grade {
+        width: 140px;
+        height: 140px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 56px;
+        font-weight: 700;
+        color: white;
+        margin: 0 auto 15px;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+        position: relative;
+        transition: transform 0.3s ease;
+      }
+
+      .circle-grade:hover {
+        transform: scale(1.1);
+        animation: pulse 1s ease-in-out infinite;
+      }
+
+      .circle-grade.grade-excellent {
+        background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+      }
+
+      .circle-grade.grade-good {
+        background: linear-gradient(135deg, #0575E6 0%, #00F260 100%);
+      }
+
+      .circle-grade.grade-pass {
+        background: linear-gradient(135deg, #FFB75E 0%, #ED8F03 100%);
+      }
+
+      .circle-grade.grade-fail {
+        background: linear-gradient(135deg, #ee0979 0%, #ff6a00 100%);
+      }
+
+      .circle-grade-small {
+        width: 80px;
+        height: 80px;
+        font-size: 32px;
+        margin: 0 auto;
+      }
+
+      .grade-label {
+        color: white;
+        font-size: 14px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+      }
+
+      .period-section {
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+        border-radius: 24px;
+        padding: 30px;
+        margin-bottom: 30px;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        animation: fadeIn 0.6s ease-out;
+      }
+
+      .period-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 30px;
+        flex-wrap: wrap;
+        gap: 20px;
+      }
+
+      .period-title {
+        font-size: 28px;
+        font-weight: 700;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        margin: 0;
+      }
+
+      .subject-card {
+        background: linear-gradient(135deg, #f5f7fa 0%, #ffffff 100%);
+        border-radius: 16px;
+        padding: 20px;
+        margin-bottom: 16px;
+        transition: all 0.3s ease;
+        border: 2px solid transparent;
+      }
+
+      .subject-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.15);
+        border-color: #667eea;
+      }
+
+      .subject-card.excellent {
+        border-left: 5px solid #38ef7d;
+      }
+
+      .subject-card.good {
+        border-left: 5px solid #00F260;
+      }
+
+      .subject-card.pass {
+        border-left: 5px solid #FFB75E;
+      }
+
+      .subject-card.fail {
+        border-left: 5px solid #ee0979;
+      }
+
+      .subject-name {
+        font-size: 20px;
+        font-weight: 700;
+        color: #1e293b;
+        margin-bottom: 15px;
+      }
+
+      .grade-badge {
+        display: inline-block;
+        padding: 8px 14px;
+        border-radius: 12px;
+        font-weight: 600;
+        font-size: 15px;
+        margin: 4px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        color: white;
+        border: none;
+      }
+
+      .grade-badge:hover {
+        transform: translateY(-3px) scale(1.05);
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+      }
+
+      .grade-badge.excellent {
+        background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+      }
+
+      .grade-badge.good {
+        background: linear-gradient(135deg, #0575E6 0%, #00F260 100%);
+      }
+
+      .grade-badge.pass {
+        background: linear-gradient(135deg, #FFB75E 0%, #ED8F03 100%);
+      }
+
+      .grade-badge.fail {
+        background: linear-gradient(135deg, #ee0979 0%, #ff6a00 100%);
+      }
+
+      .subject-average {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+      }
+
+      .modal-content {
+        border-radius: 20px;
+        border: none;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      }
+
+      .modal-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 20px 20px 0 0;
+        padding: 20px 30px;
+      }
+
+      .modal-title {
+        font-weight: 700;
+      }
+
+      .modal-body {
+        padding: 30px;
+      }
+
+      .modal-body p {
+        margin-bottom: 15px;
+        font-size: 15px;
+        line-height: 1.6;
+      }
+
+      .modal-body strong {
+        color: #667eea;
+        font-weight: 600;
+      }
+
+      .btn-close {
+        filter: brightness(0) invert(1);
+      }
+
+      @media (max-width: 768px) {
+        .page-title {
+          font-size: 32px;
+        }
+        
+        .circle-grade {
+          width: 100px;
+          height: 100px;
+          font-size: 40px;
+        }
+
+        .period-header {
+          flex-direction: column;
+          align-items: center;
+        }
       }
     </style>
   </head>
   <body>
-    <div class="container my-3">
-      <h1 class="text-center mb-4">
-        Grades
-        <p
-          class="fw-bold {% if grades_avr['all_avr']  < 5 %} text-danger {% elif grades_avr['all_avr']  >= 5 and grades_avr['all_avr']  < 6 %} text-warning {% else %} text-success {% endif %}"
-        >
+    <div class="header-section">
+      <h1 class="page-title">Your Academic Performance</h1>
+      <div class="overall-average">
+        <div class="circle-grade {% if grades_avr['all_avr'] >= 8 %}grade-excellent{% elif grades_avr['all_avr'] >= 7 %}grade-good{% elif grades_avr['all_avr'] >= 6 %}grade-pass{% else %}grade-fail{% endif %}">
           {{ grades_avr["all_avr"] | round(1) }}
-        </p>
-      </h1>
-      <div class="table-responsive">
-        {% for period, subjects in grades_avr.items() if period != 'all_avr' %}
-        <h2 class="text-center my-4">
-          Period {{ period }}
-          <p
-            class="fw-bold {% if grades_avr[period]['period_avr'] < 5 %} text-danger {% elif grades_avr[period]['period_avr'] >= 5 and grades_avr[period]['period_avr'] < 6 %} text-warning {% else %} text-success {% endif %}"
-          >
-            {{ grades_avr[period]['period_avr'] | round(1) }}
-          </p>
-        </h2>
-        <table class="table table-bordered align-middle">
-          <thead class="table-light">
-            <tr>
-              <th scope="col">Subject</th>
-              <th scope="col">Grades</th>
-              <th scope="col" class="text-center">Average</th>
-            </tr>
-          </thead>
-          <tbody class="table-group-divider">
-            {% for subject, data in subjects.items() %} {% if subject !=
-            'period_avr' %}
-            <tr
-              class="{% if data.avr < 5 %} table-danger {% elif data.avr >= 5 and data.avr < 6 %} table-warning {% else %} table-success {% endif %}"
-            >
-              <td class="fw-bold">{{ subject }}</td>
-              <td>
+        </div>
+        <div class="grade-label">Overall Average</div>
+      </div>
+    </div>
+
+    <div class="container my-3">
+      {% for period, subjects in grades_avr.items() if period != 'all_avr' %}
+      <div class="period-section">
+        <div class="period-header">
+          <h2 class="period-title">Period {{ period }}</h2>
+          <div>
+            <div class="circle-grade circle-grade-small {% if grades_avr[period]['period_avr'] >= 8 %}grade-excellent{% elif grades_avr[period]['period_avr'] >= 7 %}grade-good{% elif grades_avr[period]['period_avr'] >= 6 %}grade-pass{% else %}grade-fail{% endif %}">
+              {{ grades_avr[period]['period_avr'] | round(1) }}
+            </div>
+            <div class="grade-label" style="color: #64748b;">Period Average</div>
+          </div>
+        </div>
+
+        {% for subject, data in subjects.items() %}
+        {% if subject != 'period_avr' %}
+        <div class="subject-card {% if data.avr >= 8 %}excellent{% elif data.avr >= 7 %}good{% elif data.avr >= 6 %}pass{% else %}fail{% endif %}">
+          <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
+            <div class="flex-grow-1">
+              <div class="subject-name">{{ subject }}</div>
+              <div class="grade-badges">
                 {% for grade in data.grades %}
                 <button
                   type="button"
-                  class="btn {% if grade.decimalValue < 5 %} btn-danger {% elif grade.decimalValue >= 5 and grade.decimalValue < 6 %} btn-warning {% else %} btn-success {% endif %} btn-sm mb-1"
+                  class="grade-badge {% if grade.decimalValue >= 8 %}excellent{% elif grade.decimalValue >= 7 %}good{% elif grade.decimalValue >= 6 %}pass{% else %}fail{% endif %}"
                   data-bs-toggle="modal"
                   data-bs-target="#gradeModal"
                   data-grade='{
@@ -69,14 +328,19 @@
                   {{ grade.decimalValue }}
                 </button>
                 {% endfor %}
-              </td>
-              <td class="fw-bold text-center">{{ (data.avr) | round(1) }}</td>
-            </tr>
-            {% endif %} {% endfor %}
-          </tbody>
-        </table>
+              </div>
+            </div>
+            <div class="subject-average">
+              <div class="circle-grade circle-grade-small {% if data.avr >= 8 %}grade-excellent{% elif data.avr >= 7 %}grade-good{% elif data.avr >= 6 %}grade-pass{% else %}grade-fail{% endif %}">
+                {{ (data.avr) | round(1) }}
+              </div>
+            </div>
+          </div>
+        </div>
+        {% endif %}
         {% endfor %}
       </div>
+      {% endfor %}
     </div>
 
     <!-- Grade Details Modal -->
@@ -87,10 +351,10 @@
       aria-labelledby="gradeModalLabel"
       aria-hidden="true"
     >
-      <div class="modal-dialog">
+      <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
           <div class="modal-header">
-            <h5 class="modal-title" id="gradeModalLabel">Grade Details</h5>
+            <h5 class="modal-title" id="gradeModalLabel">📊 Grade Details</h5>
             <button
               type="button"
               class="btn-close"
@@ -105,22 +369,12 @@
             <p><strong>Teacher:</strong> <span id="modalTeacher"></span></p>
             <p><strong>Notes:</strong> <span id="modalNotes"></span></p>
           </div>
-          <div class="modal-footer">
-            <button
-              type="button"
-              class="btn btn-secondary"
-              data-bs-dismiss="modal"
-            >
-              Close
-            </button>
-          </div>
         </div>
       </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-      // JavaScript to populate modal with grade details
       const gradeModal = document.getElementById('gradeModal');
       gradeModal.addEventListener('show.bs.modal', (event) => {
         const button = event.relatedTarget;
