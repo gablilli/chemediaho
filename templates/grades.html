@@ -96,6 +96,17 @@
       .dark-mode .hover\:bg-slate-200\/50:hover {
         background-color: rgba(51, 65, 85, 0.5);
       }
+
+      /* Dark mode toggle button styling */
+      .light-mode #darkModeToggle {
+        background-color: rgba(255, 255, 255, 0.2);
+        border-color: rgba(226, 232, 240, 0.5);
+      }
+
+      .dark-mode #darkModeToggle {
+        background-color: rgba(30, 41, 59, 0.2);
+        border-color: rgba(51, 65, 85, 0.5);
+      }
     </style>
     <script>
       tailwind.config = {
@@ -120,7 +131,7 @@
     <!-- Dark Mode Toggle -->
     <button 
       id="darkModeToggle" 
-      class="fixed top-4 right-4 z-50 w-12 h-12 rounded-full bg-white/20 dark:bg-slate-800/20 backdrop-blur-md border border-slate-200/50 dark:border-slate-700/50 flex items-center justify-center hover:scale-110 transition-all duration-200 shadow-lg"
+      class="fixed top-4 right-4 z-50 w-12 h-12 rounded-full bg-white/20 backdrop-blur-md border border-slate-200/50 flex items-center justify-center hover:scale-110 transition-all duration-200 shadow-lg"
       aria-label="Toggle Dark Mode"
     >
       <svg id="sunIcon" class="w-6 h-6 text-slate-700" fill="currentColor" viewBox="0 0 20 20">
