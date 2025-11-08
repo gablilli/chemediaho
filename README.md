@@ -1,6 +1,6 @@
 # che media ho?
 
-una semplice web app flask per visualizzare la media dei voti di classeviva anche se la scuola ha disattivato la funzione ufficiale.
+una semplice web app flask dockerizzabile per visualizzare la media dei voti di classeviva anche se la scuola ha disattivato la funzione ufficiale.
 
 ## installazione
 
@@ -66,4 +66,9 @@ se qualcosa non funziona, controlla eventuali errori nel terminale e assicurati 
 
 ## grazie a
 
-* [classeviva-official-endpoints](https://github.com/Lioydiano/Classeviva-Official-Endpoints) — per aver reso possibile tutto questo ❤️
+* [classeviva-official-endpoints](https://github.com/Lioydiano/Classeviva-Official-Endpoints)
+* sysregister del buon [syswhite.dev](https://github.com/syswhite.dev)
+* [CVVSimpleAvgrage](https://github.com/LucaCraft89/CVVSimpleAvgrage)
+
+
+per aver reso possibile tutto questo ❤️
