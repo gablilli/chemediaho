@@ -388,7 +388,7 @@
             <button
               type="button"
               class="grade-badge {% if grade.decimalValue >= 8 %}excellent{% elif grade.decimalValue >= 7 %}good{% elif grade.decimalValue >= 6 %}pass{% else %}fail{% endif %}"
-              onclick="showModal({{ grade | tojson | safe }})"
+              onclick='showModal({{ grade | tojson | safe }})'
             >
               {{ grade.decimalValue }}
             </button>
