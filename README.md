@@ -55,7 +55,7 @@ l'app può essere installata sul tuo dispositivo mobile per un'esperienza nativa
 3. scorri e seleziona "aggiungi a home"
 4. conferma l'installazione
 
-una volta installata, l'app funzionerà come un'applicazione nativa con supporto offline!
+una volta installata, l'app funzionerà come un'applicazione nativa!
 
 
 ## installazione con docker
