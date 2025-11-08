@@ -1,6 +1,7 @@
 # che media ho?
 
-una semplice web app flask dockerizzabile per visualizzare la media dei voti di classeviva anche se la scuola ha disattivato la funzione ufficiale.
+una semplice web app flask self-hostabile via docker per visualizzare la media dei voti di classeviva anche se l'istituto ha disattivato la funzione ufficiale. 
+sysregister ui-based.
 
 ## installazione
 
@@ -30,7 +31,7 @@ esegui lo script principale dentro la cartella:
 python app.py
 ```
 
-poi apri il browser su **[http://127.0.0.1:5000](http://127.0.0.1:5000)**, inserisci le tue credenziali di classeviva e… buona media! 🧮
+poi apri il browser su **[http://localhost:5000](http://localhost:5000)**, inserisci le tue credenziali di classeviva e… buona media! 🧮
 
 
 ## installazione con docker
@@ -67,7 +68,7 @@ se qualcosa non funziona, controlla eventuali errori nel terminale e assicurati 
 ## grazie a
 
 * [classeviva-official-endpoints](https://github.com/Lioydiano/Classeviva-Official-Endpoints)
-* sysregister del buon [syswhite.dev](https://github.com/syswhite.dev)
+* sysregister del buon [syswhite.dev](https://github.com/syswhitedev)
 * [CVVSimpleAvgrage](https://github.com/LucaCraft89/CVVSimpleAvgrage)
 
 
