@@ -449,6 +449,32 @@
       document.querySelectorAll('[data-palette]').forEach(p => {
         p.classList.toggle('active', p.getAttribute('data-palette') === savedPalette);
       });
+
+      // Add form submission handling for debugging and better UX
+      const loginForm = document.querySelector('form');
+      const submitButton = document.querySelector('button[type="submit"]');
+      
+      if (loginForm && submitButton) {
+        loginForm.addEventListener('submit', function(e) {
+          console.log('Form submission started');
+          
+          // Disable button to prevent double submission
+          submitButton.disabled = true;
+          submitButton.textContent = 'Caricamento...';
+          
+          // Re-enable button after a delay in case of error
+          setTimeout(() => {
+            if (submitButton.disabled) {
+              submitButton.disabled = false;
+              submitButton.textContent = translations[savedLang]['submit'];
+            }
+          }, 10000);
+        });
+        
+        console.log('Login form initialized successfully');
+      } else {
+        console.error('Login form or submit button not found');
+      }
     </script>
   </body>
 </html>
