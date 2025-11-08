@@ -6,9 +6,10 @@ sysregister ui-based.
 ## ✨ funzionalità
 
 * 📱 **PWA (Progressive Web App)** - installabile su dispositivi mobili
-* 🔄 **Supporto offline** - funziona anche senza connessione
+* 🔄 **Supporto offline** - funziona anche senza connessione (con i dati scaricati precedentemente)
 * 🎨 **Design responsive** - ottimizzato per mobile e desktop
 * 📊 **Calcolo media** - visualizza automaticamente la media dei voti
+* 🆓 **100% free and opensource** - così puoi stare tranquillo.
 
 ## installazione
 
