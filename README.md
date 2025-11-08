@@ -3,6 +3,13 @@
 una semplice web app flask self-hostabile via docker per visualizzare la media dei voti di classeviva anche se l'istituto ha disattivato la funzione ufficiale. 
 sysregister ui-based.
 
+## ✨ funzionalità
+
+* 📱 **PWA (Progressive Web App)** - installabile su dispositivi mobili
+* 🔄 **Supporto offline** - funziona anche senza connessione
+* 🎨 **Design responsive** - ottimizzato per mobile e desktop
+* 📊 **Calcolo media** - visualizza automaticamente la media dei voti
+
 ## installazione
 
 ### prerequisiti
@@ -32,6 +39,23 @@ python app.py
 ```
 
 poi apri il browser su **[http://localhost:5000](http://localhost:5000)**, inserisci le tue credenziali di classeviva e… buona media! 🧮
+
+## 📱 installazione come PWA
+
+l'app può essere installata sul tuo dispositivo mobile per un'esperienza nativa:
+
+### su android (chrome)
+1. apri l'app nel browser
+2. tocca il menu (⋮) e seleziona "installa app" o "aggiungi a schermata home"
+3. conferma l'installazione
+
+### su ios (safari)
+1. apri l'app in safari
+2. tocca il pulsante condividi (□↑)
+3. scorri e seleziona "aggiungi a home"
+4. conferma l'installazione
+
+una volta installata, l'app funzionerà come un'applicazione nativa con supporto offline!
 
 
 ## installazione con docker
