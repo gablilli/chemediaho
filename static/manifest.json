@@ -1,6 +1,6 @@
 {
-  "name": "Che Media Ho?",
-  "short_name": "MediaHo",
+  "name": "che media ho?",
+  "short_name": "chemediaho?",
   "description": "Visualizza la media dei voti di ClasseViva",
   "start_url": "/",
   "display": "standalone",
