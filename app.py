@@ -3,6 +3,15 @@ import json
 import flask
 
 app = flask.Flask(__name__)
+
+@app.route('/manifest.json')
+def manifest():
+    return flask.send_from_directory('static', 'manifest.json', mimetype='application/manifest+json')
+
+@app.route('/sw.js')
+def service_worker():
+    return flask.send_from_directory('static', 'sw.js', mimetype='application/javascript')
+
 @app.route('/')
 def home():
     return flask.render_template('login.html')

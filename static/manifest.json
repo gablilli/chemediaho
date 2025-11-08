@@ -1,0 +1,24 @@
+{
+  "name": "Che Media Ho?",
+  "short_name": "MediaHo",
+  "description": "Visualizza la media dei voti di ClasseViva",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#130909",
+  "theme_color": "#f03333",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/static/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/static/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
