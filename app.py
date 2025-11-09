@@ -4,6 +4,7 @@ import flask
 import logging
 
 app = flask.Flask(__name__)
+@app.route('/')
 def home():
     return flask.render_template('login.html')
 
