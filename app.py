@@ -2,11 +2,21 @@ import requests
 import json
 import flask
 import os
+import secrets
 from datetime import timedelta
 
 app = flask.Flask(__name__)
-app.secret_key = os.environ.get('SECRET_KEY', os.urandom(24))
+# Use environment variable for secret key, or generate a stable one
+# WARNING: In production, SECRET_KEY should be set as environment variable
+app.secret_key = os.environ.get('SECRET_KEY', secrets.token_hex(32))
 app.permanent_session_lifetime = timedelta(days=30)  # Session lasts 30 days
+
+# Additional security configurations for sessions
+app.config.update(
+    SESSION_COOKIE_SECURE=os.environ.get('FLASK_ENV') == 'production',  # Only send cookie over HTTPS in production
+    SESSION_COOKIE_HTTPONLY=True,  # Prevent JavaScript access to session cookie
+    SESSION_COOKIE_SAMESITE='Lax'  # CSRF protection
+)
 
 @app.route('/manifest.json')
 def manifest():
@@ -26,7 +36,7 @@ def home():
             student_id = "".join(filter(str.isdigit, user_id))
             grades_avr = calculate_avr(get_grades(student_id, token))
             return flask.render_template('grades.html', grades_avr=grades_avr)
-        except:
+        except (requests.exceptions.RequestException, KeyError, ValueError):
             # If session is invalid, clear it and show login
             flask.session.clear()
     return flask.render_template('login.html')
