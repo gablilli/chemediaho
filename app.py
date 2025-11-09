@@ -30,8 +30,9 @@ def service_worker():
 def home():
     # Check if user has a valid session (remember me)
     if 'user_id' in flask.session and 'token' in flask.session:
-        # Ensure session remains permanent for returning users
-        flask.session.permanent = True
+        # Ensure session remains permanent if remember_me was enabled
+        if flask.session.get('remember_me'):
+            flask.session.permanent = True
         try:
             user_id = flask.session['user_id']
             token = flask.session['token']
@@ -54,11 +55,17 @@ def login_route():
         if token is None or token == "":
             return "Invalid token", 401
         
-        # Store credentials in session if remember me is checked
+        # Store credentials in session
+        flask.session['user_id'] = user_id
+        flask.session['token'] = token
+        
+        # Set session as permanent if remember me is checked
         if remember_me:
-            flask.session['user_id'] = user_id
-            flask.session['token'] = token
+            flask.session['remember_me'] = True
             flask.session.permanent = True  # Make session persistent
+        else:
+            flask.session['remember_me'] = False
+            flask.session.permanent = False  # Session expires when browser closes
         
         student_id = "".join(filter(str.isdigit, user_id))
         grades_avr = calculate_avr(get_grades(student_id, token))
