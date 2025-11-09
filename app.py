@@ -79,8 +79,12 @@ def home():
             flask.session.clear()
     return flask.render_template('login.html')
 
-@app.route('/login', methods=['POST'])
+@app.route('/login', methods=['GET', 'POST'])
 def login_route():
+    # Redirect GET requests to home page
+    if flask.request.method == 'GET':
+        return flask.redirect('/')
+    
     user_id = flask.request.form['user_id']
     user_pass = flask.request.form['user_pass']
     remember_me = flask.request.form.get('remember_me') == 'on'
