@@ -1,8 +1,22 @@
 import requests
 import json
 import flask
+import os
+import secrets
+from datetime import timedelta
 
 app = flask.Flask(__name__)
+# Use environment variable for secret key, or generate a stable one
+# WARNING: In production, SECRET_KEY should be set as environment variable
+app.secret_key = os.environ.get('SECRET_KEY', secrets.token_hex(32))
+app.permanent_session_lifetime = timedelta(days=30)  # Session lasts 30 days
+
+# Additional security configurations for sessions
+app.config.update(
+    SESSION_COOKIE_SECURE=os.environ.get('FLASK_ENV') == 'production',  # Only send cookie over HTTPS in production
+    SESSION_COOKIE_HTTPONLY=True,  # Prevent JavaScript access to session cookie
+    SESSION_COOKIE_SAMESITE='Lax'  # CSRF protection
+)
 
 @app.route('/manifest.json')
 def manifest():
@@ -14,17 +28,36 @@ def service_worker():
 
 @app.route('/')
 def home():
+    # Check if user has a valid session (remember me)
+    if 'user_id' in flask.session and 'token' in flask.session:
+        try:
+            user_id = flask.session['user_id']
+            token = flask.session['token']
+            student_id = "".join(filter(str.isdigit, user_id))
+            grades_avr = calculate_avr(get_grades(student_id, token))
+            return flask.render_template('grades.html', grades_avr=grades_avr)
+        except (requests.exceptions.RequestException, KeyError, ValueError):
+            # If session is invalid, clear it and show login
+            flask.session.clear()
     return flask.render_template('login.html')
 
 @app.route('/login', methods=['POST'])
 def login_route():
     user_id = flask.request.form['user_id']
     user_pass = flask.request.form['user_pass']
+    remember_me = flask.request.form.get('remember_me') == 'on'
     try:
         login_response = login(user_id, user_pass)
         token = login_response["token"]
         if token is None or token == "":
             return "Invalid token", 401
+        
+        # Store credentials in session if remember me is checked
+        if remember_me:
+            flask.session['user_id'] = user_id
+            flask.session['token'] = token
+            flask.session.permanent = True  # Make session persistent
+        
         student_id = "".join(filter(str.isdigit, user_id))
         grades_avr = calculate_avr(get_grades(student_id, token))
         return flask.render_template('grades.html', grades_avr=grades_avr)
@@ -53,6 +86,11 @@ def login(user_id, user_pass):
         return response.json()
     else:
         response.raise_for_status()
+
+@app.route('/logout', methods=['POST'])
+def logout():
+    flask.session.clear()
+    return flask.redirect('/')
                 
 def get_periods(student_id, token):
     url = f"https://web.spaggiari.eu/rest/v1/students/{student_id}/periods"
