@@ -30,6 +30,8 @@ def service_worker():
 def home():
     # Check if user has a valid session (remember me)
     if 'user_id' in flask.session and 'token' in flask.session:
+        # Ensure session remains permanent for returning users
+        flask.session.permanent = True
         try:
             user_id = flask.session['user_id']
             token = flask.session['token']
