@@ -103,9 +103,32 @@ questo abiliterà il flag `Secure` sui cookie di sessione, garantendo che vengan
 ### chiave segreta della sessione
 
 l'app genera automaticamente una chiave segreta (`secret_key.txt`) al primo avvio e la riutilizza per mantenere valide le sessioni anche dopo i riavvii. questa chiave:
-- è salvata in `secret_key.txt` nella directory dell'app
+- è salvata in `secret_key.txt` nella directory dell'app con permessi restrittivi (600 - solo proprietario può leggere/scrivere)
 - non deve essere committata su git (già esclusa da .gitignore)
 - in docker, è persistita tramite volume mount per funzionare anche dopo i restart dei container
+
+#### note di sicurezza
+
+⚠️ **importante per la sicurezza:**
+- la chiave è salvata in chiaro sul file system - proteggi l'accesso al file
+- per ambienti di produzione, considera l'uso di gestori di segreti esterni (es. Docker secrets, Kubernetes secrets, HashiCorp Vault)
+- usa sempre la variabile d'ambiente `SECRET_KEY` in produzione invece del file
+- assicurati che il file `secret_key.txt` sia leggibile solo dall'utente che esegue l'app (permessi 600)
+
+esempio per produzione con docker secrets:
+```yaml
+# compose.yml per produzione
+services:
+  flask:
+    environment:
+      - SECRET_KEY_FILE=/run/secrets/flask_secret
+    secrets:
+      - flask_secret
+
+secrets:
+  flask_secret:
+    external: true
+```
 
 ## risoluzione problemi
 

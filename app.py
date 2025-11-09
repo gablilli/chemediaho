@@ -27,9 +27,16 @@ def get_secret_key():
     # Last resort: generate a new key and save it
     new_key = secrets.token_hex(32)
     try:
-        with open(SECRET_KEY_FILE, 'w') as f:
+        # Create file with restricted permissions (owner read/write only)
+        # Using os.open with specific flags for secure file creation
+        fd = os.open(SECRET_KEY_FILE, os.O_CREAT | os.O_WRONLY | os.O_EXCL, 0o600)
+        with os.fdopen(fd, 'w') as f:
             f.write(new_key)
         print(f"Generated new secret key and saved to {SECRET_KEY_FILE}")
+    except FileExistsError:
+        # File was created between the exists check and open - try reading it
+        with open(SECRET_KEY_FILE, 'r') as f:
+            return f.read().strip()
     except Exception as e:
         print(f"Warning: Could not save secret key to file: {e}")
     
