@@ -12,6 +12,7 @@ ENV/
 # Flask
 instance/
 .webassets-cache
+secret_key.txt
 
 # IDE
 .vscode/

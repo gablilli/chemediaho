@@ -6,14 +6,42 @@ import secrets
 from datetime import timedelta
 
 app = flask.Flask(__name__)
-# Use environment variable for secret key, or generate a stable one
-# WARNING: In production, SECRET_KEY should be set as environment variable
-app.secret_key = os.environ.get('SECRET_KEY', secrets.token_hex(32))
+
+# Load or generate a persistent SECRET_KEY
+SECRET_KEY_FILE = 'secret_key.txt'
+
+def get_secret_key():
+    """Load secret key from file, or generate and save a new one if it doesn't exist."""
+    # First priority: environment variable (for production with external secret management)
+    if os.environ.get('SECRET_KEY'):
+        return os.environ.get('SECRET_KEY')
+    
+    # Second priority: load from file (for persistence across restarts)
+    if os.path.exists(SECRET_KEY_FILE):
+        try:
+            with open(SECRET_KEY_FILE, 'r') as f:
+                return f.read().strip()
+        except Exception as e:
+            print(f"Warning: Could not read secret key file: {e}")
+    
+    # Last resort: generate a new key and save it
+    new_key = secrets.token_hex(32)
+    try:
+        with open(SECRET_KEY_FILE, 'w') as f:
+            f.write(new_key)
+        print(f"Generated new secret key and saved to {SECRET_KEY_FILE}")
+    except Exception as e:
+        print(f"Warning: Could not save secret key to file: {e}")
+    
+    return new_key
+
+app.secret_key = get_secret_key()
 app.permanent_session_lifetime = timedelta(days=30)  # Session lasts 30 days
 
 # Additional security configurations for sessions
+# Only require HTTPS cookies if explicitly enabled (for when running behind HTTPS proxy/load balancer)
 app.config.update(
-    SESSION_COOKIE_SECURE=os.environ.get('FLASK_ENV') == 'production',  # Only send cookie over HTTPS in production
+    SESSION_COOKIE_SECURE=os.environ.get('HTTPS_ENABLED', 'false').lower() == 'true',
     SESSION_COOKIE_HTTPONLY=True,  # Prevent JavaScript access to session cookie
     SESSION_COOKIE_SAMESITE='Lax'  # CSRF protection
 )
