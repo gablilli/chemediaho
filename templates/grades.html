@@ -31,6 +31,18 @@
         --fail: #f03333;
       }
 
+      :root[data-theme="light"] {
+        --text: #1a0a0a;
+        --background: #fef8f8;
+        --primary: #f03333;
+        --secondary: #f5cccc;
+        --accent: #c83737;
+        --excellent: #4caf50;
+        --good: #4facfe;
+        --pass: #ffa500;
+        --fail: #f03333;
+      }
+
       body {
         margin: 0;
         padding: 0;
@@ -335,6 +347,34 @@
         font-weight: 600;
       }
 
+      .theme-toggle {
+        position: fixed;
+        top: 20px;
+        right: 80px;
+        background: var(--secondary);
+        border: 2px solid var(--accent);
+        border-radius: 50%;
+        width: 50px;
+        height: 50px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.3s ease;
+        z-index: 100;
+      }
+
+      .theme-toggle:hover {
+        transform: scale(1.1);
+        background: var(--accent);
+      }
+
+      .theme-toggle svg {
+        width: 24px;
+        height: 24px;
+        fill: var(--text);
+      }
+
       .logout-btn {
         position: fixed;
         top: 20px;
@@ -378,6 +418,19 @@
     </style>
   </head>
   <body>
+    <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="5"/>
+        <line x1="12" x2="12" y1="1" y2="3"/>
+        <line x1="12" x2="12" y1="21" y2="23"/>
+        <line x1="4.22" x2="5.64" y1="4.22" y2="5.64"/>
+        <line x1="18.36" x2="19.78" y1="18.36" y2="19.78"/>
+        <line x1="1" x2="3" y1="12" y2="12"/>
+        <line x1="21" x2="23" y1="12" y2="12"/>
+        <line x1="4.22" x2="5.64" y1="19.78" y2="18.36"/>
+        <line x1="18.36" x2="19.78" y1="5.64" y2="4.22"/>
+      </svg>
+    </button>
     <form action="/logout" method="post" style="display: inline;">
       <button type="submit" class="logout-btn">Esci</button>
     </form>
@@ -446,6 +499,40 @@
     </div>
 
     <script>
+      // Theme management
+      const themeToggle = document.getElementById('themeToggle');
+      const root = document.documentElement;
+      
+      // Function to get system preference
+      function getSystemTheme() {
+        if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) {
+          return 'light';
+        }
+        return 'dark';
+      }
+      
+      // Load saved theme or use system preference
+      const savedTheme = localStorage.getItem('theme');
+      const initialTheme = savedTheme || getSystemTheme();
+      
+      if (initialTheme === 'light') {
+        root.setAttribute('data-theme', 'light');
+      }
+      
+      // Toggle theme
+      themeToggle.addEventListener('click', () => {
+        const currentTheme = root.getAttribute('data-theme');
+        const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+        
+        if (newTheme === 'light') {
+          root.setAttribute('data-theme', 'light');
+        } else {
+          root.removeAttribute('data-theme');
+        }
+        
+        localStorage.setItem('theme', newTheme);
+      });
+
       function showModal(gradeData) {
         document.getElementById('modalGrade').textContent = gradeData.decimalValue;
         document.getElementById('modalDate').textContent = gradeData.evtDate;
