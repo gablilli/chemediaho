@@ -335,6 +335,30 @@
         font-weight: 600;
       }
 
+      .logout-btn {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: var(--primary);
+        color: var(--text);
+        border: none;
+        border-radius: 8px;
+        padding: 10px 20px;
+        font-size: 14px;
+        font-weight: bold;
+        cursor: pointer;
+        transition: opacity 0.2s ease;
+        z-index: 100;
+      }
+
+      .logout-btn:hover {
+        opacity: 0.8;
+      }
+
+      .logout-btn:active {
+        opacity: 0.6;
+      }
+
       @media (max-width: 768px) {
         .page-title {
           font-size: 24px;
@@ -354,6 +378,9 @@
     </style>
   </head>
   <body>
+    <form action="/logout" method="post" style="display: inline;">
+      <button type="submit" class="logout-btn">Esci</button>
+    </form>
     <div class="header-section">
       <h1 class="page-title">I tuoi voti</h1>
       <div class="overall-average">
