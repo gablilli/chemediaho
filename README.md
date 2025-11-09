@@ -1,6 +1,16 @@
 # che media ho?
 
-una semplice web app flask per visualizzare la media dei voti di classeviva anche se la scuola ha disattivato la funzione ufficiale.
+una semplice web app flask self-hostabile via docker per visualizzare la media dei voti di classeviva anche se l'istituto ha disattivato la funzione ufficiale. 
+sysregister ui-based.
+
+## ✨ funzionalità
+
+* 📱 **PWA (Progressive Web App)** - installabile su dispositivi mobili
+* 🔄 **Supporto offline** - funziona anche senza connessione (con i dati scaricati precedentemente)
+* 🎨 **Design responsive** - ottimizzato per mobile e desktop
+* 📊 **Calcolo media** - visualizza automaticamente la media dei voti
+* 🔐 **Remember Me** - rimani autenticato senza dover reinserire le credenziali ogni volta
+* 🆓 **100% free and opensource** - così puoi stare tranquillo.
 
 ## installazione
 
@@ -30,7 +40,24 @@ esegui lo script principale dentro la cartella:
 python app.py
 ```
 
-poi apri il browser su **[http://127.0.0.1:5000](http://127.0.0.1:5000)**, inserisci le tue credenziali di classeviva e… buona media! 🧮
+poi apri il browser su **[http://localhost:5000](http://localhost:5000)**, inserisci le tue credenziali di classeviva e… buona media! 🧮
+
+## 📱 installazione come PWA
+
+l'app può essere installata sul tuo dispositivo mobile per un'esperienza nativa:
+
+### su android (chrome)
+1. apri l'app nel browser
+2. tocca il menu (⋮) e seleziona "installa app" o "aggiungi a schermata home"
+3. conferma l'installazione
+
+### su ios (safari)
+1. apri l'app in safari
+2. tocca il pulsante condividi (□↑)
+3. scorri e seleziona "aggiungi a home"
+4. conferma l'installazione
+
+una volta installata, l'app funzionerà come un'applicazione nativa!
 
 
 ## installazione con docker
@@ -66,4 +93,9 @@ se qualcosa non funziona, controlla eventuali errori nel terminale e assicurati 
 
 ## grazie a
 
-* [classeviva-official-endpoints](https://github.com/Lioydiano/Classeviva-Official-Endpoints) — per aver reso possibile tutto questo ❤️
+* [classeviva-official-endpoints](https://github.com/Lioydiano/Classeviva-Official-Endpoints)
+* sysregister del buon [syswhite.dev](https://github.com/syswhitedev)
+* [CVVSimpleAvgrage](https://github.com/LucaCraft89/CVVSimpleAvgrage)
+
+
+per aver reso possibile tutto questo ❤️
