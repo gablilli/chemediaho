@@ -7,4 +7,9 @@ services:
       - "5000:5000"
     environment:
       - FLASK_ENV=production
+      # Set HTTPS_ENABLED=true if running behind HTTPS proxy/load balancer
+      # - HTTPS_ENABLED=true
+    volumes:
+      # Persist secret key across container restarts
+      - ./secret_key.txt:/app/secret_key.txt
     restart: always
