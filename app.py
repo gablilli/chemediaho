@@ -1,6 +1,7 @@
 import requests
 import json
 import flask
+import logging
 import os
 import secrets
 from datetime import timedelta
@@ -62,9 +63,11 @@ def login_route():
         grades_avr = calculate_avr(get_grades(student_id, token))
         return flask.render_template('grades.html', grades_avr=grades_avr)
     except requests.exceptions.RequestException as e:
-        return f"An error occurred: {e}", 500
+        logging.exception("RequestException during login")
+        return "An internal error occurred.", 500
     except Exception as e:
-        return f"An error occurred: {e}", 500
+        logging.exception("Unhandled exception during login")
+        return "An internal error occurred.", 500
     
 
 def login(user_id, user_pass):
