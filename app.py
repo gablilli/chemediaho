@@ -101,13 +101,15 @@ def login_route():
         if token is None or token == "":
             return flask.render_template('login.html', error="Token non valido. Riprova.")
         
-        # Store credentials and token in session if remember me is checked
+        # Always store token in session for the grades page
+        flask.session['token'] = token
+        
+        # Store credentials and session persistence based on remember me setting
         if remember_me:
             flask.session.permanent = True  # Make session last 30 days
             flask.session['remember_me'] = True
             flask.session['user_id'] = user_id
             flask.session['user_pass'] = user_pass  # Stored encrypted in session cookie
-            flask.session['token'] = token
         else:
             flask.session.permanent = False  # Session expires when browser closes
             flask.session['remember_me'] = False
