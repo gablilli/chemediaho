@@ -3,7 +3,6 @@ import json
 import flask
 import os
 import secrets
-from datetime import timedelta
 
 app = flask.Flask(__name__)
 
@@ -43,7 +42,6 @@ def get_secret_key():
     return new_key
 
 app.secret_key = get_secret_key()
-app.permanent_session_lifetime = timedelta(days=30)  # Session lasts 30 days
 
 # Additional security configurations for sessions
 app.config.update(
@@ -62,27 +60,6 @@ def service_worker():
 
 @app.route('/')
 def home():
-    # Check if user has remember me enabled with stored credentials
-    if flask.session.get('remember_me') and 'user_id' in flask.session and 'user_pass' in flask.session:
-        try:
-            user_id = flask.session['user_id']
-            user_pass = flask.session['user_pass']
-            
-            # Try to authenticate and get fresh token
-            login_response = login(user_id, user_pass)
-            token = login_response["token"]
-            
-            if token:
-                # Update token in session
-                flask.session['token'] = token
-                student_id = "".join(filter(str.isdigit, user_id))
-                grades_avr = calculate_avr(get_grades(student_id, token))
-                return flask.render_template('grades.html', grades_avr=grades_avr)
-        except Exception as e:
-            # If auto-login fails, clear session and show login page
-            print(f"Auto-login failed: {e}")
-            flask.session.clear()
-    
     return flask.render_template('login.html')
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -93,7 +70,6 @@ def login_route():
     
     user_id = flask.request.form['user_id']
     user_pass = flask.request.form['user_pass']
-    remember_me = flask.request.form.get('remember_me') == 'on'
     
     try:
         login_response = login(user_id, user_pass)
@@ -101,18 +77,8 @@ def login_route():
         if token is None or token == "":
             return flask.render_template('login.html', error="Token non valido. Riprova.")
         
-        # Always store token in session for the grades page
+        # Store token in session for the grades page
         flask.session['token'] = token
-        
-        # Store credentials and session persistence based on remember me setting
-        if remember_me:
-            flask.session.permanent = True  # Make session last 30 days
-            flask.session['remember_me'] = True
-            flask.session['user_id'] = user_id
-            flask.session['user_pass'] = user_pass  # Stored encrypted in session cookie
-        else:
-            flask.session.permanent = False  # Session expires when browser closes
-            flask.session['remember_me'] = False
         
         student_id = "".join(filter(str.isdigit, user_id))
         grades_avr = calculate_avr(get_grades(student_id, token))

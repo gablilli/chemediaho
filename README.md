@@ -9,7 +9,6 @@ sysregister ui-based.
 * 🔄 **supporto offline** - funziona anche senza connessione (con i dati scaricati precedentemente)
 * 🎨 **design responsive** - ottimizzato per mobile e desktop
 * 📊 **calcolo media** - visualizza automaticamente la media dei voti
-* 🔐 **remember me** - rimani autenticato automaticamente senza dover reinserire le credenziali ogni volta
 * 🆓 **codice 100% free and opensource con controllo codeql** - così puoi stare tranquillo.
 
 ## installazione
