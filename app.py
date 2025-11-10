@@ -3,6 +3,14 @@ import json
 import flask
 import os
 import secrets
+from io import BytesIO
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.units import cm
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+from reportlab.lib import colors
+from reportlab.lib.enums import TA_CENTER, TA_LEFT
+from datetime import datetime
 
 app = flask.Flask(__name__)
 
@@ -77,10 +85,11 @@ def login_route():
         if token is None or token == "":
             return flask.render_template('login.html', error="Token non valido. Riprova.")
         
-        # Store token in session for the grades page
+        # Store token and student_id in session for later use
         flask.session['token'] = token
-        
         student_id = "".join(filter(str.isdigit, user_id))
+        flask.session['student_id'] = student_id
+        
         grades_avr = calculate_avr(get_grades(student_id, token))
         return flask.render_template('grades.html', grades_avr=grades_avr)
     except requests.exceptions.HTTPError as e:
@@ -188,6 +197,159 @@ def calculate_avr(grades):
     
     # print(json.dumps(grades_avr, indent=4))
     return grades_avr
+
+@app.route('/export-pdf')
+def export_pdf():
+    """Export grades as a PDF report"""
+    # Check if user has a valid session
+    if 'token' not in flask.session or 'student_id' not in flask.session:
+        return flask.redirect('/')
+    
+    token = flask.session.get('token')
+    student_id = flask.session.get('student_id')
+    
+    try:
+        # Get grades data
+        grades_data = get_grades(student_id, token)
+        grades_avr = calculate_avr(grades_data)
+        
+        # Create PDF in memory
+        buffer = BytesIO()
+        doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=2*cm, leftMargin=2*cm, 
+                              topMargin=2*cm, bottomMargin=2*cm)
+        
+        # Container for the 'Flowable' objects
+        elements = []
+        
+        # Define styles
+        styles = getSampleStyleSheet()
+        title_style = ParagraphStyle(
+            'CustomTitle',
+            parent=styles['Heading1'],
+            fontSize=24,
+            textColor=colors.HexColor('#f03333'),
+            spaceAfter=30,
+            alignment=TA_CENTER,
+            fontName='Helvetica-Bold'
+        )
+        
+        heading_style = ParagraphStyle(
+            'CustomHeading',
+            parent=styles['Heading2'],
+            fontSize=16,
+            textColor=colors.HexColor('#c83737'),
+            spaceAfter=12,
+            spaceBefore=12,
+            fontName='Helvetica-Bold'
+        )
+        
+        # Add title
+        title = Paragraph("📊 Riepilogo Voti - che media ho?", title_style)
+        elements.append(title)
+        elements.append(Spacer(1, 0.5*cm))
+        
+        # Add generation date
+        date_text = f"Generato il: {datetime.now().strftime('%d/%m/%Y alle %H:%M')}"
+        date_para = Paragraph(date_text, styles['Normal'])
+        elements.append(date_para)
+        elements.append(Spacer(1, 0.5*cm))
+        
+        # Add overall average
+        overall_avg = grades_avr.get('all_avr', 0)
+        avg_color = colors.HexColor('#4caf50') if overall_avg >= 8 else \
+                   colors.HexColor('#4facfe') if overall_avg >= 7 else \
+                   colors.HexColor('#ffa500') if overall_avg >= 6 else \
+                   colors.HexColor('#f03333')
+        
+        avg_style = ParagraphStyle(
+            'AvgStyle',
+            parent=styles['Normal'],
+            fontSize=18,
+            textColor=avg_color,
+            alignment=TA_CENTER,
+            fontName='Helvetica-Bold'
+        )
+        
+        avg_text = f"Media Generale: {overall_avg:.1f}"
+        avg_para = Paragraph(avg_text, avg_style)
+        elements.append(avg_para)
+        elements.append(Spacer(1, 1*cm))
+        
+        # Add grades by period
+        for period, subjects in grades_avr.items():
+            if period == 'all_avr':
+                continue
+                
+            # Period header
+            period_avg = subjects.get('period_avr', 0)
+            period_title = f"Periodo {period} - Media: {period_avg:.1f}"
+            period_para = Paragraph(period_title, heading_style)
+            elements.append(period_para)
+            elements.append(Spacer(1, 0.3*cm))
+            
+            # Create table for subjects
+            table_data = [['Materia', 'Media', 'Voti']]
+            
+            for subject, data in subjects.items():
+                if subject == 'period_avr':
+                    continue
+                    
+                subject_avg = data.get('avr', 0)
+                grades_list = [str(g['decimalValue']) for g in data.get('grades', [])]
+                grades_str = ', '.join(grades_list)
+                
+                table_data.append([subject, f"{subject_avg:.1f}", grades_str])
+            
+            # Create and style table
+            if len(table_data) > 1:
+                table = Table(table_data, colWidths=[6*cm, 2*cm, 8*cm])
+                table.setStyle(TableStyle([
+                    ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#c83737')),
+                    ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                    ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+                    ('ALIGN', (1, 0), (1, -1), 'CENTER'),
+                    ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                    ('FONTSIZE', (0, 0), (-1, 0), 12),
+                    ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+                    ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+                    ('GRID', (0, 0), (-1, -1), 1, colors.black),
+                    ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+                    ('FONTSIZE', (0, 1), (-1, -1), 10),
+                    ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f5f5f5')]),
+                ]))
+                elements.append(table)
+                elements.append(Spacer(1, 0.8*cm))
+        
+        # Add footer
+        elements.append(Spacer(1, 1*cm))
+        footer_style = ParagraphStyle(
+            'Footer',
+            parent=styles['Normal'],
+            fontSize=8,
+            textColor=colors.grey,
+            alignment=TA_CENTER
+        )
+        footer = Paragraph("Generato da chemediaho - https://github.com/gablilli/chemediaho", footer_style)
+        elements.append(footer)
+        
+        # Build PDF
+        doc.build(elements)
+        
+        # Get PDF from buffer
+        pdf = buffer.getvalue()
+        buffer.close()
+        
+        # Create response
+        response = flask.make_response(pdf)
+        response.headers['Content-Type'] = 'application/pdf'
+        response.headers['Content-Disposition'] = f'attachment; filename=voti_{datetime.now().strftime("%Y%m%d_%H%M%S")}.pdf'
+        
+        return response
+        
+    except Exception as e:
+        print(f"Error generating PDF: {e}")
+        return flask.render_template('login.html', error="Errore durante l'esportazione del PDF. Riprova.")
+
     
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=5000)
