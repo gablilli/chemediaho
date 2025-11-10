@@ -3,6 +3,7 @@ import json
 import flask
 import os
 import secrets
+from datetime import timedelta
 
 app = flask.Flask(__name__)
 
@@ -42,6 +43,14 @@ def get_secret_key():
     return new_key
 
 app.secret_key = get_secret_key()
+app.permanent_session_lifetime = timedelta(days=30)  # Session lasts 30 days
+
+# Additional security configurations for sessions
+app.config.update(
+    SESSION_COOKIE_SECURE=os.environ.get('HTTPS_ENABLED', 'false').lower() == 'true',
+    SESSION_COOKIE_HTTPONLY=True,  # Prevent JavaScript access to session cookie
+    SESSION_COOKIE_SAMESITE='Lax'  # CSRF protection
+)
 
 @app.route('/manifest.json')
 def manifest():
@@ -53,6 +62,27 @@ def service_worker():
 
 @app.route('/')
 def home():
+    # Check if user has remember me enabled with stored credentials
+    if flask.session.get('remember_me') and 'user_id' in flask.session and 'user_pass' in flask.session:
+        try:
+            user_id = flask.session['user_id']
+            user_pass = flask.session['user_pass']
+            
+            # Try to authenticate and get fresh token
+            login_response = login(user_id, user_pass)
+            token = login_response["token"]
+            
+            if token:
+                # Update token in session
+                flask.session['token'] = token
+                student_id = "".join(filter(str.isdigit, user_id))
+                grades_avr = calculate_avr(get_grades(student_id, token))
+                return flask.render_template('grades.html', grades_avr=grades_avr)
+        except Exception as e:
+            # If auto-login fails, clear session and show login page
+            print(f"Auto-login failed: {e}")
+            flask.session.clear()
+    
     return flask.render_template('login.html')
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -63,11 +93,24 @@ def login_route():
     
     user_id = flask.request.form['user_id']
     user_pass = flask.request.form['user_pass']
+    remember_me = flask.request.form.get('remember_me') == 'on'
+    
     try:
         login_response = login(user_id, user_pass)
         token = login_response["token"]
         if token is None or token == "":
             return flask.render_template('login.html', error="Token non valido. Riprova.")
+        
+        # Store credentials and token in session if remember me is checked
+        if remember_me:
+            flask.session.permanent = True  # Make session last 30 days
+            flask.session['remember_me'] = True
+            flask.session['user_id'] = user_id
+            flask.session['user_pass'] = user_pass  # Stored encrypted in session cookie
+            flask.session['token'] = token
+        else:
+            flask.session.permanent = False  # Session expires when browser closes
+            flask.session['remember_me'] = False
         
         student_id = "".join(filter(str.isdigit, user_id))
         grades_avr = calculate_avr(get_grades(student_id, token))
@@ -82,7 +125,11 @@ def login_route():
         return flask.render_template('login.html', error="Errore di connessione. Verifica la tua connessione internet.")
     except Exception as e:
         return flask.render_template('login.html', error="Errore imprevisto. Riprova più tardi.")
-    
+
+@app.route('/logout', methods=['POST'])
+def logout():
+    flask.session.clear()
+    return flask.redirect('/')
 
 def login(user_id, user_pass):
     url = "https://web.spaggiari.eu/rest/v1/auth/login"
