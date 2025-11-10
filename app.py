@@ -3,7 +3,6 @@ import json
 import flask
 import os
 import secrets
-from datetime import timedelta
 
 app = flask.Flask(__name__)
 
@@ -43,15 +42,6 @@ def get_secret_key():
     return new_key
 
 app.secret_key = get_secret_key()
-app.permanent_session_lifetime = timedelta(days=30)  # Session lasts 30 days
-
-# Additional security configurations for sessions
-# Only require HTTPS cookies if explicitly enabled (for when running behind HTTPS proxy/load balancer)
-app.config.update(
-    SESSION_COOKIE_SECURE=os.environ.get('HTTPS_ENABLED', 'false').lower() == 'true',
-    SESSION_COOKIE_HTTPONLY=True,  # Prevent JavaScript access to session cookie
-    SESSION_COOKIE_SAMESITE='Lax'  # CSRF protection
-)
 
 @app.route('/manifest.json')
 def manifest():
@@ -63,20 +53,6 @@ def service_worker():
 
 @app.route('/')
 def home():
-    # Check if user has a valid session (remember me)
-    if 'user_id' in flask.session and 'token' in flask.session:
-        # Ensure session remains permanent if remember_me was enabled
-        if flask.session.get('remember_me'):
-            flask.session.permanent = True
-        try:
-            user_id = flask.session['user_id']
-            token = flask.session['token']
-            student_id = "".join(filter(str.isdigit, user_id))
-            grades_avr = calculate_avr(get_grades(student_id, token))
-            return flask.render_template('grades.html', grades_avr=grades_avr)
-        except (requests.exceptions.RequestException, KeyError, ValueError):
-            # If session is invalid, clear it and show login
-            flask.session.clear()
     return flask.render_template('login.html')
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -87,32 +63,25 @@ def login_route():
     
     user_id = flask.request.form['user_id']
     user_pass = flask.request.form['user_pass']
-    remember_me = flask.request.form.get('remember_me') == 'on'
     try:
         login_response = login(user_id, user_pass)
         token = login_response["token"]
         if token is None or token == "":
-            return "Invalid token", 401
-        
-        # Store credentials in session
-        flask.session['user_id'] = user_id
-        flask.session['token'] = token
-        
-        # Set session as permanent if remember me is checked
-        if remember_me:
-            flask.session['remember_me'] = True
-            flask.session.permanent = True  # Make session persistent
-        else:
-            flask.session['remember_me'] = False
-            flask.session.permanent = False  # Session expires when browser closes
+            return flask.render_template('login.html', error="Token non valido. Riprova.")
         
         student_id = "".join(filter(str.isdigit, user_id))
         grades_avr = calculate_avr(get_grades(student_id, token))
         return flask.render_template('grades.html', grades_avr=grades_avr)
+    except requests.exceptions.HTTPError as e:
+        # Handle 422 and other HTTP errors with user-friendly message
+        if e.response.status_code == 422:
+            return flask.render_template('login.html', error="Credenziali non valide. Verifica User ID e Password.")
+        else:
+            return flask.render_template('login.html', error=f"Errore di autenticazione ({e.response.status_code}). Riprova.")
     except requests.exceptions.RequestException as e:
-        return f"An error occurred: {e}", 500
+        return flask.render_template('login.html', error="Errore di connessione. Verifica la tua connessione internet.")
     except Exception as e:
-        return f"An error occurred: {e}", 500
+        return flask.render_template('login.html', error="Errore imprevisto. Riprova più tardi.")
     
 
 def login(user_id, user_pass):
@@ -135,11 +104,6 @@ def login(user_id, user_pass):
     else:
         response.raise_for_status()
 
-@app.route('/logout', methods=['POST'])
-def logout():
-    flask.session.clear()
-    return flask.redirect('/')
-                
 def get_periods(student_id, token):
     url = f"https://web.spaggiari.eu/rest/v1/students/{student_id}/periods"
     headers = {

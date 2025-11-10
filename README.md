@@ -9,7 +9,6 @@ sysregister ui-based.
 * 🔄 **supporto offline** - funziona anche senza connessione (con i dati scaricati precedentemente)
 * 🎨 **design responsive** - ottimizzato per mobile e desktop
 * 📊 **calcolo media** - visualizza automaticamente la media dei voti
-* 🔐 **remember me** - rimani autenticato senza dover reinserire le credenziali ogni volta
 * 🆓 **codice 100% free and opensource con controllo codeql** - così puoi stare tranquillo.
 
 ## installazione
@@ -87,22 +86,9 @@ sudo ufw allow 5000
 
 ## configurazione avanzata
 
-### https e sicurezza dei cookie
+### chiave segreta flask
 
-di default, l'app funziona su http (adatto per uso locale/domestico). se esegui l'app dietro un proxy https o un load balancer, imposta la variabile d'ambiente `HTTPS_ENABLED=true`:
-
-```bash
-# in compose.yml, aggiungi:
-environment:
-  - FLASK_ENV=production
-  - HTTPS_ENABLED=true
-```
-
-questo abiliterà il flag `Secure` sui cookie di sessione, garantendo che vengano inviati solo su connessioni https.
-
-### chiave segreta della sessione
-
-l'app genera automaticamente una chiave segreta (`secret_key.txt`) al primo avvio e la riutilizza per mantenere valide le sessioni anche dopo i riavvii. questa chiave:
+l'app genera automaticamente una chiave segreta (`secret_key.txt`) al primo avvio per uso interno di Flask. questa chiave:
 - è salvata in `secret_key.txt` nella directory dell'app con permessi restrittivi (600 - solo proprietario può leggere/scrivere)
 - non deve essere committata su git (già esclusa da .gitignore)
 - in docker, è persistita tramite volume mount per funzionare anche dopo i restart dei container
