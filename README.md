@@ -105,7 +105,6 @@ l'app genera automaticamente una chiave segreta (`secret_key.txt`) al primo avvi
 - è salvata in `secret_key.txt` nella directory dell'app con permessi restrittivi (600 - solo proprietario può leggere/scrivere)
 - non deve essere committata su git (già esclusa da .gitignore)
 - in docker, è persistita tramite volume mount per funzionare anche dopo i restart dei container
-- viene usata per criptare i cookie di sessione (incluse le credenziali quando "Ricordami" è attivo)
 
 #### note di sicurezza
 
