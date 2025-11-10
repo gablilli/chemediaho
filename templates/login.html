@@ -331,7 +331,7 @@
             </div>
           </div>
 
-          <div class="form-group" style="display: flex; align-items: center; gap: 8px;">
+          <div class="form-group" style="display: flex; align-items: center; gap: 8px; margin-bottom: 16px;">
             <input 
               type="checkbox" 
               id="remember_me" 
@@ -343,7 +343,7 @@
             </label>
           </div>
 
-          <div class="error-message" id="errorMessage"></div>
+          <div class="error-message" id="errorMessage">{% if error %}{{ error }}{% endif %}</div>
 
           <button type="submit" class="btn-submit" id="submitBtn">
             Accedi
@@ -402,13 +402,6 @@
         submitBtn.disabled = true;
         submitBtn.textContent = 'Accesso...';
       });
-
-      // Check for error in URL (if redirected back with error)
-      const urlParams = new URLSearchParams(window.location.search);
-      const error = urlParams.get('error');
-      if (error) {
-        errorMessage.textContent = decodeURIComponent(error);
-      }
 
       // Register Service Worker for PWA
       if ('serviceWorker' in navigator) {

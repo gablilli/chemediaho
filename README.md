@@ -9,7 +9,7 @@ sysregister ui-based.
 * 🔄 **supporto offline** - funziona anche senza connessione (con i dati scaricati precedentemente)
 * 🎨 **design responsive** - ottimizzato per mobile e desktop
 * 📊 **calcolo media** - visualizza automaticamente la media dei voti
-* 🔐 **remember me** - rimani autenticato senza dover reinserire le credenziali ogni volta
+* 🔐 **remember me** - rimani autenticato automaticamente senza dover reinserire le credenziali ogni volta
 * 🆓 **codice 100% free and opensource con controllo codeql** - così puoi stare tranquillo.
 
 ## installazione
@@ -100,17 +100,19 @@ environment:
 
 questo abiliterà il flag `Secure` sui cookie di sessione, garantendo che vengano inviati solo su connessioni https.
 
-### chiave segreta della sessione
+### chiave segreta e sessioni
 
-l'app genera automaticamente una chiave segreta (`secret_key.txt`) al primo avvio e la riutilizza per mantenere valide le sessioni anche dopo i riavvii. questa chiave:
+l'app genera automaticamente una chiave segreta (`secret_key.txt`) al primo avvio per gestire le sessioni in modo sicuro. questa chiave:
 - è salvata in `secret_key.txt` nella directory dell'app con permessi restrittivi (600 - solo proprietario può leggere/scrivere)
 - non deve essere committata su git (già esclusa da .gitignore)
 - in docker, è persistita tramite volume mount per funzionare anche dopo i restart dei container
+- viene usata per criptare i cookie di sessione (incluse le credenziali quando "Ricordami" è attivo)
 
 #### note di sicurezza
 
 ⚠️ **importante per la sicurezza:**
 - la chiave è salvata in chiaro sul file system - proteggi l'accesso al file
+- le credenziali nel cookie di sessione sono criptate con questa chiave
 - per ambienti di produzione, considera l'uso di gestori di segreti esterni (es. Docker secrets, Kubernetes secrets, HashiCorp Vault)
 - usa sempre la variabile d'ambiente `SECRET_KEY` in produzione invece del file
 - assicurati che il file `secret_key.txt` sia leggibile solo dall'utente che esegue l'app (permessi 600)
