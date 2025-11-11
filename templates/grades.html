@@ -46,6 +46,7 @@
       body {
         margin: 0;
         padding: 0;
+        padding-bottom: 80px; /* Space for bottom navigation */
         min-height: 100vh;
         background: var(--background);
         color: var(--text);
@@ -404,6 +405,60 @@
         opacity: 0.6;
       }
 
+      /* Bottom Navigation Bar */
+      .bottom-nav {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 80px;
+        background: var(--background);
+        box-shadow: 0 -4px 12px rgba(240, 51, 51, 0.3);
+        z-index: 100;
+        display: flex;
+        align-items: center;
+        justify-content: space-around;
+        padding-top: 16px;
+      }
+
+      .nav-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-decoration: none;
+        color: var(--text);
+        transition: all 0.3s ease;
+        opacity: 0.6;
+        flex: 1;
+      }
+
+      .nav-item.active {
+        opacity: 1;
+      }
+
+      .nav-item:hover {
+        opacity: 1;
+      }
+
+      .nav-icon {
+        width: 28px;
+        height: 28px;
+        margin-bottom: 4px;
+        stroke: currentColor;
+        fill: none;
+      }
+
+      .nav-item.active .nav-icon {
+        fill: var(--accent);
+        stroke: var(--accent);
+      }
+
+      .nav-label {
+        font-size: 12px;
+        font-weight: 600;
+      }
+
       @media (max-width: 768px) {
         .page-title {
           font-size: 24px;
@@ -491,6 +546,33 @@
       </div>
       {% endfor %}
     </div>
+
+    <!-- Bottom Navigation Bar -->
+    <nav class="bottom-nav">
+      <a href="/grades" class="nav-item active">
+        <svg class="nav-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+          <polyline points="9 22 9 12 15 12 15 22"/>
+        </svg>
+        <span class="nav-label">Medie</span>
+      </a>
+      <a href="/charts" class="nav-item">
+        <svg class="nav-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="20" x2="18" y2="10"/>
+          <line x1="12" y1="20" x2="12" y2="4"/>
+          <line x1="6" y1="20" x2="6" y2="14"/>
+        </svg>
+        <span class="nav-label">Grafici</span>
+      </a>
+      <a href="/export" class="nav-item">
+        <svg class="nav-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="7 10 12 15 17 10"/>
+          <line x1="12" y1="15" x2="12" y2="3"/>
+        </svg>
+        <span class="nav-label">Esporta</span>
+      </a>
+    </nav>
 
     <!-- Grade Details Modal -->
     <div class="modal" id="gradeModal">
