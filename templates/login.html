@@ -250,6 +250,216 @@
         min-height: 20px;
       }
 
+      /* PWA Install Banner */
+      .pwa-banner {
+        width: 100%;
+        max-width: 400px;
+        margin-bottom: 16px;
+        position: relative;
+        overflow: hidden;
+        border-radius: 12px;
+        background: #8b5cf6;
+        padding: 16px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+      }
+
+      .pwa-banner::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background-color: #7c3aed;
+        opacity: 0.25;
+        z-index: -1;
+      }
+
+      .pwa-banner:hover {
+        background: #7c3aed;
+        transform: translateY(-2px);
+      }
+
+      .pwa-banner-content {
+        flex: 1;
+      }
+
+      .pwa-banner-title {
+        font-weight: 600;
+        font-size: 16px;
+        color: white;
+        margin-bottom: 4px;
+      }
+
+      .pwa-banner-subtitle {
+        font-size: 14px;
+        color: white;
+        opacity: 0.8;
+      }
+
+      .pwa-banner-icon {
+        color: white;
+        width: 24px;
+        height: 24px;
+      }
+
+      .pwa-banner.hidden {
+        display: none;
+      }
+
+      /* iOS Install Modal */
+      .ios-modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.7);
+        z-index: 2000;
+        align-items: flex-end;
+        justify-content: center;
+      }
+
+      .ios-modal.show {
+        display: flex;
+      }
+
+      .ios-drawer {
+        background: var(--background);
+        border-radius: 12px 12px 0 0;
+        max-width: 600px;
+        width: 100%;
+        max-height: 80vh;
+        overflow-y: auto;
+        animation: slideUp 0.3s ease-out;
+      }
+
+      @keyframes slideUp {
+        from {
+          transform: translateY(100%);
+        }
+        to {
+          transform: translateY(0);
+        }
+      }
+
+      .ios-drawer-header {
+        padding: 20px;
+        border-bottom: 1px solid var(--secondary);
+      }
+
+      .ios-drawer-title {
+        font-size: 24px;
+        font-weight: 600;
+        color: var(--text);
+        margin-bottom: 8px;
+      }
+
+      .ios-drawer-description {
+        font-size: 14px;
+        color: var(--text);
+        opacity: 0.7;
+      }
+
+      .ios-drawer-content {
+        padding: 20px;
+      }
+
+      .ios-step {
+        margin-bottom: 24px;
+      }
+
+      .ios-step-header {
+        display: flex;
+        gap: 12px;
+        margin-bottom: 12px;
+        align-items: flex-start;
+      }
+
+      .ios-step-number {
+        width: 32px;
+        height: 32px;
+        background: var(--accent);
+        color: white;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 600;
+        flex-shrink: 0;
+      }
+
+      .ios-step-text {
+        color: var(--text);
+        font-size: 14px;
+        line-height: 1.5;
+        opacity: 0.9;
+      }
+
+      .ios-step-image {
+        background: var(--secondary);
+        border-radius: 12px;
+        padding: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 160px;
+      }
+
+      .ios-step-image svg {
+        width: 100px;
+        height: 100px;
+        fill: var(--text);
+      }
+
+      .ios-step-image.success {
+        border: 2px solid var(--accent);
+      }
+
+      .ios-drawer-footer {
+        padding: 20px;
+        border-top: 1px solid var(--secondary);
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .ios-drawer-btn {
+        width: 100%;
+        padding: 12px;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: opacity 0.2s;
+        border: none;
+        font-size: 16px;
+      }
+
+      .ios-drawer-btn-primary {
+        background: var(--primary);
+        color: white;
+      }
+
+      .ios-drawer-btn-primary:hover {
+        opacity: 0.8;
+      }
+
+      .ios-drawer-btn-secondary {
+        background: transparent;
+        color: var(--text);
+        text-decoration: underline;
+      }
+
+      .ios-drawer-btn-secondary:hover {
+        opacity: 0.7;
+      }
+
       @media (max-width: 480px) {
         .login-container {
           padding: 16px;
@@ -300,6 +510,19 @@
       </div>
 
       <div class="form-container">
+        <!-- PWA Install Banner -->
+        <div id="pwaBanner" class="pwa-banner hidden">
+          <div class="pwa-banner-content">
+            <div class="pwa-banner-title">Installa l'applicazione!</div>
+            <div class="pwa-banner-subtitle">Clicca per installare</div>
+          </div>
+          <svg class="pwa-banner-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="7 10 12 15 17 10"/>
+            <line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+        </div>
+
         <form action="/login" method="post" id="loginForm">
           <div class="form-group">
             <label for="user_id" class="form-label">User ID</label>
@@ -345,7 +568,141 @@
       </div>
     </div>
 
+    <!-- iOS Install Modal -->
+    <div id="iosModal" class="ios-modal">
+      <div class="ios-drawer">
+        <div class="ios-drawer-header">
+          <div class="ios-drawer-title">Installa l'applicazione su iOS</div>
+          <div class="ios-drawer-description">È semplice, segui questi passaggi.</div>
+        </div>
+        <div class="ios-drawer-content">
+          <div class="ios-step">
+            <div class="ios-step-header">
+              <div class="ios-step-number">1</div>
+              <div class="ios-step-text">
+                Trova questa icona nella barra del tuo browser e cliccaci sopra. (su Safari la trovi in fondo allo schermo)
+              </div>
+            </div>
+            <div class="ios-step-image">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 50 50">
+                <path d="M30.3 13.7L25 8.4l-5.3 5.3-1.4-1.4L25 5.6l6.7 6.7z" />
+                <path d="M24 7h2v21h-2z" />
+                <path d="M35 40H15c-1.7 0-3-1.3-3-3V19c0-1.7 1.3-3 3-3h7v2h-7c-.6 0-1 .4-1 1v18c0 .6.4 1 1 1h20c.6 0 1-.4 1-1V19c0-.6-.4-1-1-1h-7v-2h7c1.7 0 3 1.3 3 3v18c0 1.7-1.3 3-3 3z" />
+              </svg>
+            </div>
+          </div>
+          <div class="ios-step">
+            <div class="ios-step-header">
+              <div class="ios-step-number">2</div>
+              <div class="ios-step-text">
+                Ora uscirà il popup per condividere, scorri in basso fino a trovare "Aggiungi a schermata home". Safari si chiuderà e ti porterà alla home, trova l'app e cliccaci sopra.
+              </div>
+            </div>
+            <div class="ios-step-image">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="5" y="2" width="14" height="20" rx="2" ry="2"/>
+                <line x1="12" y1="18" x2="12.01" y2="18"/>
+              </svg>
+            </div>
+          </div>
+          <div class="ios-step">
+            <div class="ios-step-header">
+              <div class="ios-step-number">3</div>
+              <div class="ios-step-text">
+                Ecco fatto! Ora hai l'app installata nel tuo dispositivo. Per completare clicca il pulsante "Fatto, chiudi".
+              </div>
+            </div>
+            <div class="ios-step-image success">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="20 6 9 17 4 12"/>
+              </svg>
+            </div>
+          </div>
+        </div>
+        <div class="ios-drawer-footer">
+          <button class="ios-drawer-btn ios-drawer-btn-primary" onclick="closeIOSModal(true)">
+            Fatto, chiudi
+          </button>
+          <button class="ios-drawer-btn ios-drawer-btn-secondary" onclick="closeIOSModal(false)">
+            Lo faccio dopo
+          </button>
+        </div>
+      </div>
+    </div>
+
     <script>
+      // PWA Install Banner Logic
+      let deferredPrompt;
+      const pwaBanner = document.getElementById('pwaBanner');
+      const iosModal = document.getElementById('iosModal');
+      
+      // Check if already installed
+      const isInstalled = localStorage.getItem('pwaInstalled') === 'true';
+      
+      // Detect platform
+      function getPlatform() {
+        const userAgent = navigator.userAgent.toLowerCase();
+        if (/iphone|ipad|ipod/.test(userAgent)) {
+          return 'ios';
+        } else if (/android/.test(userAgent)) {
+          return 'android';
+        }
+        return 'desktop';
+      }
+      
+      const platform = getPlatform();
+      
+      // Show banner if not installed
+      if (!isInstalled) {
+        // For Android/Desktop with beforeinstallprompt support
+        window.addEventListener('beforeinstallprompt', (e) => {
+          e.preventDefault();
+          deferredPrompt = e;
+          pwaBanner.classList.remove('hidden');
+        });
+        
+        // For iOS or if beforeinstallprompt not fired
+        if (platform === 'ios' || (platform === 'android' && !deferredPrompt)) {
+          // Show banner after a short delay
+          setTimeout(() => {
+            pwaBanner.classList.remove('hidden');
+          }, 1000);
+        }
+      }
+      
+      // Handle banner click
+      pwaBanner.addEventListener('click', async () => {
+        if (deferredPrompt) {
+          // Android/Desktop with native prompt
+          deferredPrompt.prompt();
+          const { outcome } = await deferredPrompt.userChoice;
+          if (outcome === 'accepted') {
+            localStorage.setItem('pwaInstalled', 'true');
+            pwaBanner.classList.add('hidden');
+          }
+          deferredPrompt = null;
+        } else if (platform === 'ios') {
+          // Show iOS instructions
+          iosModal.classList.add('show');
+        }
+      });
+      
+      // Close iOS modal
+      function closeIOSModal(installed) {
+        iosModal.classList.remove('show');
+        if (installed) {
+          localStorage.setItem('pwaInstalled', 'true');
+          pwaBanner.classList.add('hidden');
+        }
+      }
+      
+      // Close modal on backdrop click
+      iosModal.addEventListener('click', (e) => {
+        if (e.target === iosModal) {
+          closeIOSModal(false);
+        }
+      });
+
       // Theme management
       const themeToggle = document.getElementById('themeToggle');
       const root = document.documentElement;
