@@ -431,6 +431,10 @@
         transition: all 0.3s ease;
         opacity: 0.6;
         flex: 1;
+        background: none;
+        border: none;
+        cursor: pointer;
+        font-family: inherit;
       }
 
       .nav-item.active {
@@ -479,6 +483,10 @@
           top: auto;
           bottom: 20px;
           right: 20px;
+        }
+
+        .logout-btn {
+          display: none;
         }
       }
     </style>
@@ -572,6 +580,14 @@
         </svg>
         <span class="nav-label">Esporta</span>
       </a>
+      <button type="button" class="nav-item" id="logoutNavBtn">
+        <svg class="nav-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+          <polyline points="16 17 21 12 16 7"/>
+          <line x1="21" y1="12" x2="9" y2="12"/>
+        </svg>
+        <span class="nav-label">Esci</span>
+      </button>
     </nav>
 
     <!-- Grade Details Modal -->
@@ -663,6 +679,18 @@
             .catch(error => {
               console.log('Service Worker registration failed:', error);
             });
+        });
+      }
+
+      // Handle logout from bottom nav
+      const logoutNavBtn = document.getElementById('logoutNavBtn');
+      if (logoutNavBtn) {
+        logoutNavBtn.addEventListener('click', () => {
+          const form = document.createElement('form');
+          form.method = 'POST';
+          form.action = '/logout';
+          document.body.appendChild(form);
+          form.submit();
         });
       }
     </script>
