@@ -191,7 +191,7 @@ def export_pdf():
         from reportlab.lib.units import cm
         from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
         from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-        from reportlab.lib.enums import TA_CENTER, TA_LEFT
+        from reportlab.lib.enums import TA_CENTER
         
         # Create PDF in memory
         output = io.BytesIO()
@@ -228,11 +228,15 @@ def export_pdf():
         elements.append(Paragraph(avg_text, styles['Normal']))
         elements.append(Spacer(1, 20))
         
-        # Add grades by period
-        for period in sorted(grades_avr.keys()):
-            if period == 'all_avr':
-                continue
-            
+        # Add grades by period - sort numerically
+        periods = [k for k in grades_avr.keys() if k != 'all_avr']
+        # Sort periods numerically if they are numeric strings
+        try:
+            periods = sorted(periods, key=lambda x: int(x))
+        except (ValueError, TypeError):
+            periods = sorted(periods)
+        
+        for period in periods:
             elements.append(Paragraph(f"Periodo {period}", heading_style))
             
             period_avg = grades_avr[period].get('period_avr', 0)
@@ -285,6 +289,10 @@ def export_pdf():
     except ImportError:
         # Fallback if reportlab is not installed
         return flask.render_template('export.html', error="PDF export richiede l'installazione di reportlab. Usa CSV invece.")
+    except Exception as e:
+        # Log the error and return user-friendly message
+        print(f"Error generating PDF: {e}")
+        return flask.render_template('export.html', error=f"Errore durante la generazione del PDF. Riprova o usa CSV.")
 
 def login(user_id, user_pass):
     url = "https://web.spaggiari.eu/rest/v1/auth/login"

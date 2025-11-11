@@ -223,6 +223,10 @@
         transition: all 0.3s ease;
         opacity: 0.6;
         flex: 1;
+        background: none;
+        border: none;
+        cursor: pointer;
+        font-family: inherit;
       }
 
       .nav-item.active {
@@ -265,6 +269,10 @@
           bottom: 100px;
           right: 20px;
         }
+
+        .logout-btn {
+          display: none;
+        }
       }
     </style>
   </head>
@@ -292,24 +300,14 @@
     </div>
 
     <div class="container">
-      <!-- Overall Average Trend -->
-      <div class="chart-section">
-        <div class="chart-card">
-          <h2 class="chart-title">📈 Andamento Media Generale</h2>
-          <div class="chart-container">
-            <canvas id="overallChart"></canvas>
-          </div>
-        </div>
-      </div>
-
-      <!-- Subject Grades Trend -->
+      <!-- Subject Grades Trend - Now primary chart -->
       <div class="chart-section">
         <div class="chart-card">
           <h2 class="chart-title">📊 Andamento per Materia</h2>
           <div class="subject-selector" id="subjectSelector">
             <!-- Subject buttons will be added here by JavaScript -->
           </div>
-          <div class="chart-container">
+          <div class="chart-container" style="position: relative;">
             <canvas id="subjectChart"></canvas>
           </div>
         </div>
@@ -341,6 +339,14 @@
         </svg>
         <span class="nav-label">Esporta</span>
       </a>
+      <button type="button" class="nav-item" id="logoutNavBtn">
+        <svg class="nav-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+          <polyline points="16 17 21 12 16 7"/>
+          <line x1="21" y1="12" x2="9" y2="12"/>
+        </svg>
+        <span class="nav-label">Esci</span>
+      </button>
     </nav>
 
     <script>
@@ -386,45 +392,194 @@
       Chart.defaults.color = textColor;
       Chart.defaults.borderColor = gridColor;
 
-      // Overall Average Chart
-      function createOverallChart() {
-        const periods = Object.keys(gradesData).filter(key => key !== 'all_avr');
-        const averages = periods.map(period => gradesData[period].period_avr);
+      // Prepare data for all subjects across periods
+      const periods = Object.keys(gradesData).filter(key => key !== 'all_avr');
+      
+      // Get all unique subjects
+      const allSubjects = new Set();
+      periods.forEach(period => {
+        Object.keys(gradesData[period]).forEach(subject => {
+          if (subject !== 'period_avr') {
+            allSubjects.add(subject);
+          }
+        });
+      });
+
+      // Generate distinct colors for each subject
+      const subjectColors = [
+        '#4facfe', '#43e97b', '#fa709a', '#fee140',
+        '#30cfd0', '#a8edea', '#ff6e7f', '#bfe9ff',
+        '#c471ed', '#f64f59', '#12c2e9', '#f093fb',
+        '#4facfe', '#00f2fe', '#fa709a', '#ffd200'
+      ];
+
+      let subjectChart = null;
+      let selectedSubjects = Array.from(allSubjects);
+
+      // Prepare subject data structure
+      function prepareSubjectData() {
+        const subjectData = {};
         
-        const ctx = document.getElementById('overallChart').getContext('2d');
-        new Chart(ctx, {
+        allSubjects.forEach(subject => {
+          subjectData[subject] = {
+            grades: [],
+            labels: []
+          };
+          
+          periods.forEach(period => {
+            if (gradesData[period][subject]) {
+              const grades = gradesData[period][subject].grades;
+              grades.forEach((grade, index) => {
+                subjectData[subject].grades.push(grade.decimalValue);
+                subjectData[subject].labels.push(`P${period}-V${index + 1}`);
+              });
+            }
+          });
+        });
+        
+        return subjectData;
+      }
+
+      // Prepare overall average data by period
+      function prepareOverallData() {
+        const overallData = {
+          labels: [],
+          values: []
+        };
+        
+        periods.forEach(period => {
+          overallData.labels.push(`Periodo ${period}`);
+          overallData.values.push(gradesData[period].period_avr);
+        });
+        
+        return overallData;
+      }
+
+      const subjectDataCache = prepareSubjectData();
+      const overallData = prepareOverallData();
+
+      function createCombinedChart(selectedSubjects) {
+        const ctx = document.getElementById('subjectChart').getContext('2d');
+        
+        if (subjectChart) {
+          subjectChart.destroy();
+        }
+
+        // Prepare datasets for selected subjects
+        const datasets = [];
+        
+        // Add overall average as background (first dataset, will be drawn first)
+        datasets.push({
+          label: 'Media Generale',
+          data: overallData.values,
+          borderColor: 'rgba(240, 51, 51, 0.3)',
+          backgroundColor: 'rgba(240, 51, 51, 0.05)',
+          borderWidth: 2,
+          fill: true,
+          tension: 0.4,
+          pointRadius: 4,
+          pointHoverRadius: 6,
+          pointBackgroundColor: 'rgba(240, 51, 51, 0.5)',
+          borderDash: [5, 5],
+          order: 2 // Draw in background
+        });
+
+        // Add selected subjects
+        selectedSubjects.forEach((subject, index) => {
+          const data = subjectDataCache[subject];
+          const colorIndex = Array.from(allSubjects).indexOf(subject) % subjectColors.length;
+          
+          datasets.push({
+            label: subject,
+            data: data.grades,
+            borderColor: subjectColors[colorIndex],
+            backgroundColor: subjectColors[colorIndex] + '20',
+            borderWidth: 3,
+            fill: false,
+            tension: 0.4,
+            pointRadius: 5,
+            pointHoverRadius: 7,
+            pointBackgroundColor: subjectColors[colorIndex],
+            pointBorderColor: '#fff',
+            pointBorderWidth: 2,
+            order: 1 // Draw in foreground
+          });
+        });
+
+        // Collect all labels
+        let allLabels = [];
+        selectedSubjects.forEach(subject => {
+          allLabels = allLabels.concat(subjectDataCache[subject].labels);
+        });
+        
+        // Use unique labels, preserving order
+        const uniqueLabels = [...new Set(allLabels)];
+        
+        // Prepare data arrays matching labels
+        const finalDatasets = datasets.map((dataset, idx) => {
+          if (idx === 0) {
+            // For overall average, expand to match all labels
+            const expandedData = uniqueLabels.map(label => {
+              const periodMatch = label.match(/P(\d+)/);
+              if (periodMatch) {
+                const periodIdx = periods.indexOf(periodMatch[1]);
+                return periodIdx >= 0 ? overallData.values[periodIdx] : null;
+              }
+              return null;
+            });
+            return { ...dataset, data: expandedData };
+          } else {
+            // For subjects, map their data to the labels
+            const subject = selectedSubjects[idx - 1];
+            const subjectLabels = subjectDataCache[subject].labels;
+            const subjectGrades = subjectDataCache[subject].grades;
+            
+            const mappedData = uniqueLabels.map(label => {
+              const labelIdx = subjectLabels.indexOf(label);
+              return labelIdx >= 0 ? subjectGrades[labelIdx] : null;
+            });
+            
+            return { ...dataset, data: mappedData };
+          }
+        });
+        
+        subjectChart = new Chart(ctx, {
           type: 'line',
           data: {
-            labels: periods.map(p => `Periodo ${p}`),
-            datasets: [{
-              label: 'Media Generale',
-              data: averages,
-              borderColor: '#f03333',
-              backgroundColor: 'rgba(240, 51, 51, 0.1)',
-              borderWidth: 3,
-              fill: true,
-              tension: 0.4,
-              pointRadius: 6,
-              pointHoverRadius: 8,
-              pointBackgroundColor: '#f03333',
-              pointBorderColor: '#fff',
-              pointBorderWidth: 2
-            }]
+            labels: uniqueLabels,
+            datasets: finalDatasets
           },
           options: {
             responsive: true,
             maintainAspectRatio: false,
+            interaction: {
+              mode: 'index',
+              intersect: false,
+            },
             plugins: {
               legend: {
-                display: false
+                display: true,
+                position: 'bottom',
+                labels: {
+                  boxWidth: 20,
+                  padding: 15,
+                  usePointStyle: true
+                }
               },
               tooltip: {
                 backgroundColor: 'rgba(0, 0, 0, 0.8)',
                 padding: 12,
-                displayColors: false,
+                displayColors: true,
                 callbacks: {
                   label: function(context) {
-                    return 'Media: ' + context.parsed.y.toFixed(2);
+                    let label = context.dataset.label || '';
+                    if (label) {
+                      label += ': ';
+                    }
+                    if (context.parsed.y !== null) {
+                      label += context.parsed.y.toFixed(2);
+                    }
+                    return label;
                   }
                 }
               }
@@ -444,80 +599,10 @@
               x: {
                 grid: {
                   display: false
-                }
-              }
-            }
-          }
-        });
-      }
-
-      // Subject Chart
-      let subjectChart = null;
-      let currentSubject = null;
-
-      function createSubjectChart(subjectName, subjectData) {
-        const grades = subjectData.grades;
-        const ctx = document.getElementById('subjectChart').getContext('2d');
-        
-        if (subjectChart) {
-          subjectChart.destroy();
-        }
-        
-        subjectChart = new Chart(ctx, {
-          type: 'bar',
-          data: {
-            labels: grades.map((_, index) => `Voto ${index + 1}`),
-            datasets: [{
-              label: subjectName,
-              data: grades.map(g => g.decimalValue),
-              backgroundColor: grades.map(g => {
-                if (g.decimalValue >= 8) return '#4caf50';
-                if (g.decimalValue >= 7) return '#4facfe';
-                if (g.decimalValue >= 6) return '#ffa500';
-                return '#f03333';
-              }),
-              borderColor: 'rgba(255, 255, 255, 0.8)',
-              borderWidth: 2,
-              borderRadius: 8
-            }]
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-              legend: {
-                display: false
-              },
-              tooltip: {
-                backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                padding: 12,
-                displayColors: false,
-                callbacks: {
-                  label: function(context) {
-                    const grade = grades[context.dataIndex];
-                    return [
-                      'Voto: ' + grade.decimalValue,
-                      'Data: ' + grade.evtDate
-                    ];
-                  }
-                }
-              }
-            },
-            scales: {
-              y: {
-                beginAtZero: false,
-                min: 2,
-                max: 10,
-                ticks: {
-                  stepSize: 1
                 },
-                grid: {
-                  color: gridColor
-                }
-              },
-              x: {
-                grid: {
-                  display: false
+                ticks: {
+                  maxRotation: 45,
+                  minRotation: 45
                 }
               }
             }
@@ -528,56 +613,65 @@
       // Create subject selector buttons
       function createSubjectButtons() {
         const selector = document.getElementById('subjectSelector');
-        const periods = Object.keys(gradesData).filter(key => key !== 'all_avr');
         
-        // Get all unique subjects
-        const subjects = new Set();
-        periods.forEach(period => {
-          Object.keys(gradesData[period]).forEach(subject => {
-            if (subject !== 'period_avr') {
-              subjects.add(subject);
-            }
-          });
-        });
+        // Add "All" button
+        const allBtn = document.createElement('button');
+        allBtn.className = 'subject-btn active';
+        allBtn.textContent = 'Tutte';
+        allBtn.onclick = () => {
+          document.querySelectorAll('.subject-btn').forEach(b => b.classList.remove('active'));
+          allBtn.classList.add('active');
+          selectedSubjects = Array.from(allSubjects);
+          createCombinedChart(selectedSubjects);
+        };
+        selector.appendChild(allBtn);
         
-        // Create buttons for each subject
-        subjects.forEach((subject, index) => {
+        // Add individual subject buttons
+        allSubjects.forEach(subject => {
           const btn = document.createElement('button');
-          btn.className = 'subject-btn' + (index === 0 ? ' active' : '');
+          btn.className = 'subject-btn';
           btn.textContent = subject;
           btn.onclick = () => {
-            // Remove active class from all buttons
-            document.querySelectorAll('.subject-btn').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
+            const isActive = btn.classList.contains('active');
             
-            // Find subject data across all periods
-            const subjectData = { grades: [] };
-            periods.forEach(period => {
-              if (gradesData[period][subject]) {
-                subjectData.grades.push(...gradesData[period][subject].grades);
-              }
-            });
+            // If clicking on "All", deselect it
+            if (allBtn.classList.contains('active')) {
+              allBtn.classList.remove('active');
+              selectedSubjects = [];
+            }
             
-            createSubjectChart(subject, subjectData);
+            // Toggle this button
+            if (isActive) {
+              btn.classList.remove('active');
+              selectedSubjects = selectedSubjects.filter(s => s !== subject);
+            } else {
+              btn.classList.add('active');
+              selectedSubjects.push(subject);
+            }
+            
+            // If no subjects selected, select all
+            if (selectedSubjects.length === 0) {
+              allBtn.classList.add('active');
+              selectedSubjects = Array.from(allSubjects);
+            }
+            
+            // If all subjects selected, activate "All" button
+            if (selectedSubjects.length === allSubjects.size) {
+              allBtn.classList.add('active');
+              document.querySelectorAll('.subject-btn').forEach(b => {
+                if (b !== allBtn) b.classList.remove('active');
+              });
+            }
+            
+            createCombinedChart(selectedSubjects);
           };
           selector.appendChild(btn);
-          
-          // Load first subject by default
-          if (index === 0) {
-            const subjectData = { grades: [] };
-            periods.forEach(period => {
-              if (gradesData[period][subject]) {
-                subjectData.grades.push(...gradesData[period][subject].grades);
-              }
-            });
-            createSubjectChart(subject, subjectData);
-          }
         });
       }
 
-      // Initialize charts
-      createOverallChart();
+      // Initialize chart with all subjects
       createSubjectButtons();
+      createCombinedChart(selectedSubjects);
 
       // Update charts when theme changes
       themeToggle.addEventListener('click', () => {
@@ -585,6 +679,18 @@
           location.reload();
         }, 100);
       });
+
+      // Handle logout from bottom nav
+      const logoutNavBtn = document.getElementById('logoutNavBtn');
+      if (logoutNavBtn) {
+        logoutNavBtn.addEventListener('click', () => {
+          const form = document.createElement('form');
+          form.method = 'POST';
+          form.action = '/logout';
+          document.body.appendChild(form);
+          form.submit();
+        });
+      }
     </script>
   </body>
 </html>
