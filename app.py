@@ -3,6 +3,9 @@ import json
 import flask
 import os
 import secrets
+import csv
+import io
+from datetime import datetime
 
 app = flask.Flask(__name__)
 
@@ -77,12 +80,17 @@ def login_route():
         if token is None or token == "":
             return flask.render_template('login.html', error="Token non valido. Riprova.")
         
-        # Store token in session for the grades page
+        # Store token in session
         flask.session['token'] = token
         
         student_id = "".join(filter(str.isdigit, user_id))
         grades_avr = calculate_avr(get_grades(student_id, token))
-        return flask.render_template('grades.html', grades_avr=grades_avr)
+        
+        # Store grades in session for other pages
+        flask.session['grades_avr'] = grades_avr
+        
+        # Redirect to grades page instead of rendering template
+        return flask.redirect('/grades')
     except requests.exceptions.HTTPError as e:
         # Handle 422 and other HTTP errors with user-friendly message
         if e.response.status_code == 422:
@@ -98,6 +106,185 @@ def login_route():
 def logout():
     flask.session.clear()
     return flask.redirect('/')
+
+@app.route('/grades')
+def grades_page():
+    """Display grades page - requires active session with token"""
+    if 'grades_avr' not in flask.session:
+        return flask.redirect('/')
+    
+    grades_avr = flask.session['grades_avr']
+    return flask.render_template('grades.html', grades_avr=grades_avr)
+
+@app.route('/charts')
+def charts_page():
+    """Display charts page - requires active session with grades data"""
+    if 'grades_avr' not in flask.session:
+        return flask.redirect('/')
+    
+    grades_avr = flask.session['grades_avr']
+    return flask.render_template('charts.html', grades_avr=grades_avr)
+
+@app.route('/export')
+def export_page():
+    """Display export page - requires active session"""
+    if 'token' not in flask.session:
+        return flask.redirect('/')
+    
+    return flask.render_template('export.html')
+
+@app.route('/export/csv', methods=['POST'])
+def export_csv():
+    """Export grades as CSV file"""
+    if 'grades_avr' not in flask.session:
+        return flask.redirect('/')
+    
+    grades_avr = flask.session['grades_avr']
+    
+    # Create CSV in memory
+    output = io.StringIO()
+    writer = csv.writer(output)
+    
+    # Write header
+    writer.writerow(['Periodo', 'Materia', 'Voto', 'Data', 'Tipo', 'Docente', 'Note'])
+    
+    # Write data
+    for period in sorted(grades_avr.keys()):
+        if period == 'all_avr':
+            continue
+        
+        for subject, data in grades_avr[period].items():
+            if subject == 'period_avr':
+                continue
+            
+            for grade in data.get('grades', []):
+                writer.writerow([
+                    f'Periodo {period}',
+                    subject,
+                    grade.get('decimalValue', ''),
+                    grade.get('evtDate', ''),
+                    grade.get('componentDesc', ''),
+                    grade.get('teacherName', ''),
+                    grade.get('notesForFamily', '')
+                ])
+    
+    # Prepare response
+    output.seek(0)
+    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    
+    response = flask.Response(output.getvalue(), mimetype='text/csv')
+    response.headers['Content-Disposition'] = f'attachment; filename=voti_{timestamp}.csv'
+    
+    return response
+
+@app.route('/export/pdf', methods=['POST'])
+def export_pdf():
+    """Export grades as PDF file"""
+    if 'grades_avr' not in flask.session:
+        return flask.redirect('/')
+    
+    grades_avr = flask.session['grades_avr']
+    
+    try:
+        from reportlab.lib.pagesizes import A4
+        from reportlab.lib import colors
+        from reportlab.lib.units import cm
+        from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+        from reportlab.lib.enums import TA_CENTER, TA_LEFT
+        
+        # Create PDF in memory
+        output = io.BytesIO()
+        doc = SimpleDocTemplate(output, pagesize=A4, topMargin=2*cm, bottomMargin=2*cm)
+        
+        # Container for the 'Flowable' objects
+        elements = []
+        
+        # Define styles
+        styles = getSampleStyleSheet()
+        title_style = ParagraphStyle(
+            'CustomTitle',
+            parent=styles['Heading1'],
+            fontSize=24,
+            textColor=colors.HexColor('#f03333'),
+            alignment=TA_CENTER,
+            spaceAfter=30
+        )
+        
+        heading_style = ParagraphStyle(
+            'CustomHeading',
+            parent=styles['Heading2'],
+            fontSize=16,
+            textColor=colors.HexColor('#c83737'),
+            spaceAfter=12
+        )
+        
+        # Add title
+        elements.append(Paragraph("Report Voti", title_style))
+        elements.append(Spacer(1, 12))
+        
+        # Add overall average
+        avg_text = f"Media Generale: <b>{grades_avr.get('all_avr', 0):.2f}</b>"
+        elements.append(Paragraph(avg_text, styles['Normal']))
+        elements.append(Spacer(1, 20))
+        
+        # Add grades by period
+        for period in sorted(grades_avr.keys()):
+            if period == 'all_avr':
+                continue
+            
+            elements.append(Paragraph(f"Periodo {period}", heading_style))
+            
+            period_avg = grades_avr[period].get('period_avr', 0)
+            elements.append(Paragraph(f"Media Periodo: <b>{period_avg:.2f}</b>", styles['Normal']))
+            elements.append(Spacer(1, 12))
+            
+            # Create table for subjects
+            table_data = [['Materia', 'Media', 'Voti']]
+            
+            for subject, data in sorted(grades_avr[period].items()):
+                if subject == 'period_avr':
+                    continue
+                
+                avg = data.get('avr', 0)
+                grades_list = ', '.join([str(g.get('decimalValue', '')) for g in data.get('grades', [])])
+                
+                table_data.append([subject, f"{avg:.2f}", grades_list])
+            
+            # Create table
+            table = Table(table_data, colWidths=[7*cm, 2*cm, 8*cm])
+            table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#f03333')),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('FONTSIZE', (0, 0), (-1, 0), 12),
+                ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+                ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+                ('GRID', (0, 0), (-1, -1), 1, colors.black),
+                ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+                ('FONTSIZE', (0, 1), (-1, -1), 10),
+                ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.lightgrey])
+            ]))
+            
+            elements.append(table)
+            elements.append(Spacer(1, 20))
+        
+        # Build PDF
+        doc.build(elements)
+        
+        # Prepare response
+        output.seek(0)
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        
+        response = flask.Response(output.getvalue(), mimetype='application/pdf')
+        response.headers['Content-Disposition'] = f'attachment; filename=voti_{timestamp}.pdf'
+        
+        return response
+        
+    except ImportError:
+        # Fallback if reportlab is not installed
+        return flask.render_template('export.html', error="PDF export richiede l'installazione di reportlab. Usa CSV invece.")
 
 def login(user_id, user_pass):
     url = "https://web.spaggiari.eu/rest/v1/auth/login"

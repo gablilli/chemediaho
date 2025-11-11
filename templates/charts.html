@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="it">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#f03333" />
+    <meta name="description" content="Visualizza l'andamento dei voti di ClasseViva" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="MediaHo" />
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/static/icons/icon-192.png" />
+    <link rel="apple-touch-icon" href="/static/icons/icon-192.png" />
+    <title>Grafici - che media ho?</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      :root {
+        --text: #f1e4e4;
+        --background: #130909;
+        --primary: #f03333;
+        --secondary: #7f2929;
+        --accent: #c83737;
+        --excellent: #4caf50;
+        --good: #4facfe;
+        --pass: #ffa500;
+        --fail: #f03333;
+      }
+
+      :root[data-theme="light"] {
+        --text: #1a0a0a;
+        --background: #fef8f8;
+        --primary: #f03333;
+        --secondary: #f5cccc;
+        --accent: #c83737;
+        --excellent: #4caf50;
+        --good: #4facfe;
+        --pass: #ffa500;
+        --fail: #f03333;
+      }
+
+      body {
+        margin: 0;
+        padding: 0;
+        padding-bottom: 80px;
+        min-height: 100vh;
+        background: var(--background);
+        color: var(--text);
+        font-family: Arial, Helvetica, sans-serif;
+      }
+
+      .header-section {
+        text-align: center;
+        padding: 32px 20px 24px;
+      }
+
+      .page-title {
+        font-size: 28px;
+        font-weight: bold;
+        color: var(--text);
+        margin-bottom: 8px;
+      }
+
+      .page-subtitle {
+        font-size: 14px;
+        color: var(--text);
+        opacity: 0.7;
+      }
+
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 0 20px 40px;
+      }
+
+      .chart-section {
+        margin-bottom: 32px;
+      }
+
+      .chart-card {
+        position: relative;
+        overflow: hidden;
+        border-radius: 12px;
+        padding: 24px;
+        background: var(--background);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+      }
+
+      .chart-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        background-color: var(--secondary);
+        opacity: 0.15;
+        z-index: -1;
+      }
+
+      .chart-title {
+        font-size: 20px;
+        font-weight: bold;
+        color: var(--text);
+        margin-bottom: 20px;
+      }
+
+      .chart-container {
+        position: relative;
+        height: 300px;
+        margin-bottom: 20px;
+      }
+
+      .subject-selector {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-bottom: 20px;
+      }
+
+      .subject-btn {
+        padding: 8px 16px;
+        border-radius: 8px;
+        border: 2px solid var(--secondary);
+        background: transparent;
+        color: var(--text);
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s ease;
+      }
+
+      .subject-btn:hover {
+        background: var(--secondary);
+      }
+
+      .subject-btn.active {
+        background: var(--accent);
+        border-color: var(--accent);
+        color: white;
+      }
+
+      .theme-toggle {
+        position: fixed;
+        top: 20px;
+        right: 100px;
+        background: var(--secondary);
+        border: 2px solid var(--accent);
+        border-radius: 50%;
+        width: 50px;
+        height: 50px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.3s ease;
+        z-index: 100;
+      }
+
+      .theme-toggle:hover {
+        transform: scale(1.1);
+        background: var(--accent);
+      }
+
+      .theme-toggle svg {
+        width: 24px;
+        height: 24px;
+        fill: var(--text);
+      }
+
+      .logout-btn {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: var(--primary);
+        color: var(--text);
+        border: none;
+        border-radius: 8px;
+        padding: 12px 20px;
+        font-size: 14px;
+        font-weight: bold;
+        cursor: pointer;
+        transition: opacity 0.2s ease;
+        z-index: 100;
+        height: 50px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .logout-btn:hover {
+        opacity: 0.8;
+      }
+
+      /* Bottom Navigation Bar */
+      .bottom-nav {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 80px;
+        background: var(--background);
+        box-shadow: 0 -4px 12px rgba(240, 51, 51, 0.3);
+        z-index: 100;
+        display: flex;
+        align-items: center;
+        justify-content: space-around;
+        padding-top: 16px;
+      }
+
+      .nav-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-decoration: none;
+        color: var(--text);
+        transition: all 0.3s ease;
+        opacity: 0.6;
+        flex: 1;
+      }
+
+      .nav-item.active {
+        opacity: 1;
+      }
+
+      .nav-item:hover {
+        opacity: 1;
+      }
+
+      .nav-icon {
+        width: 28px;
+        height: 28px;
+        margin-bottom: 4px;
+        stroke: currentColor;
+        fill: none;
+      }
+
+      .nav-item.active .nav-icon {
+        fill: var(--accent);
+        stroke: var(--accent);
+      }
+
+      .nav-label {
+        font-size: 12px;
+        font-weight: 600;
+      }
+
+      @media (max-width: 768px) {
+        .page-title {
+          font-size: 24px;
+        }
+
+        .chart-container {
+          height: 250px;
+        }
+
+        .theme-toggle {
+          top: auto;
+          bottom: 100px;
+          right: 20px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="5"/>
+        <line x1="12" x2="12" y1="1" y2="3"/>
+        <line x1="12" x2="12" y1="21" y2="23"/>
+        <line x1="4.22" x2="5.64" y1="4.22" y2="5.64"/>
+        <line x1="18.36" x2="19.78" y1="18.36" y2="19.78"/>
+        <line x1="1" x2="3" y1="12" y2="12"/>
+        <line x1="21" x2="23" y1="12" y2="12"/>
+        <line x1="4.22" x2="5.64" y1="19.78" y2="18.36"/>
+        <line x1="18.36" x2="19.78" y1="5.64" y2="4.22"/>
+      </svg>
+    </button>
+    <form action="/logout" method="post" style="display: inline;">
+      <button type="submit" class="logout-btn">Esci</button>
+    </form>
+
+    <div class="header-section">
+      <h1 class="page-title">Andamento Voti</h1>
+      <p class="page-subtitle">Visualizza l'evoluzione dei tuoi voti nel tempo</p>
+    </div>
+
+    <div class="container">
+      <!-- Overall Average Trend -->
+      <div class="chart-section">
+        <div class="chart-card">
+          <h2 class="chart-title">📈 Andamento Media Generale</h2>
+          <div class="chart-container">
+            <canvas id="overallChart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- Subject Grades Trend -->
+      <div class="chart-section">
+        <div class="chart-card">
+          <h2 class="chart-title">📊 Andamento per Materia</h2>
+          <div class="subject-selector" id="subjectSelector">
+            <!-- Subject buttons will be added here by JavaScript -->
+          </div>
+          <div class="chart-container">
+            <canvas id="subjectChart"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bottom Navigation Bar -->
+    <nav class="bottom-nav">
+      <a href="/grades" class="nav-item">
+        <svg class="nav-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+          <polyline points="9 22 9 12 15 12 15 22"/>
+        </svg>
+        <span class="nav-label">Medie</span>
+      </a>
+      <a href="/charts" class="nav-item active">
+        <svg class="nav-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="20" x2="18" y2="10"/>
+          <line x1="12" y1="20" x2="12" y2="4"/>
+          <line x1="6" y1="20" x2="6" y2="14"/>
+        </svg>
+        <span class="nav-label">Grafici</span>
+      </a>
+      <a href="/export" class="nav-item">
+        <svg class="nav-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="7 10 12 15 17 10"/>
+          <line x1="12" y1="15" x2="12" y2="3"/>
+        </svg>
+        <span class="nav-label">Esporta</span>
+      </a>
+    </nav>
+
+    <script>
+      // Theme management
+      const themeToggle = document.getElementById('themeToggle');
+      const root = document.documentElement;
+      
+      function getSystemTheme() {
+        if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) {
+          return 'light';
+        }
+        return 'dark';
+      }
+      
+      const savedTheme = localStorage.getItem('theme');
+      const initialTheme = savedTheme || getSystemTheme();
+      
+      if (initialTheme === 'light') {
+        root.setAttribute('data-theme', 'light');
+      }
+      
+      themeToggle.addEventListener('click', () => {
+        const currentTheme = root.getAttribute('data-theme');
+        const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+        
+        if (newTheme === 'light') {
+          root.setAttribute('data-theme', 'light');
+        } else {
+          root.removeAttribute('data-theme');
+        }
+        
+        localStorage.setItem('theme', newTheme);
+      });
+
+      // Get grades data from backend
+      const gradesData = {{ grades_avr | tojson | safe }};
+
+      // Chart.js configuration
+      const isDark = root.getAttribute('data-theme') !== 'light';
+      const textColor = isDark ? '#f1e4e4' : '#1a0a0a';
+      const gridColor = isDark ? 'rgba(241, 228, 228, 0.1)' : 'rgba(26, 10, 10, 0.1)';
+
+      Chart.defaults.color = textColor;
+      Chart.defaults.borderColor = gridColor;
+
+      // Overall Average Chart
+      function createOverallChart() {
+        const periods = Object.keys(gradesData).filter(key => key !== 'all_avr');
+        const averages = periods.map(period => gradesData[period].period_avr);
+        
+        const ctx = document.getElementById('overallChart').getContext('2d');
+        new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels: periods.map(p => `Periodo ${p}`),
+            datasets: [{
+              label: 'Media Generale',
+              data: averages,
+              borderColor: '#f03333',
+              backgroundColor: 'rgba(240, 51, 51, 0.1)',
+              borderWidth: 3,
+              fill: true,
+              tension: 0.4,
+              pointRadius: 6,
+              pointHoverRadius: 8,
+              pointBackgroundColor: '#f03333',
+              pointBorderColor: '#fff',
+              pointBorderWidth: 2
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                display: false
+              },
+              tooltip: {
+                backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                padding: 12,
+                displayColors: false,
+                callbacks: {
+                  label: function(context) {
+                    return 'Media: ' + context.parsed.y.toFixed(2);
+                  }
+                }
+              }
+            },
+            scales: {
+              y: {
+                beginAtZero: false,
+                min: 4,
+                max: 10,
+                ticks: {
+                  stepSize: 1
+                },
+                grid: {
+                  color: gridColor
+                }
+              },
+              x: {
+                grid: {
+                  display: false
+                }
+              }
+            }
+          }
+        });
+      }
+
+      // Subject Chart
+      let subjectChart = null;
+      let currentSubject = null;
+
+      function createSubjectChart(subjectName, subjectData) {
+        const grades = subjectData.grades;
+        const ctx = document.getElementById('subjectChart').getContext('2d');
+        
+        if (subjectChart) {
+          subjectChart.destroy();
+        }
+        
+        subjectChart = new Chart(ctx, {
+          type: 'bar',
+          data: {
+            labels: grades.map((_, index) => `Voto ${index + 1}`),
+            datasets: [{
+              label: subjectName,
+              data: grades.map(g => g.decimalValue),
+              backgroundColor: grades.map(g => {
+                if (g.decimalValue >= 8) return '#4caf50';
+                if (g.decimalValue >= 7) return '#4facfe';
+                if (g.decimalValue >= 6) return '#ffa500';
+                return '#f03333';
+              }),
+              borderColor: 'rgba(255, 255, 255, 0.8)',
+              borderWidth: 2,
+              borderRadius: 8
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                display: false
+              },
+              tooltip: {
+                backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                padding: 12,
+                displayColors: false,
+                callbacks: {
+                  label: function(context) {
+                    const grade = grades[context.dataIndex];
+                    return [
+                      'Voto: ' + grade.decimalValue,
+                      'Data: ' + grade.evtDate
+                    ];
+                  }
+                }
+              }
+            },
+            scales: {
+              y: {
+                beginAtZero: false,
+                min: 2,
+                max: 10,
+                ticks: {
+                  stepSize: 1
+                },
+                grid: {
+                  color: gridColor
+                }
+              },
+              x: {
+                grid: {
+                  display: false
+                }
+              }
+            }
+          }
+        });
+      }
+
+      // Create subject selector buttons
+      function createSubjectButtons() {
+        const selector = document.getElementById('subjectSelector');
+        const periods = Object.keys(gradesData).filter(key => key !== 'all_avr');
+        
+        // Get all unique subjects
+        const subjects = new Set();
+        periods.forEach(period => {
+          Object.keys(gradesData[period]).forEach(subject => {
+            if (subject !== 'period_avr') {
+              subjects.add(subject);
+            }
+          });
+        });
+        
+        // Create buttons for each subject
+        subjects.forEach((subject, index) => {
+          const btn = document.createElement('button');
+          btn.className = 'subject-btn' + (index === 0 ? ' active' : '');
+          btn.textContent = subject;
+          btn.onclick = () => {
+            // Remove active class from all buttons
+            document.querySelectorAll('.subject-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            
+            // Find subject data across all periods
+            const subjectData = { grades: [] };
+            periods.forEach(period => {
+              if (gradesData[period][subject]) {
+                subjectData.grades.push(...gradesData[period][subject].grades);
+              }
+            });
+            
+            createSubjectChart(subject, subjectData);
+          };
+          selector.appendChild(btn);
+          
+          // Load first subject by default
+          if (index === 0) {
+            const subjectData = { grades: [] };
+            periods.forEach(period => {
+              if (gradesData[period][subject]) {
+                subjectData.grades.push(...gradesData[period][subject].grades);
+              }
+            });
+            createSubjectChart(subject, subjectData);
+          }
+        });
+      }
+
+      // Initialize charts
+      createOverallChart();
+      createSubjectButtons();
+
+      // Update charts when theme changes
+      themeToggle.addEventListener('click', () => {
+        setTimeout(() => {
+          location.reload();
+        }, 100);
+      });
+    </script>
+  </body>
+</html>
