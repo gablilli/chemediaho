@@ -460,6 +460,46 @@
         opacity: 0.7;
       }
 
+      .platform-tabs {
+        display: flex;
+        gap: 8px;
+        padding: 0 20px;
+        margin-top: -10px;
+        margin-bottom: 10px;
+      }
+
+      .platform-tab {
+        flex: 1;
+        padding: 8px 16px;
+        background: transparent;
+        border: 1px solid var(--secondary);
+        border-radius: 8px;
+        color: var(--text);
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+
+      .platform-tab.active {
+        background: var(--accent);
+        border-color: var(--accent);
+        color: white;
+      }
+
+      .platform-tab:hover:not(.active) {
+        background: var(--secondary);
+        opacity: 0.8;
+      }
+
+      .platform-content {
+        display: none;
+      }
+
+      .platform-content.active {
+        display: block;
+      }
+
       @media (max-width: 480px) {
         .login-container {
           padding: 16px;
@@ -568,57 +608,117 @@
       </div>
     </div>
 
-    <!-- iOS Install Modal -->
+    <!-- Install Modal -->
     <div id="iosModal" class="ios-modal">
       <div class="ios-drawer">
         <div class="ios-drawer-header">
-          <div class="ios-drawer-title">Installa l'applicazione su iOS</div>
-          <div class="ios-drawer-description">È semplice, segui questi passaggi.</div>
+          <div class="ios-drawer-title">Installa l'applicazione</div>
+          <div class="ios-drawer-description">Scegli il tuo dispositivo e segui i passaggi.</div>
         </div>
-        <div class="ios-drawer-content">
-          <div class="ios-step">
-            <div class="ios-step-header">
-              <div class="ios-step-number">1</div>
-              <div class="ios-step-text">
-                Trova questa icona nella barra del tuo browser e cliccaci sopra. (su Safari la trovi in fondo allo schermo)
+        
+        <!-- Platform Tabs -->
+        <div class="platform-tabs">
+          <button class="platform-tab active" onclick="switchTab('ios')">iOS (Safari)</button>
+          <button class="platform-tab" onclick="switchTab('android')">Android (Chrome)</button>
+        </div>
+        
+        <!-- iOS Content -->
+        <div id="iosContent" class="platform-content active">
+          <div class="ios-drawer-content">
+            <div class="ios-step">
+              <div class="ios-step-header">
+                <div class="ios-step-number">1</div>
+                <div class="ios-step-text">
+                  Trova l'icona di condivisione nella barra del browser Safari (in fondo allo schermo) e cliccaci sopra.
+                </div>
+              </div>
+              <div class="ios-step-image">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 50 50">
+                  <path d="M30.3 13.7L25 8.4l-5.3 5.3-1.4-1.4L25 5.6l6.7 6.7z" />
+                  <path d="M24 7h2v21h-2z" />
+                  <path d="M35 40H15c-1.7 0-3-1.3-3-3V19c0-1.7 1.3-3 3-3h7v2h-7c-.6 0-1 .4-1 1v18c0 .6.4 1 1 1h20c.6 0 1-.4 1-1V19c0-.6-.4-1-1-1h-7v-2h7c1.7 0 3 1.3 3 3v18c0 1.7-1.3 3-3 3z" />
+                </svg>
               </div>
             </div>
-            <div class="ios-step-image">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 50 50">
-                <path d="M30.3 13.7L25 8.4l-5.3 5.3-1.4-1.4L25 5.6l6.7 6.7z" />
-                <path d="M24 7h2v21h-2z" />
-                <path d="M35 40H15c-1.7 0-3-1.3-3-3V19c0-1.7 1.3-3 3-3h7v2h-7c-.6 0-1 .4-1 1v18c0 .6.4 1 1 1h20c.6 0 1-.4 1-1V19c0-.6-.4-1-1-1h-7v-2h7c1.7 0 3 1.3 3 3v18c0 1.7-1.3 3-3 3z" />
-              </svg>
-            </div>
-          </div>
-          <div class="ios-step">
-            <div class="ios-step-header">
-              <div class="ios-step-number">2</div>
-              <div class="ios-step-text">
-                Ora uscirà il popup per condividere, scorri in basso fino a trovare "Aggiungi a schermata home". Safari si chiuderà e ti porterà alla home, trova l'app e cliccaci sopra.
+            <div class="ios-step">
+              <div class="ios-step-header">
+                <div class="ios-step-number">2</div>
+                <div class="ios-step-text">
+                  Nel menu che appare, scorri in basso fino a trovare "Aggiungi a schermata Home" e selezionalo.
+                </div>
+              </div>
+              <div class="ios-step-image">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="5" y="2" width="14" height="20" rx="2" ry="2"/>
+                  <line x1="12" y1="18" x2="12.01" y2="18"/>
+                </svg>
               </div>
             </div>
-            <div class="ios-step-image">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <rect x="5" y="2" width="14" height="20" rx="2" ry="2"/>
-                <line x1="12" y1="18" x2="12.01" y2="18"/>
-              </svg>
-            </div>
-          </div>
-          <div class="ios-step">
-            <div class="ios-step-header">
-              <div class="ios-step-number">3</div>
-              <div class="ios-step-text">
-                Ecco fatto! Ora hai l'app installata nel tuo dispositivo. Per completare clicca il pulsante "Fatto, chiudi".
+            <div class="ios-step">
+              <div class="ios-step-header">
+                <div class="ios-step-number">3</div>
+                <div class="ios-step-text">
+                  Fatto! L'app è ora installata sulla schermata Home. Trova l'icona e aprila per utilizzare l'applicazione.
+                </div>
               </div>
-            </div>
-            <div class="ios-step-image success">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <polyline points="20 6 9 17 4 12"/>
-              </svg>
+              <div class="ios-step-image success">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="20 6 9 17 4 12"/>
+                </svg>
+              </div>
             </div>
           </div>
         </div>
+        
+        <!-- Android Content -->
+        <div id="androidContent" class="platform-content">
+          <div class="ios-drawer-content">
+            <div class="ios-step">
+              <div class="ios-step-header">
+                <div class="ios-step-number">1</div>
+                <div class="ios-step-text">
+                  Apri il menu di Chrome toccando i tre puntini verticali in alto a destra.
+                </div>
+              </div>
+              <div class="ios-step-image">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="1"/>
+                  <circle cx="12" cy="5" r="1"/>
+                  <circle cx="12" cy="19" r="1"/>
+                </svg>
+              </div>
+            </div>
+            <div class="ios-step">
+              <div class="ios-step-header">
+                <div class="ios-step-number">2</div>
+                <div class="ios-step-text">
+                  Nel menu, cerca e seleziona "Installa app" o "Aggiungi a schermata Home".
+                </div>
+              </div>
+              <div class="ios-step-image">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                  <polyline points="7 10 12 15 17 10"/>
+                  <line x1="12" y1="15" x2="12" y2="3"/>
+                </svg>
+              </div>
+            </div>
+            <div class="ios-step">
+              <div class="ios-step-header">
+                <div class="ios-step-number">3</div>
+                <div class="ios-step-text">
+                  Conferma l'installazione nel popup che appare. L'app sarà aggiunta alla schermata Home e potrai aprirla come una normale app.
+                </div>
+              </div>
+              <div class="ios-step-image success">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="20 6 9 17 4 12"/>
+                </svg>
+              </div>
+            </div>
+          </div>
+        </div>
+        
         <div class="ios-drawer-footer">
           <button class="ios-drawer-btn ios-drawer-btn-primary" onclick="closeIOSModal(true)">
             Fatto, chiudi
@@ -681,9 +781,16 @@
             pwaBanner.classList.add('hidden');
           }
           deferredPrompt = null;
-        } else if (platform === 'ios') {
-          // Show iOS instructions
+        } else {
+          // Show instructions modal with appropriate tab
           iosModal.classList.add('show');
+          
+          // Switch to appropriate tab based on platform
+          if (platform === 'android') {
+            switchTabProgrammatically('android');
+          } else {
+            switchTabProgrammatically('ios');
+          }
         }
       });
       
@@ -693,6 +800,41 @@
         if (installed) {
           localStorage.setItem('pwaInstalled', 'true');
           pwaBanner.classList.add('hidden');
+        }
+      }
+      
+      // Switch between iOS and Android tabs
+      function switchTab(platform) {
+        // Update tab buttons
+        const tabs = document.querySelectorAll('.platform-tab');
+        tabs.forEach(tab => tab.classList.remove('active'));
+        event.target.classList.add('active');
+        
+        // Update content visibility
+        switchTabProgrammatically(platform);
+      }
+      
+      // Programmatically switch tabs (without relying on event.target)
+      function switchTabProgrammatically(platform) {
+        const tabs = document.querySelectorAll('.platform-tab');
+        const iosContent = document.getElementById('iosContent');
+        const androidContent = document.getElementById('androidContent');
+        
+        tabs.forEach(tab => {
+          if ((platform === 'ios' && tab.textContent.includes('iOS')) ||
+              (platform === 'android' && tab.textContent.includes('Android'))) {
+            tab.classList.add('active');
+          } else {
+            tab.classList.remove('active');
+          }
+        });
+        
+        if (platform === 'ios') {
+          iosContent.classList.add('active');
+          androidContent.classList.remove('active');
+        } else {
+          androidContent.classList.add('active');
+          iosContent.classList.remove('active');
         }
       }
       

@@ -338,7 +338,8 @@ def get_grades(student_id, token):
 def calculate_avr(grades):
     grades_avr = {}
     for grade in grades["grades"]:
-        period = grade["periodPos"]
+        # Convert period to string to ensure consistent type for dictionary keys
+        period = str(grade["periodPos"])
         if grade["noAverage"] is True or grade["color"] == "blue" or grade["decimalValue"] is None:
             continue
         if period not in grades_avr:
