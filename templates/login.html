@@ -805,12 +805,7 @@
       
       // Switch between iOS and Android tabs
       function switchTab(platform) {
-        // Update tab buttons
-        const tabs = document.querySelectorAll('.platform-tab');
-        tabs.forEach(tab => tab.classList.remove('active'));
-        event.target.classList.add('active');
-        
-        // Update content visibility
+        // Call the programmatic function
         switchTabProgrammatically(platform);
       }
       
