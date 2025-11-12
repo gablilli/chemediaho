@@ -47,7 +47,7 @@
       body {
         margin: 0;
         padding: 0;
-        padding-bottom: 80px;
+        padding-bottom: calc(96px + env(safe-area-inset-bottom));
         min-height: 100vh;
         background: var(--background);
         color: var(--text);
@@ -148,7 +148,7 @@
       .theme-toggle {
         position: fixed;
         top: 20px;
-        right: 100px;
+        right: 20px;
         background: var(--secondary);
         border: 2px solid var(--accent);
         border-radius: 50%;
@@ -174,27 +174,7 @@
       }
 
       .logout-btn {
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        background: var(--primary);
-        color: var(--text);
-        border: none;
-        border-radius: 8px;
-        padding: 12px 20px;
-        font-size: 14px;
-        font-weight: bold;
-        cursor: pointer;
-        transition: opacity 0.2s ease;
-        z-index: 100;
-        height: 50px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-      }
-
-      .logout-btn:hover {
-        opacity: 0.8;
+        display: none; /* Hidden on all devices */
       }
 
       /* Bottom Navigation Bar */
@@ -203,7 +183,7 @@
         bottom: 0;
         left: 0;
         right: 0;
-        height: 80px;
+        height: 96px;
         background: var(--background);
         box-shadow: 0 -4px 12px rgba(240, 51, 51, 0.3);
         z-index: 100;
@@ -211,6 +191,17 @@
         align-items: center;
         justify-content: space-around;
         padding-top: 16px;
+        padding-bottom: env(safe-area-inset-bottom);
+      }
+
+      @media (max-width: 768px) {
+        .bottom-nav {
+          left: 12px;
+          right: 12px;
+          bottom: max(12px, env(safe-area-inset-bottom));
+          border-radius: 20px;
+          box-shadow: 0 -4px 12px rgba(240, 51, 51, 0.3), 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
       }
 
       .nav-item {
@@ -266,12 +257,8 @@
 
         .theme-toggle {
           top: auto;
-          bottom: 100px;
+          bottom: calc(108px + env(safe-area-inset-bottom));
           right: 20px;
-        }
-
-        .logout-btn {
-          display: none;
         }
       }
     </style>
@@ -300,7 +287,7 @@
     </div>
 
     <div class="container">
-      <!-- Subject Grades Trend - Now primary chart -->
+      <!-- Subject Grades Trend -->
       <div class="chart-section">
         <div class="chart-card">
           <h2 class="chart-title">📊 Andamento per Materia</h2>
@@ -309,6 +296,16 @@
           </div>
           <div class="chart-container" style="position: relative;">
             <canvas id="subjectChart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- Average Trend Chart -->
+      <div class="chart-section">
+        <div class="chart-card">
+          <h2 class="chart-title">📈 Andamento Media Generale</h2>
+          <div class="chart-container" style="position: relative;">
+            <canvas id="averageChart"></canvas>
           </div>
         </div>
       </div>
@@ -414,6 +411,7 @@
       ];
 
       let subjectChart = null;
+      let averageChart = null;
       let selectedSubjects = Array.from(allSubjects);
 
       // Prepare subject data structure
@@ -458,31 +456,15 @@
       const subjectDataCache = prepareSubjectData();
       const overallData = prepareOverallData();
 
-      function createCombinedChart(selectedSubjects) {
+      function createSubjectChart(selectedSubjects) {
         const ctx = document.getElementById('subjectChart').getContext('2d');
         
         if (subjectChart) {
           subjectChart.destroy();
         }
 
-        // Prepare datasets for selected subjects
+        // Prepare datasets for selected subjects only
         const datasets = [];
-        
-        // Add overall average as background (first dataset, will be drawn first)
-        datasets.push({
-          label: 'Media Generale',
-          data: overallData.values,
-          borderColor: 'rgba(240, 51, 51, 0.3)',
-          backgroundColor: 'rgba(240, 51, 51, 0.05)',
-          borderWidth: 2,
-          fill: true,
-          tension: 0.4,
-          pointRadius: 4,
-          pointHoverRadius: 6,
-          pointBackgroundColor: 'rgba(240, 51, 51, 0.5)',
-          borderDash: [5, 5],
-          order: 2 // Draw in background
-        });
 
         // Add selected subjects
         selectedSubjects.forEach((subject, index) => {
@@ -501,8 +483,7 @@
             pointHoverRadius: 7,
             pointBackgroundColor: subjectColors[colorIndex],
             pointBorderColor: '#fff',
-            pointBorderWidth: 2,
-            order: 1 // Draw in foreground
+            pointBorderWidth: 2
           });
         });
 
@@ -517,30 +498,16 @@
         
         // Prepare data arrays matching labels
         const finalDatasets = datasets.map((dataset, idx) => {
-          if (idx === 0) {
-            // For overall average, expand to match all labels
-            const expandedData = uniqueLabels.map(label => {
-              const periodMatch = label.match(/P(\d+)/);
-              if (periodMatch) {
-                const periodIdx = periods.indexOf(periodMatch[1]);
-                return periodIdx >= 0 ? overallData.values[periodIdx] : null;
-              }
-              return null;
-            });
-            return { ...dataset, data: expandedData };
-          } else {
-            // For subjects, map their data to the labels
-            const subject = selectedSubjects[idx - 1];
-            const subjectLabels = subjectDataCache[subject].labels;
-            const subjectGrades = subjectDataCache[subject].grades;
-            
-            const mappedData = uniqueLabels.map(label => {
-              const labelIdx = subjectLabels.indexOf(label);
-              return labelIdx >= 0 ? subjectGrades[labelIdx] : null;
-            });
-            
-            return { ...dataset, data: mappedData };
-          }
+          const subject = selectedSubjects[idx];
+          const subjectLabels = subjectDataCache[subject].labels;
+          const subjectGrades = subjectDataCache[subject].grades;
+          
+          const mappedData = uniqueLabels.map(label => {
+            const labelIdx = subjectLabels.indexOf(label);
+            return labelIdx >= 0 ? subjectGrades[labelIdx] : null;
+          });
+          
+          return { ...dataset, data: mappedData };
         });
         
         subjectChart = new Chart(ctx, {
@@ -610,6 +577,89 @@
         });
       }
 
+      function createAverageChart() {
+        const ctx = document.getElementById('averageChart').getContext('2d');
+        
+        if (averageChart) {
+          averageChart.destroy();
+        }
+
+        averageChart = new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels: overallData.labels,
+            datasets: [{
+              label: 'Media Generale',
+              data: overallData.values,
+              borderColor: 'rgba(240, 51, 51, 0.8)',
+              backgroundColor: 'rgba(240, 51, 51, 0.2)',
+              borderWidth: 3,
+              fill: true,
+              tension: 0.4,
+              pointRadius: 6,
+              pointHoverRadius: 8,
+              pointBackgroundColor: 'rgba(240, 51, 51, 0.8)',
+              pointBorderColor: '#fff',
+              pointBorderWidth: 2
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: {
+              mode: 'index',
+              intersect: false,
+            },
+            plugins: {
+              legend: {
+                display: true,
+                position: 'bottom',
+                labels: {
+                  boxWidth: 20,
+                  padding: 15,
+                  usePointStyle: true
+                }
+              },
+              tooltip: {
+                backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                padding: 12,
+                displayColors: true,
+                callbacks: {
+                  label: function(context) {
+                    let label = context.dataset.label || '';
+                    if (label) {
+                      label += ': ';
+                    }
+                    if (context.parsed.y !== null) {
+                      label += context.parsed.y.toFixed(2);
+                    }
+                    return label;
+                  }
+                }
+              }
+            },
+            scales: {
+              y: {
+                beginAtZero: false,
+                min: 4,
+                max: 10,
+                ticks: {
+                  stepSize: 1
+                },
+                grid: {
+                  color: gridColor
+                }
+              },
+              x: {
+                grid: {
+                  display: false
+                }
+              }
+            }
+          }
+        });
+      }
+
       // Create subject selector buttons
       function createSubjectButtons() {
         const selector = document.getElementById('subjectSelector');
@@ -622,7 +672,7 @@
           document.querySelectorAll('.subject-btn').forEach(b => b.classList.remove('active'));
           allBtn.classList.add('active');
           selectedSubjects = Array.from(allSubjects);
-          createCombinedChart(selectedSubjects);
+          createSubjectChart(selectedSubjects);
         };
         selector.appendChild(allBtn);
         
@@ -663,15 +713,16 @@
               });
             }
             
-            createCombinedChart(selectedSubjects);
+            createSubjectChart(selectedSubjects);
           };
           selector.appendChild(btn);
         });
       }
 
-      // Initialize chart with all subjects
+      // Initialize charts
       createSubjectButtons();
-      createCombinedChart(selectedSubjects);
+      createSubjectChart(selectedSubjects);
+      createAverageChart();
 
       // Update charts when theme changes
       themeToggle.addEventListener('click', () => {
