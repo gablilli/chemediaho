@@ -46,7 +46,7 @@
       body {
         margin: 0;
         padding: 0;
-        padding-bottom: 80px; /* Space for bottom navigation */
+        padding-bottom: calc(96px + env(safe-area-inset-bottom)); /* Space for bottom navigation + safe area */
         min-height: 100vh;
         background: var(--background);
         color: var(--text);
@@ -352,7 +352,7 @@
       .theme-toggle {
         position: fixed;
         top: 20px;
-        right: 100px;
+        right: 20px;
         background: var(--secondary);
         border: 2px solid var(--accent);
         border-radius: 50%;
@@ -378,31 +378,7 @@
       }
 
       .logout-btn {
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        background: var(--primary);
-        color: var(--text);
-        border: none;
-        border-radius: 8px;
-        padding: 12px 20px;
-        font-size: 14px;
-        font-weight: bold;
-        cursor: pointer;
-        transition: opacity 0.2s ease;
-        z-index: 100;
-        height: 50px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-      }
-
-      .logout-btn:hover {
-        opacity: 0.8;
-      }
-
-      .logout-btn:active {
-        opacity: 0.6;
+        display: none; /* Hidden on all devices */
       }
 
       /* Bottom Navigation Bar */
@@ -411,7 +387,7 @@
         bottom: 0;
         left: 0;
         right: 0;
-        height: 80px;
+        height: 96px;
         background: var(--background);
         box-shadow: 0 -4px 12px rgba(240, 51, 51, 0.3);
         z-index: 100;
@@ -419,6 +395,17 @@
         align-items: center;
         justify-content: space-around;
         padding-top: 16px;
+        padding-bottom: env(safe-area-inset-bottom);
+      }
+
+      @media (max-width: 768px) {
+        .bottom-nav {
+          left: 12px;
+          right: 12px;
+          bottom: max(12px, env(safe-area-inset-bottom));
+          border-radius: 20px;
+          box-shadow: 0 -4px 12px rgba(240, 51, 51, 0.3), 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
       }
 
       .nav-item {
@@ -481,12 +468,8 @@
 
         .theme-toggle {
           top: auto;
-          bottom: 20px;
+          bottom: calc(108px + env(safe-area-inset-bottom));
           right: 20px;
-        }
-
-        .logout-btn {
-          display: none;
         }
       }
     </style>
