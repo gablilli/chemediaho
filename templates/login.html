@@ -419,7 +419,14 @@
       }
 
       .ios-step-image.success {
-        border: 2px solid var(--accent);
+        background: var(--accent);
+        opacity: 0.2;
+      }
+      
+      .ios-step-image.success svg {
+        fill: none;
+        stroke: var(--accent);
+        opacity: 1;
       }
 
       .ios-drawer-footer {
@@ -464,7 +471,7 @@
         display: flex;
         gap: 8px;
         padding: 0 20px;
-        margin-top: -10px;
+        margin-top: 10px;
         margin-bottom: 10px;
       }
 
