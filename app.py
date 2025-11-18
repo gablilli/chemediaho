@@ -80,8 +80,9 @@ def login_route():
         if token is None or token == "":
             return flask.render_template('login.html', error="Token non valido. Riprova.")
         
-        # Store token in session
+        # Store token and user_id in session
         flask.session['token'] = token
+        flask.session['user_id'] = user_id
         
         student_id = "".join(filter(str.isdigit, user_id))
         grades_avr = calculate_avr(get_grades(student_id, token))
@@ -106,6 +107,38 @@ def login_route():
 def logout():
     flask.session.clear()
     return flask.redirect('/')
+
+@app.route('/refresh_grades', methods=['POST'])
+def refresh_grades():
+    """Refresh grades from ClasseViva API"""
+    if 'token' not in flask.session:
+        return flask.jsonify({'error': 'No active session'}), 401
+    
+    try:
+        token = flask.session['token']
+        # Extract student_id from session or regenerate from stored user_id
+        # We need to store user_id during login to use it here
+        if 'user_id' not in flask.session:
+            return flask.jsonify({'error': 'User ID not found in session'}), 400
+        
+        user_id = flask.session['user_id']
+        student_id = "".join(filter(str.isdigit, user_id))
+        
+        # Fetch fresh grades from API
+        grades_avr = calculate_avr(get_grades(student_id, token))
+        
+        # Update session with fresh data
+        flask.session['grades_avr'] = grades_avr
+        
+        return flask.jsonify({'success': True, 'message': 'Voti aggiornati'}), 200
+    except requests.exceptions.HTTPError as e:
+        if e.response.status_code == 401:
+            # Token expired, redirect to login
+            flask.session.clear()
+            return flask.jsonify({'error': 'Sessione scaduta', 'redirect': '/'}), 401
+        return flask.jsonify({'error': f'Errore durante l\'aggiornamento: {e.response.status_code}'}), 500
+    except Exception as e:
+        return flask.jsonify({'error': 'Errore durante l\'aggiornamento dei voti'}), 500
 
 @app.route('/grades')
 def grades_page():
@@ -132,6 +165,11 @@ def export_page():
         return flask.redirect('/')
     
     return flask.render_template('export.html')
+
+@app.route('/info')
+def info_page():
+    """Display info page"""
+    return flask.render_template('info.html')
 
 @app.route('/export/csv', methods=['POST'])
 def export_csv():
