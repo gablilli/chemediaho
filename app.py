@@ -9,6 +9,9 @@ from datetime import datetime
 
 app = flask.Flask(__name__)
 
+# Application version
+APP_VERSION = "1.4"
+
 # Load or generate a persistent SECRET_KEY
 SECRET_KEY_FILE = 'secret_key.txt'
 
@@ -169,7 +172,7 @@ def export_page():
 @app.route('/info')
 def info_page():
     """Display info page"""
-    return flask.render_template('info.html')
+    return flask.render_template('info.html', version=APP_VERSION)
 
 @app.route('/export/csv', methods=['POST'])
 def export_csv():
