@@ -356,10 +356,7 @@
           o contribuire al progetto:
         </p>
         <a href="https://github.com/gablilli/chemediaho" target="_blank" rel="noopener noreferrer" class="github-link">
-          <svg class="github-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-            <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-[...]
-          </svg>
-          github.com/gablilli/chemediaho
+          Vai alla repo
         </a>
       </div>
 
@@ -401,10 +398,10 @@
         <span class="nav-label">Esporta</span>
       </a>
       <a href="/info" class="nav-item active">
-        <svg class="nav-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 330 330" fill="currentColor" stroke="none">
-          <path d="M165,0C74.019,0,0,74.02,0,165.001C0,255.982,74.019,330,165,330s165-74.018,165-164.999C330,74.02,255.981,0,165,0z M165,300c-74.44,0-135-60.56-135-134.999C30,90.562,90.56,30,165,30s13[...]
-          <path d="M164.998,70c-11.026,0-19.996,8.976-19.996,20.009c0,11.023,8.97,19.991,19.996,19.991 c11.026,0,19.996-8.968,19.996-19.991C184.994,78.976,176.024,70,164.998,70z"/>
-          <path d="M165,140c-8.284,0-15,6.716-15,15v90c0,8.284,6.716,15,15,15c8.284,0,15-6.716,15-15v-90C180,146.716,173.284,140,165,140z"/>
+        <svg class="nav-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"/>
+          <line x1="12" y1="16" x2="12" y2="12"/>
+          <line x1="12" y1="8" x2="12.01" y2="8"/>
         </svg>
         <span class="nav-label">Info</span>
       </a>
@@ -452,6 +449,18 @@
         
         localStorage.setItem('theme', newTheme);
       });
+
+      // Handle logout from bottom nav
+      const logoutNavBtn = document.getElementById('logoutNavBtn');
+      if (logoutNavBtn) {
+        logoutNavBtn.addEventListener('click', () => {
+          const form = document.createElement('form');
+          form.method = 'POST';
+          form.action = '/logout';
+          document.body.appendChild(form);
+          form.submit();
+        });
+      }
 
       // Register Service Worker for PWA
       if ('serviceWorker' in navigator) {
