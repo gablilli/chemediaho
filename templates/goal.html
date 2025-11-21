@@ -326,6 +326,38 @@
         opacity: 0.9;
       }
 
+      .error-notification {
+        display: none;
+        position: fixed;
+        top: 80px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: var(--primary);
+        color: white;
+        padding: 16px 24px;
+        border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        z-index: 1000;
+        animation: slideDown 0.3s ease;
+        max-width: 90%;
+        text-align: center;
+      }
+
+      .error-notification.show {
+        display: block;
+      }
+
+      @keyframes slideDown {
+        from {
+          opacity: 0;
+          transform: translate(-50%, -20px);
+        }
+        to {
+          opacity: 1;
+          transform: translate(-50%, 0);
+        }
+      }
+
       .theme-toggle {
         position: fixed;
         top: 20px;
@@ -437,6 +469,9 @@
     </style>
   </head>
   <body>
+    <!-- Error Notification -->
+    <div class="error-notification" id="errorNotification"></div>
+
     <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <circle cx="12" cy="12" r="5"/>
@@ -641,6 +676,16 @@
       const periodSelect = document.getElementById('periodSelect');
       const subjectSelect = document.getElementById('subjectSelect');
 
+      // Helper function to show error notification
+      function showError(message) {
+        const notification = document.getElementById('errorNotification');
+        notification.textContent = message;
+        notification.classList.add('show');
+        setTimeout(() => {
+          notification.classList.remove('show');
+        }, 3000);
+      }
+
       periodSelect.addEventListener('change', function() {
         const period = this.value;
         subjectSelect.disabled = false;
@@ -673,7 +718,7 @@
         const targetAverage = parseFloat(document.getElementById('targetAverage').value);
 
         if (!period || !subject || !targetAverage) {
-          alert('Compila tutti i campi!');
+          showError('Compila tutti i campi!');
           return;
         }
 
@@ -699,10 +744,10 @@
           if (response.ok && data.success) {
             displayResult(data);
           } else {
-            alert(data.error || 'Errore durante il calcolo');
+            showError(data.error || 'Errore durante il calcolo');
           }
         } catch (error) {
-          alert('Errore di connessione');
+          showError('Errore di connessione');
         } finally {
           calculateBtn.disabled = false;
           calculateBtn.innerHTML = `

@@ -204,11 +204,23 @@ def calculate_goal():
         if target_average < 1 or target_average > 10:
             return flask.jsonify({'error': 'La media target deve essere tra 1 e 10'}), 400
         
-        # Get current grades
-        current_grades = [g['decimalValue'] for g in grades_avr[period][subject]['grades']]
+        # Get current grades with validation
+        subject_data = grades_avr[period][subject]
+        if 'grades' not in subject_data or not isinstance(subject_data['grades'], list):
+            return flask.jsonify({'error': 'Dati dei voti non validi'}), 400
+        
+        # Extract grades with validation
+        current_grades = []
+        for g in subject_data['grades']:
+            if isinstance(g, dict) and 'decimalValue' in g and g['decimalValue'] is not None:
+                current_grades.append(g['decimalValue'])
+        
+        if not current_grades:
+            return flask.jsonify({'error': 'Nessun voto disponibile per questa materia'}), 400
+        
         current_count = len(current_grades)
         current_sum = sum(current_grades)
-        current_average = grades_avr[period][subject]['avr']
+        current_average = subject_data.get('avr', current_sum / current_count if current_count > 0 else 0)
         
         # Calculate required grade
         # Formula: (current_sum + required_grade) / (current_count + 1) = target_average
