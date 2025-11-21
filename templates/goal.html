@@ -723,12 +723,13 @@
           const targetRangeLabel = document.getElementById('targetRangeLabel');
           const targetHelp = document.getElementById('targetHelp');
           
-          targetInput.min = Math.max(1, Math.ceil(currentAverage * 10) / 10); // Round up to nearest 0.1
+          // Use ceiling to ensure minimum target is always higher than current average
+          targetInput.min = Math.max(1, Math.ceil(currentAverage * 10) / 10);
           targetRangeLabel.textContent = `(${targetInput.min}-10)`;
           targetHelp.textContent = `La tua media attuale è ${currentAverage.toFixed(2)}. Imposta un obiettivo superiore.`;
           
           // Clear any previously entered value that might be invalid
-          if (targetInput.value && parseFloat(targetInput.value) < parseFloat(targetInput.min)) {
+          if (targetInput.value && parseFloat(targetInput.value) < targetInput.min) {
             targetInput.value = '';
           }
         } else {
