@@ -1,0 +1,943 @@
+<!DOCTYPE html>
+<html lang="it">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#f03333" />
+    <meta name="description" content="Calcola la tua media futura di ClasseViva" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="MediaHo" />
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/static/icons/icon-192.png" />
+    <link rel="apple-touch-icon" href="/static/icons/icon-192.png" />
+    <title>Previsione Voti - che media ho?</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      :root {
+        --text: #f1e4e4;
+        --background: #130909;
+        --primary: #f03333;
+        --secondary: #7f2929;
+        --accent: #c83737;
+        --excellent: #4caf50;
+        --good: #4facfe;
+        --pass: #ffa500;
+        --fail: #f03333;
+      }
+
+      :root[data-theme="light"] {
+        --text: #1a0a0a;
+        --background: #fef8f8;
+        --primary: #f03333;
+        --secondary: #f5cccc;
+        --accent: #c83737;
+        --excellent: #4caf50;
+        --good: #4facfe;
+        --pass: #ffa500;
+        --fail: #f03333;
+      }
+
+      body {
+        margin: 0;
+        padding: 0;
+        padding-bottom: calc(72px + env(safe-area-inset-bottom));
+        min-height: 100vh;
+        background: var(--background);
+        color: var(--text);
+        font-family: Arial, Helvetica, sans-serif;
+      }
+
+      .header-section {
+        text-align: center;
+        padding: 32px 20px 24px;
+      }
+
+      .page-title {
+        font-size: 28px;
+        font-weight: bold;
+        color: var(--text);
+        margin-bottom: 8px;
+      }
+
+      .page-subtitle {
+        font-size: 14px;
+        color: var(--text);
+        opacity: 0.7;
+      }
+
+      .container {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 0 20px 40px;
+      }
+
+      .predictor-card {
+        position: relative;
+        overflow: hidden;
+        border-radius: 12px;
+        padding: 24px;
+        margin-bottom: 20px;
+        background: var(--background);
+      }
+
+      .predictor-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        background-color: var(--secondary);
+        opacity: 0.15;
+        z-index: -1;
+      }
+
+      .card-title {
+        font-size: 20px;
+        font-weight: bold;
+        color: var(--text);
+        margin-bottom: 16px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .current-average {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 16px;
+        margin-bottom: 24px;
+        padding: 20px;
+        background: var(--secondary);
+        background: linear-gradient(135deg, var(--secondary) 0%, var(--accent) 100%);
+        border-radius: 12px;
+      }
+
+      .average-label {
+        font-size: 16px;
+        font-weight: 600;
+      }
+
+      .average-value {
+        font-size: 36px;
+        font-weight: bold;
+        color: white;
+      }
+
+      .subject-selector-wrapper {
+        margin-bottom: 20px;
+      }
+
+      .subject-selector-label {
+        display: block;
+        font-size: 14px;
+        font-weight: 600;
+        margin-bottom: 8px;
+        color: var(--text);
+      }
+
+      .subject-selector {
+        width: 100%;
+        padding: 12px;
+        border: 2px solid var(--secondary);
+        border-radius: 8px;
+        background: var(--background);
+        color: var(--text);
+        font-size: 16px;
+        font-family: inherit;
+        cursor: pointer;
+      }
+
+      .subject-selector:focus {
+        outline: none;
+        border-color: var(--accent);
+      }
+
+      .grade-input-section {
+        margin-bottom: 20px;
+      }
+
+      .input-group {
+        display: flex;
+        gap: 12px;
+        margin-bottom: 12px;
+      }
+
+      .input-wrapper {
+        flex: 1;
+      }
+
+      .input-label {
+        display: block;
+        font-size: 12px;
+        font-weight: 600;
+        margin-bottom: 6px;
+        color: var(--text);
+        opacity: 0.8;
+      }
+
+      .grade-input {
+        width: 100%;
+        padding: 12px;
+        border: 2px solid var(--secondary);
+        border-radius: 8px;
+        background: var(--background);
+        color: var(--text);
+        font-size: 16px;
+        font-family: inherit;
+      }
+
+      .grade-input:focus {
+        outline: none;
+        border-color: var(--accent);
+      }
+
+      .btn {
+        padding: 12px 24px;
+        border: none;
+        border-radius: 8px;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        font-family: inherit;
+      }
+
+      .btn-primary {
+        background: var(--primary);
+        color: white;
+        width: 100%;
+      }
+
+      .btn-primary:hover {
+        opacity: 0.9;
+        transform: translateY(-2px);
+      }
+
+      .btn-secondary {
+        background: var(--secondary);
+        color: var(--text);
+        padding: 8px 16px;
+        font-size: 14px;
+      }
+
+      .btn-secondary:hover {
+        background: var(--accent);
+      }
+
+      .simulated-grades {
+        margin-bottom: 20px;
+      }
+
+      .grade-badge-container {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 12px;
+      }
+
+      .grade-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 12px;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 14px;
+        color: var(--text);
+        background: var(--secondary);
+      }
+
+      .grade-badge .remove-btn {
+        background: transparent;
+        border: none;
+        color: var(--text);
+        cursor: pointer;
+        font-size: 18px;
+        padding: 0;
+        width: 20px;
+        height: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        opacity: 0.7;
+      }
+
+      .grade-badge .remove-btn:hover {
+        opacity: 1;
+      }
+
+      .result-section {
+        padding: 20px;
+        background: linear-gradient(135deg, var(--excellent) 0%, var(--good) 100%);
+        border-radius: 12px;
+        text-align: center;
+        margin-bottom: 20px;
+      }
+
+      .result-label {
+        font-size: 14px;
+        font-weight: 600;
+        color: white;
+        margin-bottom: 8px;
+      }
+
+      .result-value {
+        font-size: 42px;
+        font-weight: bold;
+        color: white;
+      }
+
+      .result-change {
+        font-size: 16px;
+        font-weight: 600;
+        color: white;
+        margin-top: 8px;
+      }
+
+      .info-box {
+        position: relative;
+        overflow: hidden;
+        border-radius: 12px;
+        padding: 16px;
+        margin-bottom: 20px;
+        border-left: 4px solid var(--accent);
+      }
+
+      .info-box::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        background-color: var(--secondary);
+        opacity: 0.2;
+        z-index: -1;
+      }
+
+      .info-box-title {
+        font-weight: bold;
+        color: var(--accent);
+        margin-bottom: 8px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 14px;
+      }
+
+      .info-box-content {
+        font-size: 13px;
+        line-height: 1.6;
+        opacity: 0.9;
+      }
+
+      .theme-toggle {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: var(--secondary);
+        border: 2px solid var(--accent);
+        border-radius: 50%;
+        width: 50px;
+        height: 50px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.3s ease;
+        z-index: 100;
+      }
+
+      .theme-toggle:hover {
+        transform: scale(1.1);
+        background: var(--accent);
+      }
+
+      .theme-toggle svg {
+        width: 24px;
+        height: 24px;
+        fill: var(--text);
+      }
+
+      .refresh-btn {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: var(--secondary);
+        border: 2px solid var(--accent);
+        border-radius: 50%;
+        width: 50px;
+        height: 50px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.3s ease;
+        z-index: 100;
+      }
+
+      .refresh-btn:hover {
+        transform: scale(1.1) rotate(90deg);
+        background: var(--accent);
+      }
+
+      .refresh-btn svg {
+        width: 24px;
+        height: 24px;
+        stroke: var(--text);
+      }
+
+      .refresh-btn.loading {
+        animation: spin 1s linear infinite;
+      }
+
+      @keyframes spin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+      }
+
+      .logout-btn {
+        display: none;
+      }
+
+      /* Bottom Navigation Bar */
+      .bottom-nav {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 72px;
+        background: var(--background);
+        box-shadow: 0 -4px 12px rgba(240, 51, 51, 0.3);
+        z-index: 100;
+        display: flex;
+        align-items: center;
+        justify-content: space-around;
+        padding-top: 8px;
+        padding-bottom: env(safe-area-inset-bottom);
+      }
+
+      @media (max-width: 768px) {
+        .bottom-nav {
+          left: 12px;
+          right: 12px;
+          bottom: max(16px, env(safe-area-inset-bottom));
+          border-radius: 20px;
+          box-shadow: 0 -4px 12px rgba(240, 51, 51, 0.3), 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
+      }
+
+      .nav-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-decoration: none;
+        color: var(--text);
+        transition: all 0.3s ease;
+        opacity: 0.6;
+        flex: 1;
+        background: none;
+        border: none;
+        cursor: pointer;
+        font-family: inherit;
+      }
+
+      .nav-item.active {
+        opacity: 1;
+      }
+
+      .nav-item:hover {
+        opacity: 1;
+      }
+
+      .nav-icon {
+        width: 28px;
+        height: 28px;
+        margin-bottom: 4px;
+        stroke: currentColor;
+        fill: none;
+      }
+
+      .nav-item.active .nav-icon {
+        fill: var(--accent);
+        stroke: var(--accent);
+      }
+
+      .nav-label {
+        font-size: 12px;
+        font-weight: 600;
+      }
+
+      @media (max-width: 768px) {
+        .page-title {
+          font-size: 24px;
+        }
+
+        .theme-toggle {
+          top: auto;
+          bottom: calc(96px + env(safe-area-inset-bottom));
+          right: 20px;
+        }
+
+        .refresh-btn {
+          top: auto;
+          bottom: calc(158px + env(safe-area-inset-bottom));
+          right: 20px;
+        }
+
+        .input-group {
+          flex-direction: column;
+        }
+      }
+
+      .hidden {
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <button class="refresh-btn" id="refreshBtn" aria-label="Refresh grades">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="23 4 23 10 17 10"/>
+        <polyline points="1 20 1 14 7 14"/>
+        <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+      </svg>
+    </button>
+    <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="5"/>
+        <line x1="12" x2="12" y1="1" y2="3"/>
+        <line x1="12" x2="12" y1="21" y2="23"/>
+        <line x1="4.22" x2="5.64" y1="4.22" y2="5.64"/>
+        <line x1="18.36" x2="19.78" y1="18.36" y2="19.78"/>
+        <line x1="1" x2="3" y1="12" y2="12"/>
+        <line x1="21" x2="23" y1="12" y2="12"/>
+        <line x1="4.22" x2="5.64" y1="19.78" y2="18.36"/>
+        <line x1="18.36" x2="19.78" y1="5.64" y2="4.22"/>
+      </svg>
+    </button>
+    <form action="/logout" method="post" style="display: inline;">
+      <button type="submit" class="logout-btn">Esci</button>
+    </form>
+
+    <div class="header-section">
+      <h1 class="page-title">🎯 Previsione Voti</h1>
+      <p class="page-subtitle">Simula voti futuri e scopri la tua media prevista</p>
+    </div>
+
+    <div class="container">
+      <!-- Current Average -->
+      <div class="predictor-card">
+        <h2 class="card-title">📊 Media Attuale</h2>
+        <div class="current-average">
+          <span class="average-label">Media Generale:</span>
+          <span class="average-value" id="currentAverage">{{ grades_avr["all_avr"] | round(2) }}</span>
+        </div>
+      </div>
+
+      <!-- Subject Selection -->
+      <div class="predictor-card">
+        <h2 class="card-title">🎓 Scegli Materia</h2>
+        <div class="subject-selector-wrapper">
+          <label class="subject-selector-label" for="subjectSelect">Seleziona una materia per simulare nuovi voti:</label>
+          <select class="subject-selector" id="subjectSelect">
+            <option value="">-- Seleziona una materia --</option>
+          </select>
+        </div>
+        <div id="subjectInfo" class="info-box hidden">
+          <div class="info-box-title">
+            📌 Info Materia
+          </div>
+          <div class="info-box-content">
+            <strong>Voti attuali:</strong> <span id="currentGradesCount">0</span><br>
+            <strong>Media attuale:</strong> <span id="currentSubjectAverage">0</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Grade Input -->
+      <div class="predictor-card" id="gradeInputSection" style="display: none;">
+        <h2 class="card-title">➕ Aggiungi Voti Simulati</h2>
+        <div class="grade-input-section">
+          <div class="input-group">
+            <div class="input-wrapper">
+              <label class="input-label" for="gradeValue">Voto (4-10)</label>
+              <input type="number" class="grade-input" id="gradeValue" min="4" max="10" step="0.25" placeholder="es. 8.5">
+            </div>
+            <div class="input-wrapper" style="display: flex; align-items: flex-end;">
+              <button class="btn btn-primary" id="addGradeBtn">Aggiungi Voto</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="simulated-grades">
+          <div class="input-label">Voti simulati:</div>
+          <div class="grade-badge-container" id="simulatedGradesList">
+            <span style="opacity: 0.5; font-size: 14px;">Nessun voto simulato</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Results -->
+      <div class="predictor-card" id="resultsSection" style="display: none;">
+        <h2 class="card-title">📈 Risultati Previsione</h2>
+        <div class="result-section">
+          <div class="result-label">Nuova Media Prevista (Materia)</div>
+          <div class="result-value" id="predictedSubjectAverage">-</div>
+          <div class="result-change" id="subjectChange">-</div>
+        </div>
+        <div class="result-section" style="background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);">
+          <div class="result-label">Nuova Media Generale Prevista</div>
+          <div class="result-value" id="predictedOverallAverage">-</div>
+          <div class="result-change" id="overallChange">-</div>
+        </div>
+        <button class="btn btn-secondary" id="resetBtn" style="width: 100%;">🔄 Resetta Simulazione</button>
+      </div>
+
+      <!-- Info Box -->
+      <div class="info-box">
+        <div class="info-box-title">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="12" y1="16" x2="12" y2="12"/>
+            <line x1="12" y1="8" x2="12.01" y2="8"/>
+          </svg>
+          Come Funziona
+        </div>
+        <div class="info-box-content">
+          Questa funzione ti permette di simulare l'effetto di voti futuri sulla tua media.
+          Seleziona una materia, aggiungi voti ipotetici e visualizza come cambierebbe la tua media
+          sia nella materia che generale. Perfetto per pianificare i tuoi obiettivi di studio! 📚
+        </div>
+      </div>
+    </div>
+
+    <!-- Bottom Navigation Bar -->
+    <nav class="bottom-nav">
+      <a href="/grades" class="nav-item">
+        <svg class="nav-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+          <polyline points="9 22 9 12 15 12 15 22"/>
+        </svg>
+        <span class="nav-label">Medie</span>
+      </a>
+      <a href="/charts" class="nav-item">
+        <svg class="nav-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="20" x2="18" y2="10"/>
+          <line x1="12" y1="20" x2="12" y2="4"/>
+          <line x1="6" y1="20" x2="6" y2="14"/>
+        </svg>
+        <span class="nav-label">Grafici</span>
+      </a>
+      <a href="/predictor" class="nav-item active">
+        <svg class="nav-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"/>
+          <path d="M12 6v6l4 2"/>
+        </svg>
+        <span class="nav-label">Previsione</span>
+      </a>
+      <a href="/export" class="nav-item">
+        <svg class="nav-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="7 10 12 15 17 10"/>
+          <line x1="12" y1="15" x2="12" y2="3"/>
+        </svg>
+        <span class="nav-label">Esporta</span>
+      </a>
+      <a href="/info" class="nav-item">
+        <svg class="nav-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"/>
+          <line x1="12" y1="16" x2="12" y2="12"/>
+          <line x1="12" y1="8" x2="12.01" y2="8"/>
+        </svg>
+        <span class="nav-label">Info</span>
+      </a>
+      <button type="button" class="nav-item" id="logoutNavBtn">
+        <svg class="nav-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+          <polyline points="16 17 21 12 16 7"/>
+          <line x1="21" y1="12" x2="9" y2="12"/>
+        </svg>
+        <span class="nav-label">Esci</span>
+      </button>
+    </nav>
+
+    <script>
+      // Theme management
+      const themeToggle = document.getElementById('themeToggle');
+      const root = document.documentElement;
+      
+      function getSystemTheme() {
+        if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) {
+          return 'light';
+        }
+        return 'dark';
+      }
+      
+      const savedTheme = localStorage.getItem('theme');
+      const initialTheme = savedTheme || getSystemTheme();
+      
+      if (initialTheme === 'light') {
+        root.setAttribute('data-theme', 'light');
+      }
+      
+      themeToggle.addEventListener('click', () => {
+        const currentTheme = root.getAttribute('data-theme');
+        const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+        
+        if (newTheme === 'light') {
+          root.setAttribute('data-theme', 'light');
+        } else {
+          root.removeAttribute('data-theme');
+        }
+        
+        localStorage.setItem('theme', newTheme);
+      });
+
+      // Get grades data from backend
+      const gradesData = {{ grades_avr | tojson | safe }};
+      
+      // State management
+      let selectedSubject = null;
+      let selectedPeriod = null;
+      let simulatedGrades = [];
+      let subjectData = {};
+
+      // Initialize - populate subject selector
+      function initializeSubjects() {
+        const select = document.getElementById('subjectSelect');
+        const periods = Object.keys(gradesData).filter(key => key !== 'all_avr');
+        
+        // Collect all unique subjects with their period info
+        periods.forEach(period => {
+          Object.keys(gradesData[period]).forEach(subject => {
+            if (subject !== 'period_avr') {
+              if (!subjectData[subject]) {
+                subjectData[subject] = {};
+              }
+              subjectData[subject][period] = gradesData[period][subject];
+            }
+          });
+        });
+
+        // Add options to select
+        Object.keys(subjectData).sort().forEach(subject => {
+          const option = document.createElement('option');
+          option.value = subject;
+          option.textContent = subject;
+          select.appendChild(option);
+        });
+      }
+
+      // Handle subject selection
+      document.getElementById('subjectSelect').addEventListener('change', function(e) {
+        selectedSubject = e.target.value;
+        
+        if (!selectedSubject) {
+          document.getElementById('subjectInfo').classList.add('hidden');
+          document.getElementById('gradeInputSection').style.display = 'none';
+          document.getElementById('resultsSection').style.display = 'none';
+          return;
+        }
+
+        // Reset simulated grades
+        simulatedGrades = [];
+        updateSimulatedGradesList();
+
+        // Find the most recent period for this subject
+        const periods = Object.keys(subjectData[selectedSubject]).sort().reverse();
+        selectedPeriod = periods[0];
+        
+        const data = subjectData[selectedSubject][selectedPeriod];
+        
+        // Show subject info
+        document.getElementById('currentGradesCount').textContent = data.count;
+        document.getElementById('currentSubjectAverage').textContent = data.avr.toFixed(2);
+        document.getElementById('subjectInfo').classList.remove('hidden');
+        
+        // Show grade input section
+        document.getElementById('gradeInputSection').style.display = 'block';
+        document.getElementById('resultsSection').style.display = 'none';
+      });
+
+      // Handle add grade
+      document.getElementById('addGradeBtn').addEventListener('click', function() {
+        const gradeInput = document.getElementById('gradeValue');
+        const gradeValue = parseFloat(gradeInput.value);
+        
+        if (!gradeValue || gradeValue < 4 || gradeValue > 10) {
+          alert('Inserisci un voto valido tra 4 e 10');
+          return;
+        }
+
+        if (!selectedSubject) {
+          alert('Seleziona prima una materia');
+          return;
+        }
+
+        simulatedGrades.push(gradeValue);
+        gradeInput.value = '';
+        
+        updateSimulatedGradesList();
+        calculatePredictions();
+      });
+
+      // Update simulated grades list
+      function updateSimulatedGradesList() {
+        const container = document.getElementById('simulatedGradesList');
+        
+        if (simulatedGrades.length === 0) {
+          container.innerHTML = '<span style="opacity: 0.5; font-size: 14px;">Nessun voto simulato</span>';
+          return;
+        }
+
+        container.innerHTML = '';
+        simulatedGrades.forEach((grade, index) => {
+          const badge = document.createElement('div');
+          badge.className = 'grade-badge';
+          badge.innerHTML = `
+            <span>${grade}</span>
+            <button class="remove-btn" data-index="${index}">&times;</button>
+          `;
+          container.appendChild(badge);
+        });
+
+        // Add event listeners to remove buttons
+        container.querySelectorAll('.remove-btn').forEach(btn => {
+          btn.addEventListener('click', function() {
+            const index = parseInt(this.dataset.index);
+            simulatedGrades.splice(index, 1);
+            updateSimulatedGradesList();
+            if (simulatedGrades.length > 0) {
+              calculatePredictions();
+            } else {
+              document.getElementById('resultsSection').style.display = 'none';
+            }
+          });
+        });
+      }
+
+      // Calculate predictions
+      function calculatePredictions() {
+        if (simulatedGrades.length === 0) {
+          document.getElementById('resultsSection').style.display = 'none';
+          return;
+        }
+
+        // Get current grades for the subject
+        const currentData = subjectData[selectedSubject][selectedPeriod];
+        const currentGrades = currentData.grades.map(g => g.decimalValue);
+        
+        // Calculate new subject average
+        const allGrades = [...currentGrades, ...simulatedGrades];
+        const newSubjectAverage = allGrades.reduce((a, b) => a + b, 0) / allGrades.length;
+        const currentSubjectAverage = currentData.avr;
+        const subjectChange = newSubjectAverage - currentSubjectAverage;
+
+        // Calculate new overall average
+        // We need to recalculate the overall average considering all subjects
+        let totalGrades = 0;
+        let totalCount = 0;
+        
+        const periods = Object.keys(gradesData).filter(key => key !== 'all_avr');
+        periods.forEach(period => {
+          Object.keys(gradesData[period]).forEach(subject => {
+            if (subject !== 'period_avr') {
+              const subjectGrades = gradesData[period][subject].grades.map(g => g.decimalValue);
+              
+              // If this is the selected subject in the current period, add simulated grades
+              if (subject === selectedSubject && period === selectedPeriod) {
+                totalGrades += subjectGrades.reduce((a, b) => a + b, 0) + simulatedGrades.reduce((a, b) => a + b, 0);
+                totalCount += subjectGrades.length + simulatedGrades.length;
+              } else {
+                totalGrades += subjectGrades.reduce((a, b) => a + b, 0);
+                totalCount += subjectGrades.length;
+              }
+            }
+          });
+        });
+
+        const newOverallAverage = totalGrades / totalCount;
+        const currentOverallAverage = gradesData.all_avr;
+        const overallChange = newOverallAverage - currentOverallAverage;
+
+        // Update UI
+        document.getElementById('predictedSubjectAverage').textContent = newSubjectAverage.toFixed(2);
+        document.getElementById('subjectChange').textContent = 
+          (subjectChange >= 0 ? '↑ +' : '↓ ') + subjectChange.toFixed(2);
+        
+        document.getElementById('predictedOverallAverage').textContent = newOverallAverage.toFixed(2);
+        document.getElementById('overallChange').textContent = 
+          (overallChange >= 0 ? '↑ +' : '↓ ') + overallChange.toFixed(2);
+
+        document.getElementById('resultsSection').style.display = 'block';
+      }
+
+      // Reset simulation
+      document.getElementById('resetBtn').addEventListener('click', function() {
+        simulatedGrades = [];
+        updateSimulatedGradesList();
+        document.getElementById('resultsSection').style.display = 'none';
+        document.getElementById('gradeValue').value = '';
+      });
+
+      // Initialize on page load
+      initializeSubjects();
+
+      // Handle logout from bottom nav
+      const logoutNavBtn = document.getElementById('logoutNavBtn');
+      if (logoutNavBtn) {
+        logoutNavBtn.addEventListener('click', () => {
+          const form = document.createElement('form');
+          form.method = 'POST';
+          form.action = '/logout';
+          document.body.appendChild(form);
+          form.submit();
+        });
+      }
+      
+      // Handle refresh button
+      const refreshBtn = document.getElementById('refreshBtn');
+      if (refreshBtn) {
+        refreshBtn.addEventListener('click', async () => {
+          refreshBtn.classList.add('loading');
+          refreshBtn.disabled = true;
+          
+          try {
+            const response = await fetch('/refresh_grades', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+            });
+            
+            const data = await response.json();
+            
+            if (response.ok) {
+              window.location.reload();
+            } else if (data.redirect) {
+              window.location.href = data.redirect;
+            } else {
+              alert('Errore durante l\'aggiornamento dei voti: ' + (data.error || 'Errore sconosciuto'));
+              refreshBtn.classList.remove('loading');
+              refreshBtn.disabled = false;
+            }
+          } catch (error) {
+            alert('Errore di connessione durante l\'aggiornamento dei voti');
+            refreshBtn.classList.remove('loading');
+            refreshBtn.disabled = false;
+          }
+        });
+      }
+    </script>
+  </body>
+</html>

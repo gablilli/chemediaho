@@ -174,6 +174,15 @@ def info_page():
     """Display info page"""
     return flask.render_template('info.html', version=APP_VERSION)
 
+@app.route('/predictor')
+def predictor_page():
+    """Display grade predictor page - requires active session"""
+    if 'grades_avr' not in flask.session:
+        return flask.redirect('/')
+    
+    grades_avr = flask.session['grades_avr']
+    return flask.render_template('predictor.html', grades_avr=grades_avr)
+
 @app.route('/export/csv', methods=['POST'])
 def export_csv():
     """Export grades as CSV file"""
