@@ -250,11 +250,11 @@ def get_goal_message(required_grade, target_average, current_average):
     if required_grade < 1:
         return f"Ottimo! La tua media attuale è già sopra l'obiettivo. Anche con un voto minimo raggiungerai {target_average}."
     elif required_grade > 10:
-        return f"Purtroppo non è possibile raggiungere {target_average} con un solo voto. Prova a impostare un obiettivo più realistico o continua a studiare per i prossimi voti!"
+        return f"Purtroppo non è possibile raggiungere {target_average} con un solo voto. Prova a impostare un obiettivo più realistico!"
     elif required_grade >= 9:
-        return f"Devi impegnarti molto! Ti serve almeno un {round(required_grade, 1)} per raggiungere l'obiettivo."
+        return f"Devi impegnarti, ti serve almeno un {round(required_grade, 1)} per raggiungere l'obiettivo."
     elif required_grade >= 7:
-        return f"È fattibile! Con un buon {round(required_grade, 1)} puoi raggiungere {target_average}."
+        return f"È fattibile: Con un buon {round(required_grade, 1)} puoi raggiungere {target_average}."
     elif required_grade >= 6:
         return f"Ci sei quasi! Un {round(required_grade, 1)} ti permetterà di raggiungere l'obiettivo."
     else:
