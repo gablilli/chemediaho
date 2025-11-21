@@ -10,7 +10,7 @@ from datetime import datetime
 app = flask.Flask(__name__)
 
 # Application version
-APP_VERSION = "1.4"
+APP_VERSION = "1.5"
 
 # Load or generate a persistent SECRET_KEY
 SECRET_KEY_FILE = 'secret_key.txt'
@@ -173,6 +173,92 @@ def export_page():
 def info_page():
     """Display info page"""
     return flask.render_template('info.html', version=APP_VERSION)
+
+@app.route('/goal')
+def goal_page():
+    """Display goal calculator page - requires active session"""
+    if 'grades_avr' not in flask.session:
+        return flask.redirect('/')
+    
+    grades_avr = flask.session['grades_avr']
+    return flask.render_template('goal.html', grades_avr=grades_avr)
+
+@app.route('/calculate_goal', methods=['POST'])
+def calculate_goal():
+    """Calculate what grade is needed to reach a target average"""
+    if 'grades_avr' not in flask.session:
+        return flask.jsonify({'error': 'No active session'}), 401
+    
+    try:
+        data = flask.request.get_json()
+        period = data.get('period')
+        subject = data.get('subject')
+        target_average = float(data.get('target_average'))
+        
+        grades_avr = flask.session['grades_avr']
+        
+        # Validate inputs
+        if period not in grades_avr or subject not in grades_avr[period]:
+            return flask.jsonify({'error': 'Materia o periodo non trovato'}), 400
+        
+        if target_average < 1 or target_average > 10:
+            return flask.jsonify({'error': 'La media target deve essere tra 1 e 10'}), 400
+        
+        # Get current grades with validation
+        subject_data = grades_avr[period][subject]
+        if 'grades' not in subject_data or not isinstance(subject_data['grades'], list):
+            return flask.jsonify({'error': 'Dati dei voti non validi'}), 400
+        
+        # Extract grades with validation
+        current_grades = []
+        for g in subject_data['grades']:
+            if isinstance(g, dict) and 'decimalValue' in g and g['decimalValue'] is not None:
+                current_grades.append(g['decimalValue'])
+        
+        if not current_grades:
+            return flask.jsonify({'error': 'Nessun voto disponibile per questa materia'}), 400
+        
+        current_count = len(current_grades)
+        current_sum = sum(current_grades)
+        current_average = subject_data.get('avr', current_sum / current_count if current_count > 0 else 0)
+        
+        # Calculate required grade
+        # Formula: (current_sum + required_grade) / (current_count + 1) = target_average
+        # required_grade = target_average * (current_count + 1) - current_sum
+        required_grade = target_average * (current_count + 1) - current_sum
+        
+        # Determine if it's achievable
+        achievable = 1 <= required_grade <= 10
+        
+        return flask.jsonify({
+            'success': True,
+            'current_average': round(current_average, 2),
+            'target_average': target_average,
+            'required_grade': round(required_grade, 2),
+            'current_grades_count': current_count,
+            'achievable': achievable,
+            'message': get_goal_message(required_grade, target_average, current_average)
+        }), 200
+        
+    except ValueError as e:
+        return flask.jsonify({'error': 'Valori non validi'}), 400
+    except Exception as e:
+        return flask.jsonify({'error': 'Errore durante il calcolo'}), 500
+
+def get_goal_message(required_grade, target_average, current_average):
+    """Generate a helpful message based on the calculation result"""
+    if required_grade < 1:
+        return f"Ottimo! La tua media attuale è già sopra l'obiettivo. Anche con un voto minimo raggiungerai {target_average}."
+    elif required_grade > 10:
+        return f"Purtroppo non è possibile raggiungere {target_average} con un solo voto. Prova a impostare un obiettivo più realistico!"
+    elif required_grade >= 9:
+        return f"Devi impegnarti, ti serve almeno un {round(required_grade, 1)} per raggiungere l'obiettivo."
+    elif required_grade >= 7:
+        return f"È fattibile: Con un buon {round(required_grade, 1)} puoi raggiungere {target_average}."
+    elif required_grade >= 6:
+        return f"Ci sei quasi! Un {round(required_grade, 1)} ti permetterà di raggiungere l'obiettivo."
+    else:
+        return f"Ottimo! Anche con un voto modesto ({round(required_grade, 1)}) raggiungerai {target_average}."
 
 @app.route('/export/csv', methods=['POST'])
 def export_csv():
