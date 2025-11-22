@@ -224,7 +224,7 @@ def calculate_goal():
         
         # Validate that target average is not below current average
         if target_average < current_average:
-            return flask.jsonify({'error': f'La media target ({target_average}) non può essere inferiore alla media attuale ({round(current_average, 2)}). Non ha senso calcolare un obiettivo per avere una media inferiore!'}), 400
+            return flask.jsonify({'error': f'La media target ({target_average}) non può essere inferiore alla media attuale ({round(current_average, 2)}).'}), 400
         
         # Calculate required grade
         # Formula: (current_sum + required_grade) / (current_count + 1) = target_average
