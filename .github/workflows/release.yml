@@ -1,0 +1,167 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'New version number (e.g., 1.6.0)'
+        required: true
+        type: string
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: read
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Validate version format
+        run: |
+          if ! echo "${{ inputs.version }}" | grep -E '^[0-9]+\.[0-9]+(\.[0-9]+)?$'; then
+            echo "Error: Version must be in format X.Y or X.Y.Z (e.g., 1.6 or 1.6.0)"
+            exit 1
+          fi
+      
+      - name: Check if tag already exists
+        run: |
+          if git rev-parse "v${{ inputs.version }}" >/dev/null 2>&1; then
+            echo "Error: Tag v${{ inputs.version }} already exists"
+            exit 1
+          fi
+      
+      - name: Update version in app.py
+        run: |
+          sed -i 's/APP_VERSION = "[^"]*"/APP_VERSION = "${{ inputs.version }}"/' app.py
+          echo "Updated app.py:"
+          grep "APP_VERSION" app.py
+      
+      - name: Update version in sw.js
+        run: |
+          sed -i "s/const CACHE_NAME = 'chemediaho-v[^']*'/const CACHE_NAME = 'chemediaho-v${{ inputs.version }}'/" static/sw.js
+          echo "Updated sw.js:"
+          grep "CACHE_NAME" static/sw.js
+      
+      - name: Get last release tag
+        id: last_release
+        run: |
+          LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          if [ -z "$LAST_TAG" ]; then
+            # If no previous tag, use first commit
+            LAST_TAG=$(git rev-list --max-parents=0 HEAD)
+          fi
+          echo "last_tag=$LAST_TAG" >> $GITHUB_OUTPUT
+          echo "Last release: $LAST_TAG"
+      
+      - name: Generate changelog
+        id: changelog
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const lastTag = '${{ steps.last_release.outputs.last_tag }}';
+            const newVersion = '${{ inputs.version }}';
+            
+            // Get all merged PRs since last release
+            const commits = await github.rest.repos.compareCommits({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              base: lastTag,
+              head: 'main'
+            });
+            
+            // Extract PR numbers from commit messages
+            const prNumbers = new Set();
+            for (const commit of commits.data.commits) {
+              const match = commit.commit.message.match(/#(\d+)/);
+              if (match) {
+                prNumbers.add(parseInt(match[1]));
+              }
+            }
+            
+            // Fetch PR details
+            const features = [];
+            const fixes = [];
+            
+            for (const prNumber of prNumbers) {
+              try {
+                const { data: pr } = await github.rest.pulls.get({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  pull_number: prNumber
+                });
+                
+                if (pr.merged_at) {
+                  const hasFeatureLabel = pr.labels.some(l => l.name === 'changelog:feat');
+                  const hasFixLabel = pr.labels.some(l => l.name === 'changelog:fix');
+                  
+                  const prEntry = `* ${pr.title} by @${pr.user.login} in https://github.com/${context.repo.owner}/${context.repo.repo}/pull/${prNumber}`;
+                  
+                  if (hasFeatureLabel) {
+                    features.push(prEntry);
+                  } else if (hasFixLabel) {
+                    fixes.push(prEntry);
+                  }
+                }
+              } catch (error) {
+                console.log(`Could not fetch PR #${prNumber}: ${error.message}`);
+              }
+            }
+            
+            // Build changelog
+            let changelog = `# che media ho? - ${newVersion}\n`;
+            changelog += `## What's Changed\n`;
+            
+            if (features.length > 0) {
+              changelog += `### Feats\n`;
+              changelog += features.join('\n') + '\n\n';
+            }
+            
+            if (fixes.length > 0) {
+              changelog += `### Fixes\n`;
+              changelog += fixes.join('\n') + '\n\n';
+            }
+            
+            if (features.length === 0 && fixes.length === 0) {
+              changelog += `### Changes\n`;
+              changelog += `* Version bump to ${newVersion}\n\n`;
+            }
+            
+            changelog += `\n\n**Full Changelog**: https://github.com/${context.repo.owner}/${context.repo.repo}/compare/${lastTag}...v${newVersion}`;
+            
+            core.setOutput('changelog', changelog);
+            console.log('Generated changelog:');
+            console.log(changelog);
+      
+      - name: Commit version bump
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add app.py static/sw.js
+          git commit -m "chore: bump version to ${{ inputs.version }}"
+          git push origin main
+      
+      - name: Create and push tag
+        run: |
+          git tag -a "v${{ inputs.version }}" -m "Release v${{ inputs.version }}"
+          git push origin "v${{ inputs.version }}"
+      
+      - name: Create GitHub Release
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const changelog = `${{ steps.changelog.outputs.changelog }}`;
+            
+            await github.rest.repos.createRelease({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              tag_name: 'v${{ inputs.version }}',
+              name: '${{ inputs.version }}',
+              body: changelog,
+              draft: false,
+              prerelease: false
+            });
