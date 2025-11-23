@@ -1,0 +1,849 @@
+<!DOCTYPE html>
+<html lang="it">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#f03333" />
+    <meta name="description" content="Visualizza l'andamento dei voti di ClasseViva" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="MediaHo" />
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/static/icons/icon-192.png" />
+    <link rel="apple-touch-icon" href="/static/icons/icon-192.png" />
+    <title>Grafici - che media ho?</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      :root {
+        --text: #f1e4e4;
+        --background: #130909;
+        --primary: #f03333;
+        --secondary: #7f2929;
+        --accent: #c83737;
+        --excellent: #4caf50;
+        --good: #4facfe;
+        --pass: #ffa500;
+        --fail: #f03333;
+      }
+
+      :root[data-theme="light"] {
+        --text: #1a0a0a;
+        --background: #fef8f8;
+        --primary: #f03333;
+        --secondary: #f5cccc;
+        --accent: #c83737;
+        --excellent: #4caf50;
+        --good: #4facfe;
+        --pass: #ffa500;
+        --fail: #f03333;
+      }
+
+      body {
+        margin: 0;
+        padding: 0;
+        padding-bottom: calc(72px + env(safe-area-inset-bottom));
+        min-height: 100vh;
+        background: var(--background);
+        color: var(--text);
+        font-family: Arial, Helvetica, sans-serif;
+      }
+
+      .header-section {
+        text-align: center;
+        padding: 32px 20px 24px;
+      }
+
+      .page-title {
+        font-size: 28px;
+        font-weight: bold;
+        color: var(--text);
+        margin-bottom: 8px;
+      }
+
+      .page-subtitle {
+        font-size: 14px;
+        color: var(--text);
+        opacity: 0.7;
+      }
+
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 0 20px 40px;
+      }
+
+      .chart-section {
+        margin-bottom: 32px;
+      }
+
+      .chart-card {
+        position: relative;
+        overflow: hidden;
+        border-radius: 12px;
+        padding: 24px;
+        background: var(--background);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+      }
+
+      .chart-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        background-color: var(--secondary);
+        opacity: 0.15;
+        z-index: -1;
+      }
+
+      .chart-title {
+        font-size: 20px;
+        font-weight: bold;
+        color: var(--text);
+        margin-bottom: 20px;
+      }
+
+      .chart-container {
+        position: relative;
+        height: 300px;
+        margin-bottom: 20px;
+      }
+
+      .subject-selector {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-bottom: 20px;
+      }
+
+      .subject-btn {
+        padding: 8px 16px;
+        border-radius: 8px;
+        border: 2px solid var(--secondary);
+        background: transparent;
+        color: var(--text);
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s ease;
+      }
+
+      .subject-btn:hover {
+        background: var(--secondary);
+      }
+
+      .subject-btn.active {
+        background: var(--accent);
+        border-color: var(--accent);
+        color: white;
+      }
+
+      .theme-toggle {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: var(--secondary);
+        border: 2px solid var(--accent);
+        border-radius: 50%;
+        width: 50px;
+        height: 50px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.3s ease;
+        z-index: 100;
+      }
+
+      .theme-toggle:hover {
+        transform: scale(1.1);
+        background: var(--accent);
+      }
+
+      .theme-toggle svg {
+        width: 24px;
+        height: 24px;
+        fill: var(--text);
+      }
+      
+      .refresh-btn {
+        position: fixed;
+        top: 20px;
+        right: 80px;
+        background: var(--secondary);
+        border: 2px solid var(--accent);
+        border-radius: 50%;
+        width: 50px;
+        height: 50px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.3s ease;
+        z-index: 100;
+      }
+
+      .refresh-btn:hover {
+        transform: scale(1.1) rotate(90deg);
+        background: var(--accent);
+      }
+
+      .refresh-btn svg {
+        width: 24px;
+        height: 24px;
+        stroke: var(--text);
+      }
+      
+      .refresh-btn.loading {
+        animation: spin 1s linear infinite;
+      }
+      
+      @keyframes spin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+      }
+
+      .logout-btn {
+        display: none; /* Hidden on all devices */
+      }
+
+      /* Bottom Navigation Bar */
+      .bottom-nav {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 72px;
+        background: var(--background);
+        box-shadow: 0 -4px 12px rgba(240, 51, 51, 0.3);
+        z-index: 100;
+        display: flex;
+        align-items: center;
+        justify-content: space-around;
+        padding-top: 8px;
+        padding-bottom: env(safe-area-inset-bottom);
+      }
+
+      @media (max-width: 768px) {
+        .bottom-nav {
+          left: 12px;
+          right: 12px;
+          bottom: max(16px, env(safe-area-inset-bottom));
+          border-radius: 20px;
+          box-shadow: 0 -4px 12px rgba(240, 51, 51, 0.3), 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
+      }
+
+      .nav-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-decoration: none;
+        color: var(--text);
+        transition: all 0.3s ease;
+        opacity: 0.6;
+        flex: 1;
+        background: none;
+        border: none;
+        cursor: pointer;
+        font-family: inherit;
+      }
+
+      .nav-item.active {
+        opacity: 1;
+      }
+
+      .nav-item:hover {
+        opacity: 1;
+      }
+
+      .nav-icon {
+        width: 28px;
+        height: 28px;
+        margin-bottom: 4px;
+        stroke: currentColor;
+        fill: none;
+      }
+
+      .nav-item.active .nav-icon {
+        fill: var(--accent);
+        stroke: var(--accent);
+      }
+
+      .nav-label {
+        font-size: 12px;
+        font-weight: 600;
+      }
+
+      @media (max-width: 768px) {
+        .page-title {
+          font-size: 24px;
+        }
+
+        .chart-container {
+          height: 250px;
+        }
+
+        .theme-toggle {
+          top: auto;
+          bottom: calc(96px + env(safe-area-inset-bottom));
+          right: 20px;
+        }
+        
+        .refresh-btn {
+          top: auto;
+          bottom: calc(158px + env(safe-area-inset-bottom));
+          right: 20px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <button class="refresh-btn" id="refreshBtn" aria-label="Refresh grades">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="23 4 23 10 17 10"/>
+        <polyline points="1 20 1 14 7 14"/>
+        <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+      </svg>
+    </button>
+    <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="5"/>
+        <line x1="12" x2="12" y1="1" y2="3"/>
+        <line x1="12" x2="12" y1="21" y2="23"/>
+        <line x1="4.22" x2="5.64" y1="4.22" y2="5.64"/>
+        <line x1="18.36" x2="19.78" y1="18.36" y2="19.78"/>
+        <line x1="1" x2="3" y1="12" y2="12"/>
+        <line x1="21" x2="23" y1="12" y2="12"/>
+        <line x1="4.22" x2="5.64" y1="19.78" y2="18.36"/>
+        <line x1="18.36" x2="19.78" y1="5.64" y2="4.22"/>
+      </svg>
+    </button>
+    <form action="/logout" method="post" style="display: inline;">
+      <button type="submit" class="logout-btn">Esci</button>
+    </form>
+
+    <div class="header-section">
+      <h1 class="page-title">Andamento Voti</h1>
+      <p class="page-subtitle">Visualizza l'evoluzione dei tuoi voti nel tempo</p>
+    </div>
+
+    <div class="container">
+      <!-- Subject Grades Trend -->
+      <div class="chart-section">
+        <div class="chart-card">
+          <h2 class="chart-title">📊 Andamento per Materia</h2>
+          <div class="subject-selector" id="subjectSelector">
+            <!-- Subject buttons will be added here by JavaScript -->
+          </div>
+          <div class="chart-container" style="position: relative;">
+            <canvas id="subjectChart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- Average Trend Chart -->
+      <div class="chart-section">
+        <div class="chart-card">
+          <h2 class="chart-title">📈 Andamento Media Generale</h2>
+          <div class="chart-container" style="position: relative;">
+            <canvas id="averageChart"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bottom Navigation Bar -->
+    <nav class="bottom-nav">
+      <a href="/grades" class="nav-item">
+        <svg class="nav-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+          <polyline points="9 22 9 12 15 12 15 22"/>
+        </svg>
+        <span class="nav-label">Medie</span>
+      </a>
+      <a href="/charts" class="nav-item active">
+        <svg class="nav-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="20" x2="18" y2="10"/>
+          <line x1="12" y1="20" x2="12" y2="4"/>
+          <line x1="6" y1="20" x2="6" y2="14"/>
+        </svg>
+        <span class="nav-label">Grafici</span>
+      </a>
+      <a href="/goal" class="nav-item">
+        <svg class="nav-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"/>
+          <circle cx="12" cy="12" r="6"/>
+          <circle cx="12" cy="12" r="2"/>
+        </svg>
+        <span class="nav-label">Obiettivo</span>
+      </a>
+      <a href="/export" class="nav-item">
+        <svg class="nav-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="7 10 12 15 17 10"/>
+          <line x1="12" y1="15" x2="12" y2="3"/>
+        </svg>
+        <span class="nav-label">Esporta</span>
+      </a>
+      <a href="/info" class="nav-item">
+        <svg class="nav-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"/>
+          <line x1="12" y1="16" x2="12" y2="12"/>
+          <line x1="12" y1="8" x2="12.01" y2="8"/>
+        </svg>
+        <span class="nav-label">Info</span>
+      </a>
+      <button type="button" class="nav-item" id="logoutNavBtn">
+        <svg class="nav-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+          <polyline points="16 17 21 12 16 7"/>
+          <line x1="21" y1="12" x2="9" y2="12"/>
+        </svg>
+        <span class="nav-label">Esci</span>
+      </button>
+    </nav>
+
+    <script>
+      // Theme management
+      const themeToggle = document.getElementById('themeToggle');
+      const root = document.documentElement;
+      
+      function getSystemTheme() {
+        if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) {
+          return 'light';
+        }
+        return 'dark';
+      }
+      
+      const savedTheme = localStorage.getItem('theme');
+      const initialTheme = savedTheme || getSystemTheme();
+      
+      if (initialTheme === 'light') {
+        root.setAttribute('data-theme', 'light');
+      }
+      
+      themeToggle.addEventListener('click', () => {
+        const currentTheme = root.getAttribute('data-theme');
+        const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+        
+        if (newTheme === 'light') {
+          root.setAttribute('data-theme', 'light');
+        } else {
+          root.removeAttribute('data-theme');
+        }
+        
+        localStorage.setItem('theme', newTheme);
+      });
+
+      // Get grades data from backend
+      const gradesData = {{ grades_avr | tojson | safe }};
+
+      // Chart.js configuration
+      const isDark = root.getAttribute('data-theme') !== 'light';
+      const textColor = isDark ? '#f1e4e4' : '#1a0a0a';
+      const gridColor = isDark ? 'rgba(241, 228, 228, 0.1)' : 'rgba(26, 10, 10, 0.1)';
+
+      Chart.defaults.color = textColor;
+      Chart.defaults.borderColor = gridColor;
+
+      // Prepare data for all subjects across periods
+      const periods = Object.keys(gradesData).filter(key => key !== 'all_avr');
+      
+      // Get all unique subjects
+      const allSubjects = new Set();
+      periods.forEach(period => {
+        Object.keys(gradesData[period]).forEach(subject => {
+          if (subject !== 'period_avr') {
+            allSubjects.add(subject);
+          }
+        });
+      });
+
+      // Generate distinct colors for each subject
+      const subjectColors = [
+        '#4facfe', '#43e97b', '#fa709a', '#fee140',
+        '#30cfd0', '#a8edea', '#ff6e7f', '#bfe9ff',
+        '#c471ed', '#f64f59', '#12c2e9', '#f093fb',
+        '#4facfe', '#00f2fe', '#fa709a', '#ffd200'
+      ];
+
+      let subjectChart = null;
+      let averageChart = null;
+      let selectedSubjects = Array.from(allSubjects);
+
+      // Prepare subject data structure
+      function prepareSubjectData() {
+        const subjectData = {};
+        
+        allSubjects.forEach(subject => {
+          subjectData[subject] = {
+            grades: [],
+            labels: []
+          };
+          
+          periods.forEach(period => {
+            if (gradesData[period][subject]) {
+              const grades = gradesData[period][subject].grades;
+              grades.forEach((grade, index) => {
+                subjectData[subject].grades.push(grade.decimalValue);
+                subjectData[subject].labels.push(`P${period}-V${index + 1}`);
+              });
+            }
+          });
+        });
+        
+        return subjectData;
+      }
+
+      // Prepare overall average data by period
+      function prepareOverallData() {
+        const overallData = {
+          labels: [],
+          values: []
+        };
+        
+        periods.forEach(period => {
+          overallData.labels.push(`Periodo ${period}`);
+          overallData.values.push(gradesData[period].period_avr);
+        });
+        
+        return overallData;
+      }
+
+      const subjectDataCache = prepareSubjectData();
+      const overallData = prepareOverallData();
+
+      function createSubjectChart(selectedSubjects) {
+        const ctx = document.getElementById('subjectChart').getContext('2d');
+        
+        if (subjectChart) {
+          subjectChart.destroy();
+        }
+
+        // Prepare datasets for selected subjects only
+        const datasets = [];
+
+        // Add selected subjects
+        selectedSubjects.forEach((subject, index) => {
+          const data = subjectDataCache[subject];
+          const colorIndex = Array.from(allSubjects).indexOf(subject) % subjectColors.length;
+          
+          datasets.push({
+            label: subject,
+            data: data.grades,
+            borderColor: subjectColors[colorIndex],
+            backgroundColor: subjectColors[colorIndex] + '20',
+            borderWidth: 3,
+            fill: false,
+            tension: 0.4,
+            pointRadius: 5,
+            pointHoverRadius: 7,
+            pointBackgroundColor: subjectColors[colorIndex],
+            pointBorderColor: '#fff',
+            pointBorderWidth: 2
+          });
+        });
+
+        // Collect all labels
+        let allLabels = [];
+        selectedSubjects.forEach(subject => {
+          allLabels = allLabels.concat(subjectDataCache[subject].labels);
+        });
+        
+        // Use unique labels, preserving order
+        const uniqueLabels = [...new Set(allLabels)];
+        
+        // Prepare data arrays matching labels
+        const finalDatasets = datasets.map((dataset, idx) => {
+          const subject = selectedSubjects[idx];
+          const subjectLabels = subjectDataCache[subject].labels;
+          const subjectGrades = subjectDataCache[subject].grades;
+          
+          const mappedData = uniqueLabels.map(label => {
+            const labelIdx = subjectLabels.indexOf(label);
+            return labelIdx >= 0 ? subjectGrades[labelIdx] : null;
+          });
+          
+          return { ...dataset, data: mappedData };
+        });
+        
+        subjectChart = new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels: uniqueLabels,
+            datasets: finalDatasets
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: {
+              mode: 'index',
+              intersect: false,
+            },
+            plugins: {
+              legend: {
+                display: true,
+                position: 'bottom',
+                labels: {
+                  boxWidth: 20,
+                  padding: 15,
+                  usePointStyle: true
+                }
+              },
+              tooltip: {
+                backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                padding: 12,
+                displayColors: true,
+                callbacks: {
+                  label: function(context) {
+                    let label = context.dataset.label || '';
+                    if (label) {
+                      label += ': ';
+                    }
+                    if (context.parsed.y !== null) {
+                      label += context.parsed.y.toFixed(2);
+                    }
+                    return label;
+                  }
+                }
+              }
+            },
+            scales: {
+              y: {
+                beginAtZero: false,
+                min: 4,
+                max: 10,
+                ticks: {
+                  stepSize: 1
+                },
+                grid: {
+                  color: gridColor
+                }
+              },
+              x: {
+                grid: {
+                  display: false
+                },
+                ticks: {
+                  maxRotation: 45,
+                  minRotation: 45
+                }
+              }
+            }
+          }
+        });
+      }
+
+      function createAverageChart() {
+        const ctx = document.getElementById('averageChart').getContext('2d');
+        
+        if (averageChart) {
+          averageChart.destroy();
+        }
+
+        averageChart = new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels: overallData.labels,
+            datasets: [{
+              label: 'Media Generale',
+              data: overallData.values,
+              borderColor: 'rgba(240, 51, 51, 0.8)',
+              backgroundColor: 'rgba(240, 51, 51, 0.2)',
+              borderWidth: 3,
+              fill: true,
+              tension: 0.4,
+              pointRadius: 6,
+              pointHoverRadius: 8,
+              pointBackgroundColor: 'rgba(240, 51, 51, 0.8)',
+              pointBorderColor: '#fff',
+              pointBorderWidth: 2
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: {
+              mode: 'index',
+              intersect: false,
+            },
+            plugins: {
+              legend: {
+                display: true,
+                position: 'bottom',
+                labels: {
+                  boxWidth: 20,
+                  padding: 15,
+                  usePointStyle: true
+                }
+              },
+              tooltip: {
+                backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                padding: 12,
+                displayColors: true,
+                callbacks: {
+                  label: function(context) {
+                    let label = context.dataset.label || '';
+                    if (label) {
+                      label += ': ';
+                    }
+                    if (context.parsed.y !== null) {
+                      label += context.parsed.y.toFixed(2);
+                    }
+                    return label;
+                  }
+                }
+              }
+            },
+            scales: {
+              y: {
+                beginAtZero: false,
+                min: 4,
+                max: 10,
+                ticks: {
+                  stepSize: 1
+                },
+                grid: {
+                  color: gridColor
+                }
+              },
+              x: {
+                grid: {
+                  display: false
+                }
+              }
+            }
+          }
+        });
+      }
+
+      // Create subject selector buttons
+      function createSubjectButtons() {
+        const selector = document.getElementById('subjectSelector');
+        
+        // Add "All" button
+        const allBtn = document.createElement('button');
+        allBtn.className = 'subject-btn active';
+        allBtn.textContent = 'Tutte';
+        allBtn.onclick = () => {
+          document.querySelectorAll('.subject-btn').forEach(b => b.classList.remove('active'));
+          allBtn.classList.add('active');
+          selectedSubjects = Array.from(allSubjects);
+          createSubjectChart(selectedSubjects);
+        };
+        selector.appendChild(allBtn);
+        
+        // Add individual subject buttons
+        allSubjects.forEach(subject => {
+          const btn = document.createElement('button');
+          btn.className = 'subject-btn';
+          btn.textContent = subject;
+          btn.onclick = () => {
+            const isActive = btn.classList.contains('active');
+            
+            // If clicking on "All", deselect it
+            if (allBtn.classList.contains('active')) {
+              allBtn.classList.remove('active');
+              selectedSubjects = [];
+            }
+            
+            // Toggle this button
+            if (isActive) {
+              btn.classList.remove('active');
+              selectedSubjects = selectedSubjects.filter(s => s !== subject);
+            } else {
+              btn.classList.add('active');
+              selectedSubjects.push(subject);
+            }
+            
+            // If no subjects selected, select all
+            if (selectedSubjects.length === 0) {
+              allBtn.classList.add('active');
+              selectedSubjects = Array.from(allSubjects);
+            }
+            
+            // If all subjects selected, activate "All" button
+            if (selectedSubjects.length === allSubjects.size) {
+              allBtn.classList.add('active');
+              document.querySelectorAll('.subject-btn').forEach(b => {
+                if (b !== allBtn) b.classList.remove('active');
+              });
+            }
+            
+            createSubjectChart(selectedSubjects);
+          };
+          selector.appendChild(btn);
+        });
+      }
+
+      // Initialize charts
+      createSubjectButtons();
+      createSubjectChart(selectedSubjects);
+      createAverageChart();
+
+      // Update charts when theme changes
+      themeToggle.addEventListener('click', () => {
+        setTimeout(() => {
+          location.reload();
+        }, 100);
+      });
+
+      // Handle logout from bottom nav
+      const logoutNavBtn = document.getElementById('logoutNavBtn');
+      if (logoutNavBtn) {
+        logoutNavBtn.addEventListener('click', () => {
+          const form = document.createElement('form');
+          form.method = 'POST';
+          form.action = '/logout';
+          document.body.appendChild(form);
+          form.submit();
+        });
+      }
+      
+      // Handle refresh button
+      const refreshBtn = document.getElementById('refreshBtn');
+      if (refreshBtn) {
+        refreshBtn.addEventListener('click', async () => {
+          refreshBtn.classList.add('loading');
+          refreshBtn.disabled = true;
+          
+          try {
+            const response = await fetch('/refresh_grades', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+            });
+            
+            const data = await response.json();
+            
+            if (response.ok) {
+              // Reload page to show updated grades
+              window.location.reload();
+            } else if (data.redirect) {
+              // Session expired, redirect to login
+              window.location.href = data.redirect;
+            } else {
+              alert('Errore durante l\'aggiornamento dei voti: ' + (data.error || 'Errore sconosciuto'));
+              refreshBtn.classList.remove('loading');
+              refreshBtn.disabled = false;
+            }
+          } catch (error) {
+            alert('Errore di connessione durante l\'aggiornamento dei voti');
+            refreshBtn.classList.remove('loading');
+            refreshBtn.disabled = false;
+          }
+        });
+      }
+    </script>
+  </body>
+</html>

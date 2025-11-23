@@ -1,0 +1,859 @@
+<!DOCTYPE html>
+<html lang="it">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#f03333" />
+    <meta name="description" content="Calcola il voto necessario per raggiungere la tua media target" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="MediaHo" />
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/static/icons/icon-192.png" />
+    <link rel="apple-touch-icon" href="/static/icons/icon-192.png" />
+    <title>Calcolatore Obiettivo - che media ho?</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      :root {
+        --text: #f1e4e4;
+        --background: #130909;
+        --primary: #f03333;
+        --secondary: #7f2929;
+        --accent: #c83737;
+        --success: #4caf50;
+        --warning: #ffa500;
+      }
+
+      :root[data-theme="light"] {
+        --text: #1a0a0a;
+        --background: #fef8f8;
+        --primary: #f03333;
+        --secondary: #f5cccc;
+        --accent: #c83737;
+        --success: #4caf50;
+        --warning: #ffa500;
+      }
+
+      body {
+        margin: 0;
+        padding: 0;
+        padding-bottom: calc(72px + env(safe-area-inset-bottom));
+        min-height: 100vh;
+        background: var(--background);
+        color: var(--text);
+        font-family: Arial, Helvetica, sans-serif;
+      }
+
+      .header-section {
+        text-align: center;
+        padding: 32px 20px 24px;
+      }
+
+      .page-title {
+        font-size: 28px;
+        font-weight: bold;
+        color: var(--text);
+        margin-bottom: 8px;
+      }
+
+      .page-subtitle {
+        font-size: 14px;
+        color: var(--text);
+        opacity: 0.7;
+        line-height: 1.5;
+      }
+
+      .container {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 0 20px 40px;
+      }
+
+      .calculator-card {
+        position: relative;
+        overflow: hidden;
+        border-radius: 12px;
+        padding: 24px;
+        margin-bottom: 24px;
+      }
+
+      .calculator-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        background-color: var(--secondary);
+        opacity: 0.15;
+        z-index: -1;
+      }
+
+      .form-group {
+        margin-bottom: 20px;
+      }
+
+      .form-label {
+        display: block;
+        font-weight: 600;
+        margin-bottom: 8px;
+        color: var(--text);
+        font-size: 14px;
+      }
+
+      .form-select, .form-input {
+        width: 100%;
+        padding: 12px;
+        border: 2px solid var(--secondary);
+        border-radius: 8px;
+        background: var(--background);
+        color: var(--text);
+        font-size: 16px;
+        font-family: inherit;
+        transition: border-color 0.3s ease;
+      }
+
+      .form-select:focus, .form-input:focus {
+        outline: none;
+        border-color: var(--accent);
+      }
+
+      .form-input[type="number"] {
+        appearance: textfield;
+      }
+
+      .form-input[type="number"]::-webkit-outer-spin-button,
+      .form-input[type="number"]::-webkit-inner-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+      }
+
+      .calculate-btn {
+        width: 100%;
+        padding: 14px;
+        background: var(--primary);
+        color: white;
+        border: none;
+        border-radius: 12px;
+        font-size: 16px;
+        font-weight: bold;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+      }
+
+      .calculate-btn:hover {
+        opacity: 0.9;
+        transform: translateY(-2px);
+      }
+
+      .calculate-btn:active {
+        transform: translateY(0);
+      }
+
+      .calculate-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+
+      .result-card {
+        display: none;
+        position: relative;
+        overflow: hidden;
+        border-radius: 12px;
+        padding: 24px;
+        margin-bottom: 24px;
+        border-left: 4px solid var(--accent);
+      }
+
+      .result-card.show {
+        display: block;
+        animation: slideIn 0.3s ease;
+      }
+
+      @keyframes slideIn {
+        from {
+          opacity: 0;
+          transform: translateY(-10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .result-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        background-color: var(--secondary);
+        opacity: 0.2;
+        z-index: -1;
+      }
+
+      .result-card.success {
+        border-left-color: var(--success);
+      }
+
+      .result-card.warning {
+        border-left-color: var(--warning);
+      }
+
+      .result-card.error {
+        border-left-color: var(--primary);
+      }
+
+      .result-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 16px;
+      }
+
+      .result-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 24px;
+      }
+
+      .result-card.success .result-icon {
+        background: var(--success);
+      }
+
+      .result-card.warning .result-icon {
+        background: var(--warning);
+      }
+
+      .result-card.error .result-icon {
+        background: var(--primary);
+      }
+
+      .result-title {
+        font-size: 20px;
+        font-weight: bold;
+        color: var(--text);
+      }
+
+      .result-content {
+        margin-bottom: 16px;
+      }
+
+      .result-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 12px 0;
+        border-bottom: 1px solid var(--secondary);
+      }
+
+      .result-row:last-child {
+        border-bottom: none;
+      }
+
+      .result-label {
+        font-size: 14px;
+        opacity: 0.8;
+      }
+
+      .result-value {
+        font-size: 18px;
+        font-weight: bold;
+        color: var(--accent);
+      }
+
+      .result-value.highlight {
+        font-size: 24px;
+        color: var(--primary);
+      }
+
+      .result-message {
+        padding: 16px;
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.05);
+        font-size: 14px;
+        line-height: 1.6;
+        text-align: center;
+      }
+
+      .info-box {
+        position: relative;
+        overflow: hidden;
+        border-radius: 12px;
+        padding: 16px;
+        margin-bottom: 24px;
+        border-left: 4px solid var(--accent);
+      }
+
+      .info-box::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        background-color: var(--secondary);
+        opacity: 0.2;
+        z-index: -1;
+      }
+
+      .info-box-title {
+        font-weight: bold;
+        color: var(--accent);
+        margin-bottom: 8px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .info-box-content {
+        font-size: 14px;
+        line-height: 1.6;
+        opacity: 0.9;
+      }
+
+      .error-notification {
+        display: none;
+        position: fixed;
+        top: 80px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: var(--primary);
+        color: white;
+        padding: 16px 24px;
+        border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        z-index: 1000;
+        animation: slideDown 0.3s ease;
+        max-width: 90%;
+        text-align: center;
+      }
+
+      .error-notification.show {
+        display: block;
+      }
+
+      @keyframes slideDown {
+        from {
+          opacity: 0;
+          transform: translate(-50%, -20px);
+        }
+        to {
+          opacity: 1;
+          transform: translate(-50%, 0);
+        }
+      }
+
+      .theme-toggle {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: var(--secondary);
+        border: 2px solid var(--accent);
+        border-radius: 50%;
+        width: 50px;
+        height: 50px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.3s ease;
+        z-index: 100;
+      }
+
+      .theme-toggle:hover {
+        transform: scale(1.1);
+        background: var(--accent);
+      }
+
+      .theme-toggle svg {
+        width: 24px;
+        height: 24px;
+        fill: var(--text);
+      }
+
+      /* Bottom Navigation Bar */
+      .bottom-nav {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 72px;
+        background: var(--background);
+        box-shadow: 0 -4px 12px rgba(240, 51, 51, 0.3);
+        z-index: 100;
+        display: flex;
+        align-items: center;
+        justify-content: space-around;
+        padding-top: 8px;
+        padding-bottom: env(safe-area-inset-bottom);
+      }
+
+      @media (max-width: 768px) {
+        .bottom-nav {
+          left: 12px;
+          right: 12px;
+          bottom: max(16px, env(safe-area-inset-bottom));
+          border-radius: 20px;
+          box-shadow: 0 -4px 12px rgba(240, 51, 51, 0.3), 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
+      }
+
+      .nav-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-decoration: none;
+        color: var(--text);
+        transition: all 0.3s ease;
+        opacity: 0.6;
+        flex: 1;
+        background: none;
+        border: none;
+        cursor: pointer;
+        font-family: inherit;
+      }
+
+      .nav-item.active {
+        opacity: 1;
+      }
+
+      .nav-item:hover {
+        opacity: 1;
+      }
+
+      .nav-icon {
+        width: 28px;
+        height: 28px;
+        margin-bottom: 4px;
+        stroke: currentColor;
+        fill: none;
+      }
+
+      .nav-item.active .nav-icon {
+        fill: var(--accent);
+        stroke: var(--accent);
+      }
+
+      .nav-label {
+        font-size: 12px;
+        font-weight: 600;
+      }
+
+      @media (max-width: 768px) {
+        .page-title {
+          font-size: 24px;
+        }
+
+        .theme-toggle {
+          top: auto;
+          bottom: calc(96px + env(safe-area-inset-bottom));
+          right: 20px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Error Notification -->
+    <div class="error-notification" id="errorNotification"></div>
+
+    <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="5"/>
+        <line x1="12" x2="12" y1="1" y2="3"/>
+        <line x1="12" x2="12" y1="21" y2="23"/>
+        <line x1="4.22" x2="5.64" y1="4.22" y2="5.64"/>
+        <line x1="18.36" x2="19.78" y1="18.36" y2="19.78"/>
+        <line x1="1" x2="3" y1="12" y2="12"/>
+        <line x1="21" x2="23" y1="12" y2="12"/>
+        <line x1="4.22" x2="5.64" y1="19.78" y2="18.36"/>
+        <line x1="18.36" x2="19.78" y1="5.64" y2="4.22"/>
+      </svg>
+    </button>
+
+    <div class="header-section">
+      <h1 class="page-title">🎯 Calcolatore Obiettivo</h1>
+      <p class="page-subtitle">Scopri quale voto ti serve per raggiungere la tua media target!</p>
+    </div>
+
+    <div class="container">
+      <!-- Calculator Form -->
+      <div class="calculator-card">
+        <form id="goalForm">
+          <div class="form-group">
+            <label class="form-label" for="periodSelect">Periodo</label>
+            <select class="form-select" id="periodSelect" required>
+              <option value="">Seleziona un periodo...</option>
+              {% for period in grades_avr.keys() if period != 'all_avr' %}
+              <option value="{{ period }}">Periodo {{ period }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="subjectSelect">Materia</label>
+            <select class="form-select" id="subjectSelect" required disabled>
+              <option value="">Prima seleziona un periodo...</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="targetAverage">Media Target <span id="targetRangeLabel">(1-10)</span></label>
+            <input 
+              type="number" 
+              class="form-input" 
+              id="targetAverage" 
+              min="1" 
+              max="10" 
+              step="0.1" 
+              placeholder="Es: 7.5"
+              required
+            />
+            <small id="targetHelp" style="display: block; margin-top: 6px; font-size: 12px; opacity: 0.7;"></small>
+          </div>
+
+          <button type="submit" class="calculate-btn" id="calculateBtn">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"/>
+              <polyline points="12 6 12 12 16 14"/>
+            </svg>
+            Calcola
+          </button>
+        </form>
+      </div>
+
+      <!-- Result Card -->
+      <div class="result-card" id="resultCard">
+        <div class="result-header">
+          <div class="result-icon" id="resultIcon">
+            <span id="resultEmoji">🎯</span>
+          </div>
+          <h2 class="result-title" id="resultTitle">Risultato</h2>
+        </div>
+        <div class="result-content">
+          <div class="result-row">
+            <span class="result-label">Media Attuale</span>
+            <span class="result-value" id="currentAverage">-</span>
+          </div>
+          <div class="result-row">
+            <span class="result-label">Media Target</span>
+            <span class="result-value" id="targetAverageDisplay">-</span>
+          </div>
+          <div class="result-row">
+            <span class="result-label">Voto Necessario</span>
+            <span class="result-value highlight" id="requiredGrade">-</span>
+          </div>
+          <div class="result-row">
+            <span class="result-label">Numero Voti Attuali</span>
+            <span class="result-value" id="gradesCount">-</span>
+          </div>
+        </div>
+        <div class="result-message" id="resultMessage">
+          Completa il form per vedere i risultati
+        </div>
+      </div>
+
+      <!-- Info Box -->
+      <div class="info-box">
+        <div class="info-box-title">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="12" y1="16" x2="12" y2="12"/>
+            <line x1="12" y1="8" x2="12.01" y2="8"/>
+          </svg>
+          Come funziona?
+        </div>
+        <div class="info-box-content">
+          Il calcolatore usa la formula matematica della media aritmetica per determinare 
+          quale voto devi ottenere nel prossimo test per raggiungere la tua media target. 
+          Considera tutti i voti attuali della materia selezionata e calcola il voto necessario 
+          assumendo che tu riceva un ulteriore voto.
+        </div>
+      </div>
+    </div>
+
+    <!-- Bottom Navigation Bar -->
+    <nav class="bottom-nav">
+      <a href="/grades" class="nav-item">
+        <svg class="nav-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+          <polyline points="9 22 9 12 15 12 15 22"/>
+        </svg>
+        <span class="nav-label">Medie</span>
+      </a>
+      <a href="/charts" class="nav-item">
+        <svg class="nav-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="20" x2="18" y2="10"/>
+          <line x1="12" y1="20" x2="12" y2="4"/>
+          <line x1="6" y1="20" x2="6" y2="14"/>
+        </svg>
+        <span class="nav-label">Grafici</span>
+      </a>
+      <a href="/goal" class="nav-item active">
+        <svg class="nav-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"/>
+          <circle cx="12" cy="12" r="6"/>
+          <circle cx="12" cy="12" r="2"/>
+        </svg>
+        <span class="nav-label">Obiettivo</span>
+      </a>
+      <a href="/export" class="nav-item">
+        <svg class="nav-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="7 10 12 15 17 10"/>
+          <line x1="12" y1="15" x2="12" y2="3"/>
+        </svg>
+        <span class="nav-label">Esporta</span>
+      </a>
+      <a href="/info" class="nav-item">
+        <svg class="nav-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"/>
+          <line x1="12" y1="16" x2="12" y2="12"/>
+          <line x1="12" y1="8" x2="12.01" y2="8"/>
+        </svg>
+        <span class="nav-label">Info</span>
+      </a>
+      <button type="button" class="nav-item" id="logoutNavBtn">
+        <svg class="nav-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+          <polyline points="16 17 21 12 16 7"/>
+          <line x1="21" y1="12" x2="9" y2="12"/>
+        </svg>
+        <span class="nav-label">Esci</span>
+      </button>
+    </nav>
+
+    <script>
+      // Store grades data from server
+      const gradesData = {{ grades_avr | tojson | safe }};
+
+      // Theme management
+      const themeToggle = document.getElementById('themeToggle');
+      const root = document.documentElement;
+      
+      function getSystemTheme() {
+        if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) {
+          return 'light';
+        }
+        return 'dark';
+      }
+      
+      const savedTheme = localStorage.getItem('theme');
+      const initialTheme = savedTheme || getSystemTheme();
+      
+      if (initialTheme === 'light') {
+        root.setAttribute('data-theme', 'light');
+      }
+      
+      themeToggle.addEventListener('click', () => {
+        const currentTheme = root.getAttribute('data-theme');
+        const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+        
+        if (newTheme === 'light') {
+          root.setAttribute('data-theme', 'light');
+        } else {
+          root.removeAttribute('data-theme');
+        }
+        
+        localStorage.setItem('theme', newTheme);
+      });
+
+      // Handle period selection
+      const periodSelect = document.getElementById('periodSelect');
+      const subjectSelect = document.getElementById('subjectSelect');
+
+      // Helper function to show error notification
+      function showError(message) {
+        const notification = document.getElementById('errorNotification');
+        notification.textContent = message;
+        notification.classList.add('show');
+        setTimeout(() => {
+          notification.classList.remove('show');
+        }, 3000);
+      }
+
+      periodSelect.addEventListener('change', function() {
+        const period = this.value;
+        subjectSelect.disabled = false;
+        subjectSelect.innerHTML = '<option value="">Seleziona una materia...</option>';
+        
+        if (period && gradesData[period]) {
+          const subjects = Object.keys(gradesData[period]).filter(s => s !== 'period_avr');
+          subjects.forEach(subject => {
+            const option = document.createElement('option');
+            option.value = subject;
+            option.textContent = subject;
+            subjectSelect.appendChild(option);
+          });
+        } else {
+          subjectSelect.disabled = true;
+          subjectSelect.innerHTML = '<option value="">Prima seleziona un periodo...</option>';
+        }
+        
+        // Reset target average constraints when period changes
+        resetTargetAverageInput();
+      });
+
+      // Handle subject selection to update target average constraints
+      subjectSelect.addEventListener('change', function() {
+        const period = periodSelect.value;
+        const subject = this.value;
+        
+        if (period && subject && gradesData[period] && gradesData[period][subject]) {
+          const subjectData = gradesData[period][subject];
+          const currentAverage = subjectData.avr || 0;
+          
+          // Update minimum value for target average input
+          const targetInput = document.getElementById('targetAverage');
+          const targetRangeLabel = document.getElementById('targetRangeLabel');
+          const targetHelp = document.getElementById('targetHelp');
+          
+          // Use ceiling to ensure minimum target is always higher than current average
+          targetInput.min = Math.max(1, Math.ceil(currentAverage * 10) / 10);
+          targetRangeLabel.textContent = `(${targetInput.min}-10)`;
+          targetHelp.textContent = `La tua media attuale è ${currentAverage.toFixed(2)}. Imposta un obiettivo superiore.`;
+          
+          // Clear any previously entered value that might be invalid
+          if (targetInput.value && parseFloat(targetInput.value) < targetInput.min) {
+            targetInput.value = '';
+          }
+        } else {
+          resetTargetAverageInput();
+        }
+      });
+
+      function resetTargetAverageInput() {
+        const targetInput = document.getElementById('targetAverage');
+        const targetRangeLabel = document.getElementById('targetRangeLabel');
+        const targetHelp = document.getElementById('targetHelp');
+        
+        targetInput.min = 1;
+        targetRangeLabel.textContent = '(1-10)';
+        targetHelp.textContent = '';
+        targetInput.value = '';
+      }
+
+      // Handle form submission
+      const goalForm = document.getElementById('goalForm');
+      const resultCard = document.getElementById('resultCard');
+      const calculateBtn = document.getElementById('calculateBtn');
+
+      goalForm.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const period = periodSelect.value;
+        const subject = subjectSelect.value;
+        const targetAverage = parseFloat(document.getElementById('targetAverage').value);
+
+        if (!period || !subject || !targetAverage) {
+          showError('Compila tutti i campi!');
+          return;
+        }
+
+        // Disable button during calculation
+        calculateBtn.disabled = true;
+        calculateBtn.textContent = 'Calcolo in corso...';
+
+        try {
+          const response = await fetch('/calculate_goal', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              period: period,
+              subject: subject,
+              target_average: targetAverage
+            })
+          });
+
+          const data = await response.json();
+
+          if (response.ok && data.success) {
+            displayResult(data);
+          } else {
+            showError(data.error || 'Errore durante il calcolo');
+          }
+        } catch (error) {
+          showError('Errore di connessione');
+        } finally {
+          calculateBtn.disabled = false;
+          calculateBtn.innerHTML = `
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"/>
+              <polyline points="12 6 12 12 16 14"/>
+            </svg>
+            Calcola
+          `;
+        }
+      });
+
+      function displayResult(data) {
+        // Update result values
+        document.getElementById('currentAverage').textContent = data.current_average.toFixed(2);
+        document.getElementById('targetAverageDisplay').textContent = data.target_average.toFixed(2);
+        document.getElementById('requiredGrade').textContent = data.required_grade.toFixed(2);
+        document.getElementById('gradesCount').textContent = data.current_grades_count;
+        document.getElementById('resultMessage').textContent = data.message;
+
+        // Set result card style based on achievability
+        resultCard.classList.remove('success', 'warning', 'error');
+        
+        if (data.required_grade < 1) {
+          resultCard.classList.add('success');
+          document.getElementById('resultEmoji').textContent = '🎉';
+          document.getElementById('resultTitle').textContent = 'Fantastico!';
+        } else if (data.required_grade > 10) {
+          resultCard.classList.add('error');
+          document.getElementById('resultEmoji').textContent = '😅';
+          document.getElementById('resultTitle').textContent = 'Difficile...';
+        } else if (data.required_grade >= 9) {
+          resultCard.classList.add('warning');
+          document.getElementById('resultEmoji').textContent = '💪';
+          document.getElementById('resultTitle').textContent = 'Impegnati!';
+        } else if (data.required_grade >= 7) {
+          resultCard.classList.add('success');
+          document.getElementById('resultEmoji').textContent = '👍';
+          document.getElementById('resultTitle').textContent = 'Fattibile!';
+        } else {
+          resultCard.classList.add('success');
+          document.getElementById('resultEmoji').textContent = '✅';
+          document.getElementById('resultTitle').textContent = 'Ottimo!';
+        }
+
+        // Show result card
+        resultCard.classList.add('show');
+        
+        // Scroll to result
+        resultCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+
+      // Handle logout from bottom nav
+      const logoutNavBtn = document.getElementById('logoutNavBtn');
+      if (logoutNavBtn) {
+        logoutNavBtn.addEventListener('click', () => {
+          const form = document.createElement('form');
+          form.method = 'POST';
+          form.action = '/logout';
+          document.body.appendChild(form);
+          form.submit();
+        });
+      }
+    </script>
+  </body>
+</html>

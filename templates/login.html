@@ -107,8 +107,9 @@
       }
 
       .subtitle {
-        color: var(--secondary);
+        color: var(--text);
         font-size: 14px;
+        opacity: 0.9;
       }
 
       .form-container {
@@ -201,19 +202,21 @@
 
       .footer-text {
         text-align: center;
-        color: var(--secondary);
+        color: var(--text);
         font-size: 14px;
         padding: 20px 0 32px;
+        opacity: 0.9;
       }
 
       .footer-text a {
-        color: var(--text);
+        color: var(--primary);
         text-decoration: underline;
+        font-weight: 600;
       }
 
       .theme-toggle {
         position: fixed;
-        top: 20px;
+        bottom: 20px;
         right: 20px;
         background: var(--secondary);
         border: 2px solid var(--accent);
@@ -245,6 +248,262 @@
         font-size: 14px;
         margin-top: 4px;
         min-height: 20px;
+      }
+
+      /* PWA Install Banner */
+      .pwa-banner {
+        width: 100%;
+        max-width: 400px;
+        margin-bottom: 16px;
+        position: relative;
+        overflow: hidden;
+        border-radius: 12px;
+        background: #8b5cf6;
+        padding: 16px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+      }
+
+      .pwa-banner::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background-color: #7c3aed;
+        opacity: 0.25;
+        z-index: -1;
+      }
+
+      .pwa-banner:hover {
+        background: #7c3aed;
+        transform: translateY(-2px);
+      }
+
+      .pwa-banner-content {
+        flex: 1;
+      }
+
+      .pwa-banner-title {
+        font-weight: 600;
+        font-size: 16px;
+        color: white;
+        margin-bottom: 4px;
+      }
+
+      .pwa-banner-subtitle {
+        font-size: 14px;
+        color: white;
+        opacity: 0.8;
+      }
+
+      .pwa-banner-icon {
+        color: white;
+        width: 24px;
+        height: 24px;
+      }
+
+      .pwa-banner.hidden {
+        display: none;
+      }
+
+      /* iOS Install Modal */
+      .ios-modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.7);
+        z-index: 2000;
+        align-items: flex-end;
+        justify-content: center;
+      }
+
+      .ios-modal.show {
+        display: flex;
+      }
+
+      .ios-drawer {
+        background: var(--background);
+        border-radius: 12px 12px 0 0;
+        max-width: 600px;
+        width: 100%;
+        max-height: 80vh;
+        overflow-y: auto;
+        animation: slideUp 0.3s ease-out;
+      }
+
+      @keyframes slideUp {
+        from {
+          transform: translateY(100%);
+        }
+        to {
+          transform: translateY(0);
+        }
+      }
+
+      .ios-drawer-header {
+        padding: 20px;
+        border-bottom: 1px solid var(--secondary);
+      }
+
+      .ios-drawer-title {
+        font-size: 24px;
+        font-weight: 600;
+        color: var(--text);
+        margin-bottom: 8px;
+      }
+
+      .ios-drawer-description {
+        font-size: 14px;
+        color: var(--text);
+        opacity: 0.7;
+      }
+
+      .ios-drawer-content {
+        padding: 20px;
+      }
+
+      .ios-step {
+        margin-bottom: 24px;
+      }
+
+      .ios-step-header {
+        display: flex;
+        gap: 12px;
+        margin-bottom: 12px;
+        align-items: flex-start;
+      }
+
+      .ios-step-number {
+        width: 32px;
+        height: 32px;
+        background: var(--accent);
+        color: white;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 600;
+        flex-shrink: 0;
+      }
+
+      .ios-step-text {
+        color: var(--text);
+        font-size: 14px;
+        line-height: 1.5;
+        opacity: 0.9;
+      }
+
+      .ios-step-image {
+        background: var(--secondary);
+        border-radius: 12px;
+        padding: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 160px;
+      }
+
+      .ios-step-image svg {
+        width: 100px;
+        height: 100px;
+        fill: var(--text);
+      }
+
+      .ios-step-image.success {
+        background: var(--secondary);
+      }
+      
+      .ios-step-image.success svg {
+        fill: var(--accent);
+        width: 80px;
+        height: 80px;
+      }
+
+      .ios-drawer-footer {
+        padding: 20px;
+        border-top: 1px solid var(--secondary);
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .ios-drawer-btn {
+        width: 100%;
+        padding: 12px;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: opacity 0.2s;
+        border: none;
+        font-size: 16px;
+      }
+
+      .ios-drawer-btn-primary {
+        background: var(--primary);
+        color: white;
+      }
+
+      .ios-drawer-btn-primary:hover {
+        opacity: 0.8;
+      }
+
+      .ios-drawer-btn-secondary {
+        background: transparent;
+        color: var(--text);
+        text-decoration: underline;
+      }
+
+      .ios-drawer-btn-secondary:hover {
+        opacity: 0.7;
+      }
+
+      .platform-tabs {
+        display: flex;
+        gap: 8px;
+        padding: 0 20px;
+        margin-top: 10px;
+        margin-bottom: 10px;
+      }
+
+      .platform-tab {
+        flex: 1;
+        padding: 8px 16px;
+        background: transparent;
+        border: 1px solid var(--secondary);
+        border-radius: 8px;
+        color: var(--text);
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+
+      .platform-tab.active {
+        background: var(--accent);
+        border-color: var(--accent);
+        color: white;
+      }
+
+      .platform-tab:hover:not(.active) {
+        background: var(--secondary);
+        opacity: 0.8;
+      }
+
+      .platform-content {
+        display: none;
+      }
+
+      .platform-content.active {
+        display: block;
       }
 
       @media (max-width: 480px) {
@@ -297,6 +556,19 @@
       </div>
 
       <div class="form-container">
+        <!-- PWA Install Banner -->
+        <div id="pwaBanner" class="pwa-banner hidden">
+          <div class="pwa-banner-content">
+            <div class="pwa-banner-title">Installa l'applicazione!</div>
+            <div class="pwa-banner-subtitle">Clicca per installare</div>
+          </div>
+          <svg class="pwa-banner-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="7 10 12 15 17 10"/>
+            <line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+        </div>
+
         <form action="/login" method="post" id="loginForm">
           <div class="form-group">
             <label for="user_id" class="form-label">User ID</label>
@@ -328,19 +600,7 @@
             </div>
           </div>
 
-          <div class="form-group" style="display: flex; align-items: center; gap: 8px;">
-            <input 
-              type="checkbox" 
-              id="remember_me" 
-              name="remember_me"
-              style="width: auto; margin: 0;"
-            />
-            <label for="remember_me" style="margin: 0; font-size: 14px; color: var(--text); cursor: pointer;">
-              Ricordami
-            </label>
-          </div>
-
-          <div class="error-message" id="errorMessage"></div>
+          <div class="error-message" id="errorMessage">{% if error %}{{ error }}{% endif %}</div>
 
           <button type="submit" class="btn-submit" id="submitBtn">
             Accedi
@@ -354,14 +614,255 @@
       </div>
     </div>
 
+    <!-- Install Modal -->
+    <div id="iosModal" class="ios-modal">
+      <div class="ios-drawer">
+        <div class="ios-drawer-header">
+          <div class="ios-drawer-title">Installa l'applicazione</div>
+          <div class="ios-drawer-description">Scegli il tuo dispositivo e segui i passaggi.</div>
+        </div>
+        
+        <!-- Platform Tabs -->
+        <div class="platform-tabs">
+          <button class="platform-tab active" onclick="switchTab('ios')">iOS (Safari)</button>
+          <button class="platform-tab" onclick="switchTab('android')">Android (Chrome)</button>
+        </div>
+        
+        <!-- iOS Content -->
+        <div id="iosContent" class="platform-content active">
+          <div class="ios-drawer-content">
+            <div class="ios-step">
+              <div class="ios-step-header">
+                <div class="ios-step-number">1</div>
+                <div class="ios-step-text">
+                  Trova l'icona di condivisione nella barra del browser Safari (in fondo allo schermo) e cliccaci sopra.
+                </div>
+              </div>
+              <div class="ios-step-image">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 50 50">
+                  <path d="M30.3 13.7L25 8.4l-5.3 5.3-1.4-1.4L25 5.6l6.7 6.7z" />
+                  <path d="M24 7h2v21h-2z" />
+                  <path d="M35 40H15c-1.7 0-3-1.3-3-3V19c0-1.7 1.3-3 3-3h7v2h-7c-.6 0-1 .4-1 1v18c0 .6.4 1 1 1h20c.6 0 1-.4 1-1V19c0-.6-.4-1-1-1h-7v-2h7c1.7 0 3 1.3 3 3v18c0 1.7-1.3 3-3 3z" />
+                </svg>
+              </div>
+            </div>
+            <div class="ios-step">
+              <div class="ios-step-header">
+                <div class="ios-step-number">2</div>
+                <div class="ios-step-text">
+                  Nel menu che appare, scorri in basso fino a trovare "Aggiungi a schermata Home" e selezionalo.
+                </div>
+              </div>
+              <div class="ios-step-image">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="5" y="2" width="14" height="20" rx="2" ry="2"/>
+                  <line x1="12" y1="18" x2="12.01" y2="18"/>
+                </svg>
+              </div>
+            </div>
+            <div class="ios-step">
+              <div class="ios-step-header">
+                <div class="ios-step-number">3</div>
+                <div class="ios-step-text">
+                  Fatto! L'app è ora installata sulla schermata Home. Trova l'icona e aprila per utilizzare l'applicazione.
+                </div>
+              </div>
+              <div class="ios-step-image success">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 52 52" fill="currentColor">
+                  <path d="M26,0C11.664,0,0,11.663,0,26s11.664,26,26,26s26-11.663,26-26S40.336,0,26,0z M40.495,17.329l-16,18 C24.101,35.772,23.552,36,22.999,36c-0.439,0-0.88-0.144-1.249-0.438l-10-8c-0.862-0.689-1.002-1.948-0.312-2.811 c0.689-0.863,1.949-1.003,2.811-0.313l8.517,6.813l14.739-16.581c0.732-0.826,1.998-0.9,2.823-0.166 C41.154,15.239,41.229,16.503,40.495,17.329z"/>
+                </svg>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Android Content -->
+        <div id="androidContent" class="platform-content">
+          <div class="ios-drawer-content">
+            <div class="ios-step">
+              <div class="ios-step-header">
+                <div class="ios-step-number">1</div>
+                <div class="ios-step-text">
+                  Apri il menu di Chrome toccando i tre puntini verticali in alto a destra.
+                </div>
+              </div>
+              <div class="ios-step-image">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="1"/>
+                  <circle cx="12" cy="5" r="1"/>
+                  <circle cx="12" cy="19" r="1"/>
+                </svg>
+              </div>
+            </div>
+            <div class="ios-step">
+              <div class="ios-step-header">
+                <div class="ios-step-number">2</div>
+                <div class="ios-step-text">
+                  Nel menu, cerca e seleziona "Installa app" o "Aggiungi a schermata Home".
+                </div>
+              </div>
+              <div class="ios-step-image">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                  <polyline points="7 10 12 15 17 10"/>
+                  <line x1="12" y1="15" x2="12" y2="3"/>
+                </svg>
+              </div>
+            </div>
+            <div class="ios-step">
+              <div class="ios-step-header">
+                <div class="ios-step-number">3</div>
+                <div class="ios-step-text">
+                  Conferma l'installazione nel popup che appare. L'app sarà aggiunta alla schermata Home e potrai aprirla come una normale app.
+                </div>
+              </div>
+              <div class="ios-step-image success">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 52 52" fill="currentColor">
+                  <path d="M26,0C11.664,0,0,11.663,0,26s11.664,26,26,26s26-11.663,26-26S40.336,0,26,0z M40.495,17.329l-16,18 C24.101,35.772,23.552,36,22.999,36c-0.439,0-0.88-0.144-1.249-0.438l-10-8c-0.862-0.689-1.002-1.948-0.312-2.811 c0.689-0.863,1.949-1.003,2.811-0.313l8.517,6.813l14.739-16.581c0.732-0.826,1.998-0.9,2.823-0.166 C41.154,15.239,41.229,16.503,40.495,17.329z"/>
+                </svg>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="ios-drawer-footer">
+          <button class="ios-drawer-btn ios-drawer-btn-primary" onclick="closeIOSModal(true)">
+            Fatto, chiudi
+          </button>
+          <button class="ios-drawer-btn ios-drawer-btn-secondary" onclick="closeIOSModal(false)">
+            Lo faccio dopo
+          </button>
+        </div>
+      </div>
+    </div>
+
     <script>
+      // PWA Install Banner Logic
+      let deferredPrompt;
+      const pwaBanner = document.getElementById('pwaBanner');
+      const iosModal = document.getElementById('iosModal');
+      
+      // Check if already installed
+      const isInstalled = localStorage.getItem('pwaInstalled') === 'true';
+      
+      // Detect platform
+      function getPlatform() {
+        const userAgent = navigator.userAgent.toLowerCase();
+        if (/iphone|ipad|ipod/.test(userAgent)) {
+          return 'ios';
+        } else if (/android/.test(userAgent)) {
+          return 'android';
+        }
+        return 'desktop';
+      }
+      
+      const platform = getPlatform();
+      
+      // Show banner if not installed
+      if (!isInstalled) {
+        // For Android/Desktop with beforeinstallprompt support
+        window.addEventListener('beforeinstallprompt', (e) => {
+          e.preventDefault();
+          deferredPrompt = e;
+          pwaBanner.classList.remove('hidden');
+        });
+        
+        // For iOS or if beforeinstallprompt not fired
+        if (platform === 'ios' || (platform === 'android' && !deferredPrompt)) {
+          // Show banner after a short delay
+          setTimeout(() => {
+            pwaBanner.classList.remove('hidden');
+          }, 1000);
+        }
+      }
+      
+      // Handle banner click
+      pwaBanner.addEventListener('click', async () => {
+        if (deferredPrompt) {
+          // Android/Desktop with native prompt
+          deferredPrompt.prompt();
+          const { outcome } = await deferredPrompt.userChoice;
+          if (outcome === 'accepted') {
+            localStorage.setItem('pwaInstalled', 'true');
+            pwaBanner.classList.add('hidden');
+          }
+          deferredPrompt = null;
+        } else {
+          // Show instructions modal with appropriate tab
+          iosModal.classList.add('show');
+          
+          // Switch to appropriate tab based on platform
+          if (platform === 'android') {
+            switchTabProgrammatically('android');
+          } else {
+            switchTabProgrammatically('ios');
+          }
+        }
+      });
+      
+      // Close iOS modal
+      function closeIOSModal(installed) {
+        iosModal.classList.remove('show');
+        if (installed) {
+          localStorage.setItem('pwaInstalled', 'true');
+          pwaBanner.classList.add('hidden');
+        }
+      }
+      
+      // Switch between iOS and Android tabs
+      function switchTab(platform) {
+        // Call the programmatic function
+        switchTabProgrammatically(platform);
+      }
+      
+      // Programmatically switch tabs (without relying on event.target)
+      function switchTabProgrammatically(platform) {
+        const tabs = document.querySelectorAll('.platform-tab');
+        const iosContent = document.getElementById('iosContent');
+        const androidContent = document.getElementById('androidContent');
+        
+        tabs.forEach(tab => {
+          if ((platform === 'ios' && tab.textContent.includes('iOS')) ||
+              (platform === 'android' && tab.textContent.includes('Android'))) {
+            tab.classList.add('active');
+          } else {
+            tab.classList.remove('active');
+          }
+        });
+        
+        if (platform === 'ios') {
+          iosContent.classList.add('active');
+          androidContent.classList.remove('active');
+        } else {
+          androidContent.classList.add('active');
+          iosContent.classList.remove('active');
+        }
+      }
+      
+      // Close modal on backdrop click
+      iosModal.addEventListener('click', (e) => {
+        if (e.target === iosModal) {
+          closeIOSModal(false);
+        }
+      });
+
       // Theme management
       const themeToggle = document.getElementById('themeToggle');
       const root = document.documentElement;
       
-      // Load saved theme or default to dark
-      const savedTheme = localStorage.getItem('theme') || 'dark';
-      if (savedTheme === 'light') {
+      // Function to get system preference
+      function getSystemTheme() {
+        if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) {
+          return 'light';
+        }
+        return 'dark';
+      }
+      
+      // Load saved theme or use system preference
+      const savedTheme = localStorage.getItem('theme');
+      const initialTheme = savedTheme || getSystemTheme();
+      
+      if (initialTheme === 'light') {
         root.setAttribute('data-theme', 'light');
       }
       
@@ -389,13 +890,6 @@
         submitBtn.disabled = true;
         submitBtn.textContent = 'Accesso...';
       });
-
-      // Check for error in URL (if redirected back with error)
-      const urlParams = new URLSearchParams(window.location.search);
-      const error = urlParams.get('error');
-      if (error) {
-        errorMessage.textContent = decodeURIComponent(error);
-      }
 
       // Register Service Worker for PWA
       if ('serviceWorker' in navigator) {

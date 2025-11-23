@@ -1,4 +1,4 @@
-const CACHE_NAME = 'chemediaho-v1';
+const CACHE_NAME = 'chemediaho-v1.4.2';
 const urlsToCache = [
   '/',
   '/static/manifest.json',
@@ -22,6 +22,12 @@ self.addEventListener('install', (event) => {
 
 // Fetch event - serve from cache, fallback to network
 self.addEventListener('fetch', (event) => {
+  // Skip caching for POST requests and other non-GET methods
+  if (event.request.method !== 'GET') {
+    event.respondWith(fetch(event.request));
+    return;
+  }
+
   event.respondWith(
     caches.match(event.request)
       .then((response) => {

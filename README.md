@@ -5,12 +5,14 @@ sysregister ui-based.
 
 ## ✨ funzionalità
 
-* 📱 **PWA (Progressive Web App)** - installabile su dispositivi mobili
-* 🔄 **Supporto offline** - funziona anche senza connessione (con i dati scaricati precedentemente)
-* 🎨 **Design responsive** - ottimizzato per mobile e desktop
-* 📊 **Calcolo media** - visualizza automaticamente la media dei voti
-* 🔐 **Remember Me** - rimani autenticato senza dover reinserire le credenziali ogni volta
-* 🆓 **100% free and opensource** - così puoi stare tranquillo.
+* 📱 **PWA (progressive web app)** - installabile su dispositivi mobili
+* 🔄 **supporto offline** - funziona anche senza connessione (con i dati scaricati precedentemente)
+* 🎨 **design responsive** - ottimizzato per mobile e desktop
+* 📊 **calcolo media** - visualizza automaticamente la media dei voti
+* 🎯 **calcolatore obiettivo** - scopri quale voto ti serve per raggiungere la tua media target
+* 📈 **grafici interattivi** - visualizza i tuoi progressi nel tempo
+* 💾 **esportazione dati** - esporta i tuoi voti in formato CSV
+* 🆓 **codice 100% free and opensource con controllo codeql** - così puoi stare tranquillo.
 
 ## installazione
 
@@ -83,6 +85,52 @@ se usi ubuntu o hai **ufw** attivo, abilita la porta:
 
 ```bash
 sudo ufw allow 5000
+```
+
+## configurazione avanzata
+
+### https e sicurezza dei cookie
+
+di default, l'app funziona su http (adatto per uso locale/domestico). se esegui l'app dietro un proxy https o un load balancer, imposta la variabile d'ambiente `HTTPS_ENABLED=true`:
+
+```bash
+# in compose.yml, aggiungi:
+environment:
+  - FLASK_ENV=production
+  - HTTPS_ENABLED=true
+```
+
+questo abiliterà il flag `Secure` sui cookie di sessione, garantendo che vengano inviati solo su connessioni https.
+
+### chiave segreta e sessioni
+
+l'app genera automaticamente una chiave segreta (`secret_key.txt`) al primo avvio per gestire le sessioni in modo sicuro. questa chiave:
+- è salvata in `secret_key.txt` nella directory dell'app con permessi restrittivi (600 - solo proprietario può leggere/scrivere)
+- non deve essere committata su git (già esclusa da .gitignore)
+- in docker, è persistita tramite volume mount per funzionare anche dopo i restart dei container
+
+#### note di sicurezza
+
+⚠️ **importante per la sicurezza:**
+- la chiave è salvata in chiaro sul file system - proteggi l'accesso al file
+- le credenziali nel cookie di sessione sono criptate con questa chiave
+- per ambienti di produzione, considera l'uso di gestori di segreti esterni (es. Docker secrets, Kubernetes secrets, HashiCorp Vault)
+- usa sempre la variabile d'ambiente `SECRET_KEY` in produzione invece del file
+- assicurati che il file `secret_key.txt` sia leggibile solo dall'utente che esegue l'app (permessi 600)
+
+esempio per produzione con docker secrets:
+```yaml
+# compose.yml per produzione
+services:
+  flask:
+    environment:
+      - SECRET_KEY_FILE=/run/secrets/flask_secret
+    secrets:
+      - flask_secret
+
+secrets:
+  flask_secret:
+    external: true
 ```
 
 ## risoluzione problemi
