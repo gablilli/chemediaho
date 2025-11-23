@@ -106,6 +106,14 @@ jobs:
                 });
                 
                 if (pr.merged_at) {
+                  const hasSkipLabel = pr.labels.some(l => l.name === 'changelog:skip');
+                  
+                  // Skip PRs with changelog:skip label
+                  if (hasSkipLabel) {
+                    console.log(`Skipping PR #${prNumber} (has changelog:skip label)`);
+                    continue;
+                  }
+                  
                   const hasFeatureLabel = pr.labels.some(l => l.name === 'changelog:feat');
                   const hasFixLabel = pr.labels.some(l => l.name === 'changelog:fix');
                   

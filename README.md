@@ -175,6 +175,7 @@ il workflow automaticamente:
 per includere un PR nel changelog della release, aggiungi una di queste etichette:
 * `changelog:feat` - per nuove funzionalità
 * `changelog:fix` - per correzioni di bug
+* `changelog:skip` - per escludere il PR dal changelog (utile per PR interne come documentazione, configurazione CI, ecc.)
 
 i PR senza queste etichette non appariranno nel changelog.
 
