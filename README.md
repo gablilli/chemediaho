@@ -137,7 +137,7 @@ secrets:
 
 se qualcosa non funziona, controlla eventuali errori nel terminale e assicurati che l’installazione non abbia restituito messaggi di errore.
 
---- 
+---
 
 ## grazie a
 
@@ -147,35 +147,3 @@ se qualcosa non funziona, controlla eventuali errori nel terminale e assicurati 
 
 
 per aver reso possibile tutto questo ❤️
-
-## 🚀 rilasciare una nuova versione
-
-questo repository include un workflow GitHub Actions automatizzato per creare nuove release. il workflow:
-
-* ✏️ aggiorna automaticamente i numeri di versione in `app.py` e `sw.js`
-* 📝 genera un changelog dai PR merged con etichette `changelog:feat` e `changelog:fix`
-* 🏷️ crea un tag git e una release su GitHub
-
-### come creare una release
-
-1. vai alla pagina [Actions](https://github.com/gablilli/chemediaho/actions/workflows/release.yml) del repository
-2. clicca su "Run workflow"
-3. inserisci il nuovo numero di versione (es. `1.6.0` o `1.6`)
-4. clicca su "Run workflow"
-
-il workflow automaticamente:
-- aggiornerà `APP_VERSION` in `app.py`
-- aggiornerà `CACHE_NAME` in `sw.js`
-- creerà un commit con i cambiamenti
-- creerà un tag git `vX.Y.Z`
-- genererà una release su GitHub con changelog organizzato in sezioni "Feats" e "Fixes"
-
-### etichettare i PR per il changelog
-
-per includere un PR nel changelog della release, aggiungi una di queste etichette:
-* `changelog:feat` - per nuove funzionalità
-* `changelog:fix` - per correzioni di bug
-* `changelog:skip` - per escludere il PR dal changelog (utile per PR interne come documentazione, configurazione CI, ecc.)
-
-i PR senza queste etichette non appariranno nel changelog.
-
