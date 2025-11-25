@@ -1,4 +1,4 @@
-      import { initTheme } from './common';
+import { initTheme } from './common';
 
 // PWA Install Banner Logic
 let deferredPrompt: any;
@@ -120,7 +120,7 @@ function initLoginForm(): void {
 function initServiceWorker(): void {
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-      navigator.serviceWorker.register('/static/sw.js')
+      navigator.serviceWorker.register('/sw.js')
         .then(registration => {
           console.log('Service Worker registered successfully:', registration.scope);
         })
