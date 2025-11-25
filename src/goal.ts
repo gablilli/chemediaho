@@ -1,5 +1,19 @@
 import { initTheme, initLogout } from './common';
 
+// Simple HTML escaper for output encoding to prevent XSS
+function escapeHTML(str: string): string {
+  return str.replace(/[&<>"'`]/g, function (c) {
+    return ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+     '"': '&quot;',
+     "'": '&#39;',
+     '`': '&#96;',
+    } as { [k: string]: string })[c] || c;
+  });
+}
+
 // Initialize goal calculator
 function initGoalCalculator(gradesData: any): void {
   const form = document.getElementById('goalForm') as HTMLFormElement;
@@ -64,7 +78,7 @@ function initGoalCalculator(gradesData: any): void {
     let resultHTML = `
       <h3>📊 Risultato</h3>
       <div class="result-info">
-        <p><strong>Materia:</strong> ${subject}</p>
+        <p><strong>Materia:</strong> ${escapeHTML(subject)}</p>
         <p><strong>Media attuale:</strong> ${currentAverage.toFixed(2)}</p>
         <p><strong>Numero voti:</strong> ${grades.length}</p>
         <p><strong>Media target:</strong> ${targetAverage.toFixed(2)}</p>
