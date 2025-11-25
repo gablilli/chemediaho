@@ -1,75 +1,58 @@
 const CACHE_NAME = 'chemediaho-v1.5.1';
 const urlsToCache = [
-  '/',
-  '/static/manifest.json',
-  '/static/icons/icon-192.png',
-  '/static/icons/icon-512.png'
+    '/',
+    '/static/manifest.json',
+    '/static/icons/icon-192.png',
+    '/static/icons/icon-512.png'
 ];
-
 // Install event - cache resources
 self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then((cache) => {
+    event.waitUntil(caches.open(CACHE_NAME)
+        .then((cache) => {
         console.log('Opened cache');
         return cache.addAll(urlsToCache);
-      })
-      .catch((error) => {
+    })
+        .catch((error) => {
         console.log('Cache installation failed:', error);
-      })
-  );
+    }));
 });
-
 // Fetch event - serve from cache, fallback to network
 self.addEventListener('fetch', (event) => {
-  // Skip caching for POST requests and other non-GET methods
-  if (event.request.method !== 'GET') {
-    event.respondWith(fetch(event.request));
-    return;
-  }
-
-  event.respondWith(
-    caches.match(event.request)
-      .then((response) => {
+    // Skip caching for POST requests and other non-GET methods
+    if (event.request.method !== 'GET') {
+        event.respondWith(fetch(event.request));
+        return;
+    }
+    event.respondWith(caches.match(event.request)
+        .then((response) => {
         // Cache hit - return response
         if (response) {
-          return response;
+            return response;
         }
-
-        return fetch(event.request).then(
-          (response) => {
+        return fetch(event.request).then((response) => {
             // Check if valid response
             if (!response || response.status !== 200 || response.type !== 'basic') {
-              return response;
+                return response;
             }
-
             // Clone the response
             const responseToCache = response.clone();
-
             caches.open(CACHE_NAME)
-              .then((cache) => {
+                .then((cache) => {
                 cache.put(event.request, responseToCache);
-              });
-
+            });
             return response;
-          }
-        );
-      })
-  );
+        });
+    }));
 });
-
 // Activate event - cleanup old caches
 self.addEventListener('activate', (event) => {
-  const cacheWhitelist = [CACHE_NAME];
-  event.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
-        cacheNames.map((cacheName) => {
-          if (cacheWhitelist.indexOf(cacheName) === -1) {
-            return caches.delete(cacheName);
-          }
-        })
-      );
-    })
-  );
+    const cacheWhitelist = [CACHE_NAME];
+    event.waitUntil(caches.keys().then((cacheNames) => {
+        return Promise.all(cacheNames.map((cacheName) => {
+            if (cacheWhitelist.indexOf(cacheName) === -1) {
+                return caches.delete(cacheName);
+            }
+        }));
+    }));
 });
+//# sourceMappingURL=sw.js.map
