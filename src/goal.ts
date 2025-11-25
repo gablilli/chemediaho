@@ -3,8 +3,8 @@ import { initTheme, initLogout } from './common';
 // Initialize goal calculator
 function initGoalCalculator(gradesData: any): void {
   const form = document.getElementById('goalForm') as HTMLFormElement;
-  const subjectSelect = document.getElementById('subject') as HTMLSelectElement;
-  const targetInput = document.getElementById('target') as HTMLInputElement;
+  const subjectSelect = document.getElementById('subjectSelect') as HTMLSelectElement;
+  const targetInput = document.getElementById('targetAverage') as HTMLInputElement;
   const calculateBtn = document.getElementById('calculateBtn') as HTMLButtonElement;
   const resultDiv = document.getElementById('result');
 

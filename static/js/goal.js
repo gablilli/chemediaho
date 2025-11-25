@@ -2,8 +2,8 @@ import { initTheme, initLogout } from './common';
 // Initialize goal calculator
 function initGoalCalculator(gradesData) {
     const form = document.getElementById('goalForm');
-    const subjectSelect = document.getElementById('subject');
-    const targetInput = document.getElementById('target');
+    const subjectSelect = document.getElementById('subjectSelect');
+    const targetInput = document.getElementById('targetAverage');
     const calculateBtn = document.getElementById('calculateBtn');
     const resultDiv = document.getElementById('result');
     if (!form || !subjectSelect || !targetInput || !calculateBtn || !resultDiv)
