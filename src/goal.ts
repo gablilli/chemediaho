@@ -1,216 +1,107 @@
-      // Store grades data from server
-      const gradesData = {{ grades_avr | tojson | safe }};
+import { initTheme, initLogout } from './common';
 
-      // Theme management
-      const themeToggle = document.getElementById('themeToggle');
-      const root = document.documentElement;
-      
-      function getSystemTheme() {
-        if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) {
-          return 'light';
-        }
-        return 'dark';
-      }
-      
-      const savedTheme = localStorage.getItem('theme');
-      const initialTheme = savedTheme || getSystemTheme();
-      
-      if (initialTheme === 'light') {
-        root.setAttribute('data-theme', 'light');
-      }
-      
-      themeToggle.addEventListener('click', () => {
-        const currentTheme = root.getAttribute('data-theme');
-        const newTheme = currentTheme === 'light' ? 'dark' : 'light';
-        
-        if (newTheme === 'light') {
-          root.setAttribute('data-theme', 'light');
-        } else {
-          root.removeAttribute('data-theme');
-        }
-        
-        localStorage.setItem('theme', newTheme);
-      });
+// Initialize goal calculator
+function initGoalCalculator(gradesData: any): void {
+  const form = document.getElementById('goalForm') as HTMLFormElement;
+  const subjectSelect = document.getElementById('subject') as HTMLSelectElement;
+  const targetInput = document.getElementById('target') as HTMLInputElement;
+  const calculateBtn = document.getElementById('calculateBtn') as HTMLButtonElement;
+  const resultDiv = document.getElementById('result');
 
-      // Handle period selection
-      const periodSelect = document.getElementById('periodSelect');
-      const subjectSelect = document.getElementById('subjectSelect');
+  if (!form || !subjectSelect || !targetInput || !calculateBtn || !resultDiv) return;
 
-      // Helper function to show error notification
-      function showError(message) {
-        const notification = document.getElementById('errorNotification');
-        notification.textContent = message;
-        notification.classList.add('show');
-        setTimeout(() => {
-          notification.classList.remove('show');
-        }, 3000);
-      }
-
-      periodSelect.addEventListener('change', function() {
-        const period = this.value;
-        subjectSelect.disabled = false;
-        subjectSelect.innerHTML = '<option value="">Seleziona una materia...</option>';
-        
-        if (period && gradesData[period]) {
-          const subjects = Object.keys(gradesData[period]).filter(s => s !== 'period_avr');
-          subjects.forEach(subject => {
-            const option = document.createElement('option');
-            option.value = subject;
-            option.textContent = subject;
-            subjectSelect.appendChild(option);
-          });
-        } else {
-          subjectSelect.disabled = true;
-          subjectSelect.innerHTML = '<option value="">Prima seleziona un periodo...</option>';
-        }
-        
-        // Reset target average constraints when period changes
-        resetTargetAverageInput();
-      });
-
-      // Handle subject selection to update target average constraints
-      subjectSelect.addEventListener('change', function() {
-        const period = periodSelect.value;
-        const subject = this.value;
-        
-        if (period && subject && gradesData[period] && gradesData[period][subject]) {
-          const subjectData = gradesData[period][subject];
-          const currentAverage = subjectData.avr || 0;
-          
-          // Update minimum value for target average input
-          const targetInput = document.getElementById('targetAverage');
-          const targetRangeLabel = document.getElementById('targetRangeLabel');
-          const targetHelp = document.getElementById('targetHelp');
-          
-          // Use ceiling to ensure minimum target is always higher than current average
-          targetInput.min = Math.max(1, Math.ceil(currentAverage * 10) / 10);
-          targetRangeLabel.textContent = `(${targetInput.min}-10)`;
-          targetHelp.textContent = `La tua media attuale è ${currentAverage.toFixed(2)}. Imposta un obiettivo superiore.`;
-          
-          // Clear any previously entered value that might be invalid
-          if (targetInput.value && parseFloat(targetInput.value) < targetInput.min) {
-            targetInput.value = '';
-          }
-        } else {
-          resetTargetAverageInput();
+  // Populate subject dropdown
+  const subjects = new Set<string>();
+  Object.keys(gradesData).forEach(period => {
+    if (period !== 'all_avr') {
+      Object.keys(gradesData[period]).forEach(subject => {
+        if (subject !== 'period_avr') {
+          subjects.add(subject);
         }
       });
+    }
+  });
 
-      function resetTargetAverageInput() {
-        const targetInput = document.getElementById('targetAverage');
-        const targetRangeLabel = document.getElementById('targetRangeLabel');
-        const targetHelp = document.getElementById('targetHelp');
-        
-        targetInput.min = 1;
-        targetRangeLabel.textContent = '(1-10)';
-        targetHelp.textContent = '';
-        targetInput.value = '';
-      }
+  subjects.forEach(subject => {
+    const option = document.createElement('option');
+    option.value = subject;
+    option.textContent = subject;
+    subjectSelect.appendChild(option);
+  });
 
-      // Handle form submission
-      const goalForm = document.getElementById('goalForm');
-      const resultCard = document.getElementById('resultCard');
-      const calculateBtn = document.getElementById('calculateBtn');
+  // Calculate required grade
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    
+    const subject = subjectSelect.value;
+    const targetAverage = parseFloat(targetInput.value);
 
-      goalForm.addEventListener('submit', async function(e) {
-        e.preventDefault();
-        
-        const period = periodSelect.value;
-        const subject = subjectSelect.value;
-        const targetAverage = parseFloat(document.getElementById('targetAverage').value);
+    if (!subject || isNaN(targetAverage)) {
+      resultDiv.innerHTML = '<p class="error">⚠️ Seleziona una materia e inserisci una media target valida.</p>';
+      return;
+    }
 
-        if (!period || !subject || !targetAverage) {
-          showError('Compila tutti i campi!');
-          return;
+    // Get current grades for subject
+    const grades: number[] = [];
+    Object.keys(gradesData).forEach(period => {
+      if (period !== 'all_avr') {
+        const grade = gradesData[period][subject];
+        if (typeof grade === 'number') {
+          grades.push(grade);
         }
-
-        // Disable button during calculation
-        calculateBtn.disabled = true;
-        calculateBtn.textContent = 'Calcolo in corso...';
-
-        try {
-          const response = await fetch('/calculate_goal', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              period: period,
-              subject: subject,
-              target_average: targetAverage
-            })
-          });
-
-          const data = await response.json();
-
-          if (response.ok && data.success) {
-            displayResult(data);
-          } else {
-            showError(data.error || 'Errore durante il calcolo');
-          }
-        } catch (error) {
-          showError('Errore di connessione');
-        } finally {
-          calculateBtn.disabled = false;
-          calculateBtn.innerHTML = `
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="12" cy="12" r="10"/>
-              <polyline points="12 6 12 12 16 14"/>
-            </svg>
-            Calcola
-          `;
-        }
-      });
-
-      function displayResult(data) {
-        // Update result values
-        document.getElementById('currentAverage').textContent = data.current_average.toFixed(2);
-        document.getElementById('targetAverageDisplay').textContent = data.target_average.toFixed(2);
-        document.getElementById('requiredGrade').textContent = data.required_grade.toFixed(2);
-        document.getElementById('gradesCount').textContent = data.current_grades_count;
-        document.getElementById('resultMessage').textContent = data.message;
-
-        // Set result card style based on achievability
-        resultCard.classList.remove('success', 'warning', 'error');
-        
-        if (data.required_grade < 1) {
-          resultCard.classList.add('success');
-          document.getElementById('resultEmoji').textContent = '🎉';
-          document.getElementById('resultTitle').textContent = 'Fantastico!';
-        } else if (data.required_grade > 10) {
-          resultCard.classList.add('error');
-          document.getElementById('resultEmoji').textContent = '😅';
-          document.getElementById('resultTitle').textContent = 'Difficile...';
-        } else if (data.required_grade >= 9) {
-          resultCard.classList.add('warning');
-          document.getElementById('resultEmoji').textContent = '💪';
-          document.getElementById('resultTitle').textContent = 'Impegnati!';
-        } else if (data.required_grade >= 7) {
-          resultCard.classList.add('success');
-          document.getElementById('resultEmoji').textContent = '👍';
-          document.getElementById('resultTitle').textContent = 'Fattibile!';
-        } else {
-          resultCard.classList.add('success');
-          document.getElementById('resultEmoji').textContent = '✅';
-          document.getElementById('resultTitle').textContent = 'Ottimo!';
-        }
-
-        // Show result card
-        resultCard.classList.add('show');
-        
-        // Scroll to result
-        resultCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
       }
+    });
 
-      // Handle logout from bottom nav
-      const logoutNavBtn = document.getElementById('logoutNavBtn');
-      if (logoutNavBtn) {
-        logoutNavBtn.addEventListener('click', () => {
-          const form = document.createElement('form');
-          form.method = 'POST';
-          form.action = '/logout';
-          document.body.appendChild(form);
-          form.submit();
-        });
-      }
-    </script>
+    if (grades.length === 0) {
+      resultDiv.innerHTML = '<p class="error">⚠️ Nessun voto disponibile per questa materia.</p>';
+      return;
+    }
+
+    const currentSum = grades.reduce((a, b) => a + b, 0);
+    const currentAverage = currentSum / grades.length;
+    const requiredGrade = targetAverage * (grades.length + 1) - currentSum;
+
+    let resultHTML = `
+      <h3>📊 Risultato</h3>
+      <div class="result-info">
+        <p><strong>Materia:</strong> ${subject}</p>
+        <p><strong>Media attuale:</strong> ${currentAverage.toFixed(2)}</p>
+        <p><strong>Numero voti:</strong> ${grades.length}</p>
+        <p><strong>Media target:</strong> ${targetAverage.toFixed(2)}</p>
+      </div>
+    `;
+
+    if (requiredGrade < 0 || requiredGrade > 10) {
+      resultHTML += '<p class="error">⚠️ Impossibile raggiungere questa media con un solo voto.</p>';
+    } else {
+      const message = requiredGrade < 6 
+        ? '🎉 Congratulazioni! Puoi raggiungere la tua media target!'
+        : requiredGrade > 10
+        ? '😅 Serve un voto superiore al massimo!'
+        : `✅ Devi prendere <strong>${requiredGrade.toFixed(2)}</strong> al prossimo voto!`;
+      
+      resultHTML += `<p class="success">${message}</p>`;
+    }
+
+    resultDiv.innerHTML = resultHTML;
+  });
+
+  // Min target validation
+  targetInput.addEventListener('input', () => {
+    if (parseFloat(targetInput.value) < parseFloat(targetInput.min)) {
+      targetInput.value = targetInput.min;
+    }
+  });
+}
+
+// Initialize when DOM is ready
+document.addEventListener('DOMContentLoaded', () => {
+  initTheme();
+  initLogout();
+  
+  // Get grades data from window object (injected by backend)
+  const gradesData = (window as any).gradesData;
+  if (gradesData) {
+    initGoalCalculator(gradesData);
+  }
+});
