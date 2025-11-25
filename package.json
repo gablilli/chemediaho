@@ -1,0 +1,17 @@
+{
+  "name": "chemediaho",
+  "version": "1.5.1",
+  "description": "Service Worker for che media ho? PWA",
+  "scripts": {
+    "build": "npm run build:pages && npm run build:sw",
+    "build:pages": "tsc",
+    "build:sw": "tsc -p tsconfig.sw.json",
+    "watch": "tsc --watch",
+    "clean": "rm -rf static/js static/sw.js static/sw.js.map"
+  },
+  "devDependencies": {
+    "@types/serviceworker": "^0.0.167",
+    "typescript": "^5.3.3"
+  },
+  "private": true
+}

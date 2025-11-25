@@ -1,0 +1,10 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "lib": ["ES2020", "WebWorker"],
+    "outDir": "./static",
+    "types": ["serviceworker"]
+  },
+  "include": ["src/sw.ts"],
+  "exclude": []
+}
