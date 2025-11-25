@@ -17,7 +17,7 @@ function showModal(grade) {
     if (modalComponent)
         modalComponent.textContent = grade.componentDesc || '-';
     if (modalTeacher)
-        modalTeacher.textContent = grade.authorName || '-';
+        modalTeacher.textContent = grade.teacherName || '-';
     if (modalNotes)
         modalNotes.textContent = grade.notesForFamily || 'Nessuna nota';
     modal.style.display = 'flex';
