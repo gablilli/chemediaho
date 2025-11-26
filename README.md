@@ -9,7 +9,7 @@ sysregister ui-based.
 * 🔄 **supporto offline** - funziona anche senza connessione (con i dati scaricati precedentemente)
 * 🎨 **design responsive** - ottimizzato per mobile e desktop
 * 📊 **calcolo media** - visualizza automaticamente la media dei voti
-* 🎯 **calcolatore obiettivo** - scopri quale voto ti serve per raggiungere la tua media target
+* 🎯 **calcoli & previsioni** - calcola quali voti ti servono per raggiungere un obiettivo e prevedi l'impatto di voti futuri sulla tua media
 * 📈 **grafici interattivi** - visualizza i tuoi progressi nel tempo
 * 💾 **esportazione dati** - esporta i tuoi voti in formato CSV
 * 🆓 **codice 100% free and opensource con controllo codeql** - così puoi stare tranquillo.
