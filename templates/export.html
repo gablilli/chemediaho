@@ -235,43 +235,6 @@
         height: 24px;
         fill: var(--text);
       }
-      
-      .refresh-btn {
-        position: fixed;
-        top: 20px;
-        right: 80px;
-        background: var(--secondary);
-        border: 2px solid var(--accent);
-        border-radius: 50%;
-        width: 50px;
-        height: 50px;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        transition: all 0.3s ease;
-        z-index: 100;
-      }
-
-      .refresh-btn:hover {
-        transform: scale(1.1) rotate(90deg);
-        background: var(--accent);
-      }
-
-      .refresh-btn svg {
-        width: 24px;
-        height: 24px;
-        stroke: var(--text);
-      }
-      
-      .refresh-btn.loading {
-        animation: spin 1s linear infinite;
-      }
-      
-      @keyframes spin {
-        from { transform: rotate(0deg); }
-        to { transform: rotate(360deg); }
-      }
 
       .logout-btn {
         display: none; /* Hidden on all devices */
@@ -360,23 +323,10 @@
           bottom: calc(96px + env(safe-area-inset-bottom));
           right: 20px;
         }
-        
-        .refresh-btn {
-          top: auto;
-          bottom: calc(158px + env(safe-area-inset-bottom));
-          right: 20px;
-        }
       }
     </style>
   </head>
   <body>
-    <button class="refresh-btn" id="refreshBtn" aria-label="Refresh grades">
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <polyline points="23 4 23 10 17 10"/>
-        <polyline points="1 20 1 14 7 14"/>
-        <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
-      </svg>
-    </button>
     <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <circle cx="12" cy="12" r="5"/>
@@ -484,13 +434,12 @@
         </svg>
         <span class="nav-label">Esporta</span>
       </a>
-      <a href="/info" class="nav-item">
+      <a href="/settings" class="nav-item">
         <svg class="nav-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="12" cy="12" r="10"/>
-          <line x1="12" y1="16" x2="12" y2="12"/>
-          <line x1="12" y1="8" x2="12.01" y2="8"/>
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
         </svg>
-        <span class="nav-label">Info</span>
+        <span class="nav-label">Impostazioni</span>
       </a>
       <button type="button" class="nav-item" id="logoutNavBtn">
         <svg class="nav-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -543,42 +492,6 @@
           form.action = '/logout';
           document.body.appendChild(form);
           form.submit();
-        });
-      }
-      
-      // Handle refresh button
-      const refreshBtn = document.getElementById('refreshBtn');
-      if (refreshBtn) {
-        refreshBtn.addEventListener('click', async () => {
-          refreshBtn.classList.add('loading');
-          refreshBtn.disabled = true;
-          
-          try {
-            const response = await fetch('/refresh_grades', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-            });
-            
-            const data = await response.json();
-            
-            if (response.ok) {
-              // Reload page to show updated grades
-              window.location.reload();
-            } else if (data.redirect) {
-              // Session expired, redirect to login
-              window.location.href = data.redirect;
-            } else {
-              alert('Errore durante l\'aggiornamento dei voti: ' + (data.error || 'Errore sconosciuto'));
-              refreshBtn.classList.remove('loading');
-              refreshBtn.disabled = false;
-            }
-          } catch (error) {
-            alert('Errore di connessione durante l\'aggiornamento dei voti');
-            refreshBtn.classList.remove('loading');
-            refreshBtn.disabled = false;
-          }
         });
       }
     </script>
