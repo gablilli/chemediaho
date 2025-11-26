@@ -237,8 +237,8 @@ def calculate_goal():
         required_sum = target_average * (current_count + num_grades) - current_sum
         required_average_grade = required_sum / num_grades
         
-        # For simplicity, assume all required grades are the same
-        # This gives the student a clear target
+        # Note: For simplicity and clarity, we assume all required grades are the same
+        # This gives the student a single, clear target to aim for across all tests
         required_grades = [required_average_grade] * num_grades
         
         # Determine if it's achievable

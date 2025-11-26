@@ -705,7 +705,7 @@
           <div class="info-box-content">
             Il calcolatore usa la formula della media aritmetica per determinare 
             quali voti devi ottenere nei prossimi test per raggiungere la tua media target. 
-            Puoi pianificare anche per più voti futuri!
+            Puoi pianificare anche per più voti futuri! Nota: tutti i voti calcolati avranno lo stesso valore medio.
           </div>
         </div>
       </div>
@@ -928,6 +928,11 @@
         }, 3000);
       }
 
+      // Helper function for Italian pluralization of "voto"
+      function pluralizeVoto(count) {
+        return count === 1 ? 'voto' : 'voti';
+      }
+
       // Add grade input for goal calculator
       function addGradeInput() {
         numGradesGoal++;
@@ -935,7 +940,7 @@
         const gradeGroup = document.createElement('div');
         gradeGroup.className = 'grade-input-group';
         gradeGroup.innerHTML = `
-          <span style="font-size: 14px; opacity: 0.8;">${numGradesGoal} voti</span>
+          <span style="font-size: 14px; opacity: 0.8;">${numGradesGoal} ${pluralizeVoto(numGradesGoal)}</span>
           <button type="button" class="remove-grade-btn" onclick="removeGradeInput(this)">×</button>
         `;
         container.appendChild(gradeGroup);
@@ -950,7 +955,7 @@
           groups.forEach((group, index) => {
             const span = group.querySelector('span');
             if (span) {
-              span.textContent = `${index + 1} vot${index === 0 ? 'o' : 'i'}`;
+              span.textContent = `${index + 1} ${pluralizeVoto(index + 1)}`;
             }
           });
         }
@@ -1127,10 +1132,10 @@
         document.getElementById('currentAverageGoal').textContent = data.current_average.toFixed(2);
         document.getElementById('targetAverageDisplay').textContent = data.target_average.toFixed(2);
         
-        // Display required grades
+        // Display required grades (use 2 decimal places for consistency)
         const requiredGradesEl = document.getElementById('requiredGradesGoal');
         if (data.required_grades && Array.isArray(data.required_grades)) {
-          requiredGradesEl.textContent = data.required_grades.map(g => g.toFixed(1)).join(', ');
+          requiredGradesEl.textContent = data.required_grades.map(g => g.toFixed(2)).join(', ');
         } else {
           requiredGradesEl.textContent = data.required_grade.toFixed(2);
         }
