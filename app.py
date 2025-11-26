@@ -467,11 +467,16 @@ def calculate_avr(grades, include_blue_grades=False):
     for grade in grades["grades"]:
         # Convert period to string to ensure consistent type for dictionary keys
         period = str(grade["periodPos"])
-        # Skip grades based on settings
-        if grade["noAverage"] is True or grade["decimalValue"] is None:
+        # Always skip grades without a decimal value
+        if grade["decimalValue"] is None:
             continue
+        # Check if this is a blue grade
+        is_blue = grade["color"] == "blue"
         # Skip blue grades unless include_blue_grades is True
-        if grade["color"] == "blue" and not include_blue_grades:
+        if is_blue and not include_blue_grades:
+            continue
+        # Skip non-blue grades that don't count toward the average
+        if grade["noAverage"] and not is_blue:
             continue
         if period not in grades_avr:
             grades_avr[period] = {}
@@ -487,7 +492,7 @@ def calculate_avr(grades, include_blue_grades=False):
             "notesForFamily": grade["notesForFamily"],
             "componentDesc": grade["componentDesc"],
             "teacherName": grade["teacherName"],
-            "isBlue": grade["color"] == "blue"
+            "isBlue": is_blue
         })
     
     # Calculate average per subject
