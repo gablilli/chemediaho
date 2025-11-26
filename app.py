@@ -127,8 +127,12 @@ def refresh_grades():
         user_id = flask.session['user_id']
         student_id = "".join(filter(str.isdigit, user_id))
         
+        # Get include_blue_grades preference from request body
+        data = flask.request.get_json() or {}
+        include_blue_grades = data.get('include_blue_grades', False)
+        
         # Fetch fresh grades from API
-        grades_avr = calculate_avr(get_grades(student_id, token))
+        grades_avr = calculate_avr(get_grades(student_id, token), include_blue_grades)
         
         # Update session with fresh data
         flask.session['grades_avr'] = grades_avr
@@ -169,10 +173,10 @@ def export_page():
     
     return flask.render_template('export.html')
 
-@app.route('/info')
-def info_page():
-    """Display info page"""
-    return flask.render_template('info.html', version=APP_VERSION)
+@app.route('/settings')
+def settings_page():
+    """Display settings page"""
+    return flask.render_template('settings.html', version=APP_VERSION)
 
 @app.route('/goal')
 def goal_page():
@@ -237,22 +241,27 @@ def calculate_goal():
         required_sum = target_average * (current_count + num_grades) - current_sum
         required_average_grade = required_sum / num_grades
         
+        # Round grades >= 9.75 to 10 for display purposes
+        display_grade = required_average_grade
+        if 9.75 <= required_average_grade <= 10:
+            display_grade = 10
+        
         # Note: For simplicity and clarity, we assume all required grades are the same
         # This gives the student a single, clear target to aim for across all tests
-        required_grades = [required_average_grade] * num_grades
+        required_grades = [display_grade] * num_grades
         
-        # Determine if it's achievable
+        # Determine if it's achievable (use original value for comparison, but allow 9.75+ to round to 10)
         achievable = 1 <= required_average_grade <= 10
         
         return flask.jsonify({
             'success': True,
             'current_average': round(current_average, 2),
             'target_average': target_average,
-            'required_grade': round(required_average_grade, 2),
+            'required_grade': round(display_grade, 2),
             'required_grades': [round(g, 2) for g in required_grades],
             'current_grades_count': current_count,
             'achievable': achievable,
-            'message': get_goal_message_multiple(required_average_grade, target_average, current_average, num_grades)
+            'message': get_goal_message_multiple(required_average_grade, display_grade, target_average, current_average, num_grades)
         }), 200
         
     except ValueError as e:
@@ -260,22 +269,24 @@ def calculate_goal():
     except Exception as e:
         return flask.jsonify({'error': 'Errore durante il calcolo'}), 500
 
-def get_goal_message_multiple(required_grade, target_average, current_average, num_grades):
+def get_goal_message_multiple(raw_grade, display_grade, target_average, current_average, num_grades):
     """Generate a helpful message based on the calculation result for multiple grades"""
     grade_text = "voto" if num_grades == 1 else f"{num_grades} voti"
     
-    if required_grade < 1:
+    if raw_grade < 1:
         return f"Ottimo! La tua media attuale è già sopra l'obiettivo. Anche con voti minimi raggiungerai {target_average}."
-    elif required_grade > 10:
+    elif raw_grade > 10:
         return f"Purtroppo non è possibile raggiungere {target_average} con {grade_text}. Prova a impostare un obiettivo più realistico o aggiungere più voti!"
-    elif required_grade >= 9:
-        return f"Devi impegnarti molto: ti servono {grade_text} da almeno {round(required_grade, 1)} per raggiungere l'obiettivo."
-    elif required_grade >= 7:
-        return f"È fattibile: Con {grade_text} da {round(required_grade, 1)} puoi raggiungere {target_average}."
-    elif required_grade >= 6:
-        return f"Ci sei quasi! {grade_text.capitalize()} da {round(required_grade, 1)} ti permetteranno di raggiungere l'obiettivo."
+    elif 9.75 <= raw_grade <= 10:
+        return f"Ci vuole impegno! Ti servono {grade_text} da 10 (arrotondato da {round(raw_grade, 2)}) per raggiungere l'obiettivo."
+    elif raw_grade >= 9:
+        return f"Devi impegnarti molto: ti servono {grade_text} da almeno {round(raw_grade, 1)} per raggiungere l'obiettivo."
+    elif raw_grade >= 7:
+        return f"È fattibile: Con {grade_text} da {round(raw_grade, 1)} puoi raggiungere {target_average}."
+    elif raw_grade >= 6:
+        return f"Ci sei quasi! {grade_text.capitalize()} da {round(raw_grade, 1)} ti permetteranno di raggiungere l'obiettivo."
     else:
-        return f"Ottimo! Anche con {grade_text} modesti ({round(required_grade, 1)}) raggiungerai {target_average}."
+        return f"Ottimo! Anche con {grade_text} modesti ({round(raw_grade, 1)}) raggiungerai {target_average}."
 
 @app.route('/predict_average', methods=['POST'])
 def predict_average():
@@ -451,12 +462,16 @@ def get_grades(student_id, token):
         return response.json()
     else:
         response.raise_for_status()
-def calculate_avr(grades):
+def calculate_avr(grades, include_blue_grades=False):
     grades_avr = {}
     for grade in grades["grades"]:
         # Convert period to string to ensure consistent type for dictionary keys
         period = str(grade["periodPos"])
-        if grade["noAverage"] is True or grade["color"] == "blue" or grade["decimalValue"] is None:
+        # Skip grades based on settings
+        if grade["noAverage"] is True or grade["decimalValue"] is None:
+            continue
+        # Skip blue grades unless include_blue_grades is True
+        if grade["color"] == "blue" and not include_blue_grades:
             continue
         if period not in grades_avr:
             grades_avr[period] = {}
@@ -471,7 +486,8 @@ def calculate_avr(grades):
             "evtDate": grade["evtDate"],
             "notesForFamily": grade["notesForFamily"],
             "componentDesc": grade["componentDesc"],
-            "teacherName": grade["teacherName"]
+            "teacherName": grade["teacherName"],
+            "isBlue": grade["color"] == "blue"
         })
     
     # Calculate average per subject

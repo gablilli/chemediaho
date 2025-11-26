@@ -1,0 +1,768 @@
+<!DOCTYPE html>
+<html lang="it">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#f03333" />
+    <meta name="description" content="Impostazioni - chemediaho" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="MediaHo" />
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/static/icons/icon-192.png" />
+    <link rel="apple-touch-icon" href="/static/icons/icon-192.png" />
+    <title>Impostazioni - che media ho?</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      :root {
+        --text: #f1e4e4;
+        --background: #130909;
+        --primary: #f03333;
+        --secondary: #7f2929;
+        --accent: #c83737;
+        --success: #4caf50;
+      }
+
+      :root[data-theme="light"] {
+        --text: #1a0a0a;
+        --background: #fef8f8;
+        --primary: #f03333;
+        --secondary: #f5cccc;
+        --accent: #c83737;
+        --success: #4caf50;
+      }
+
+      body {
+        margin: 0;
+        padding: 0;
+        padding-bottom: calc(72px + env(safe-area-inset-bottom));
+        min-height: 100vh;
+        background: var(--background);
+        color: var(--text);
+        font-family: Arial, Helvetica, sans-serif;
+      }
+
+      .header-section {
+        text-align: center;
+        padding: 32px 20px 24px;
+      }
+
+      .page-title {
+        font-size: 28px;
+        font-weight: bold;
+        color: var(--text);
+        margin-bottom: 8px;
+      }
+
+      .page-subtitle {
+        font-size: 14px;
+        color: var(--text);
+        opacity: 0.7;
+      }
+
+      .container {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 0 20px 40px;
+      }
+
+      .section-title {
+        font-size: 16px;
+        font-weight: bold;
+        color: var(--accent);
+        margin-bottom: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+
+      .settings-card {
+        position: relative;
+        overflow: hidden;
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 16px;
+      }
+
+      .settings-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        background-color: var(--secondary);
+        opacity: 0.15;
+        z-index: -1;
+      }
+
+      .setting-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 16px 0;
+        border-bottom: 1px solid var(--secondary);
+      }
+
+      .setting-item:last-child {
+        border-bottom: none;
+        padding-bottom: 0;
+      }
+
+      .setting-item:first-child {
+        padding-top: 0;
+      }
+
+      .setting-info {
+        flex: 1;
+        margin-right: 16px;
+      }
+
+      .setting-title {
+        font-size: 16px;
+        font-weight: 600;
+        color: var(--text);
+        margin-bottom: 4px;
+      }
+
+      .setting-description {
+        font-size: 13px;
+        color: var(--text);
+        opacity: 0.7;
+        line-height: 1.4;
+      }
+
+      /* Toggle Switch */
+      .toggle-switch {
+        position: relative;
+        width: 52px;
+        height: 28px;
+        flex-shrink: 0;
+      }
+
+      .toggle-switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+      }
+
+      .toggle-slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: var(--secondary);
+        transition: 0.3s;
+        border-radius: 28px;
+      }
+
+      .toggle-slider:before {
+        position: absolute;
+        content: "";
+        height: 22px;
+        width: 22px;
+        left: 3px;
+        bottom: 3px;
+        background-color: var(--text);
+        transition: 0.3s;
+        border-radius: 50%;
+      }
+
+      .toggle-switch input:checked + .toggle-slider {
+        background-color: var(--primary);
+      }
+
+      .toggle-switch input:checked + .toggle-slider:before {
+        transform: translateX(24px);
+        background-color: white;
+      }
+
+      /* Action Buttons */
+      .action-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        padding: 12px 20px;
+        background: var(--primary);
+        color: white;
+        border: none;
+        border-radius: 10px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        font-family: inherit;
+        min-width: 120px;
+      }
+
+      .action-btn:hover {
+        opacity: 0.9;
+        transform: translateY(-2px);
+      }
+
+      .action-btn:active {
+        transform: translateY(0);
+      }
+
+      .action-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        transform: none;
+      }
+
+      .action-btn svg {
+        width: 18px;
+        height: 18px;
+        stroke: currentColor;
+        fill: none;
+      }
+
+      .action-btn.loading svg {
+        animation: spin 1s linear infinite;
+      }
+
+      @keyframes spin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+      }
+
+      /* Info Card (condensed) */
+      .info-card {
+        position: relative;
+        overflow: hidden;
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 16px;
+      }
+
+      .info-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        background-color: var(--secondary);
+        opacity: 0.15;
+        z-index: -1;
+      }
+
+      .info-card h2 {
+        font-size: 18px;
+        font-weight: bold;
+        color: var(--accent);
+        margin-bottom: 10px;
+      }
+
+      .info-card p {
+        font-size: 13px;
+        line-height: 1.5;
+        margin-bottom: 8px;
+      }
+
+      .info-card p:last-child {
+        margin-bottom: 0;
+      }
+
+      .github-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 16px;
+        background: transparent;
+        color: var(--primary);
+        border: 2px solid var(--primary);
+        border-radius: 8px;
+        text-decoration: none;
+        font-weight: 600;
+        font-size: 14px;
+        margin-top: 8px;
+        transition: background-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease, transform 0.06s ease;
+      }
+
+      .github-link:hover,
+      .github-link:focus {
+        background: var(--primary);
+        color: #ffffff;
+        box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
+        transform: translateY(-2px);
+      }
+
+      .github-link:active {
+        transform: translateY(0);
+      }
+
+      .version-badge {
+        display: inline-block;
+        padding: 4px 10px;
+        background: var(--accent);
+        color: white;
+        border-radius: 6px;
+        font-size: 12px;
+        font-weight: 600;
+        margin-left: 8px;
+      }
+
+      /* Success notification */
+      .notification {
+        display: none;
+        position: fixed;
+        top: 80px;
+        left: 50%;
+        transform: translateX(-50%);
+        padding: 16px 24px;
+        border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        z-index: 1000;
+        animation: slideDown 0.3s ease;
+        max-width: 90%;
+        text-align: center;
+        font-weight: 600;
+      }
+
+      .notification.success {
+        background: var(--success);
+        color: white;
+      }
+
+      .notification.error {
+        background: var(--primary);
+        color: white;
+      }
+
+      .notification.show {
+        display: block;
+      }
+
+      @keyframes slideDown {
+        from {
+          opacity: 0;
+          transform: translate(-50%, -20px);
+        }
+        to {
+          opacity: 1;
+          transform: translate(-50%, 0);
+        }
+      }
+
+      .theme-toggle {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: var(--secondary);
+        border: 2px solid var(--accent);
+        border-radius: 50%;
+        width: 50px;
+        height: 50px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.3s ease;
+        z-index: 100;
+      }
+
+      .theme-toggle:hover {
+        transform: scale(1.1);
+        background: var(--accent);
+      }
+
+      .theme-toggle svg {
+        width: 24px;
+        height: 24px;
+        fill: var(--text);
+      }
+
+      /* Bottom Navigation Bar */
+      .bottom-nav {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 72px;
+        background: var(--background);
+        box-shadow: 0 -4px 12px rgba(240, 51, 51, 0.3);
+        z-index: 100;
+        display: flex;
+        align-items: center;
+        justify-content: space-around;
+        padding-top: 8px;
+        padding-bottom: env(safe-area-inset-bottom);
+      }
+
+      @media (max-width: 768px) {
+        .bottom-nav {
+          left: 12px;
+          right: 12px;
+          bottom: max(16px, env(safe-area-inset-bottom));
+          border-radius: 20px;
+          box-shadow: 0 -4px 12px rgba(240, 51, 51, 0.3), 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
+        
+        .theme-toggle {
+          top: auto;
+          bottom: calc(96px + env(safe-area-inset-bottom));
+          right: 20px;
+        }
+
+        .page-title {
+          font-size: 24px;
+        }
+
+        .setting-item {
+          flex-direction: column;
+          align-items: flex-start;
+          gap: 12px;
+        }
+
+        .setting-info {
+          margin-right: 0;
+        }
+
+        .action-btn {
+          width: 100%;
+        }
+      }
+
+      .nav-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-decoration: none;
+        color: var(--text);
+        transition: all 0.3s ease;
+        opacity: 0.6;
+        flex: 1;
+        background: none;
+        border: none;
+        cursor: pointer;
+        font-family: inherit;
+      }
+
+      .nav-item.active {
+        opacity: 1;
+      }
+
+      .nav-item:hover {
+        opacity: 1;
+      }
+
+      .nav-icon {
+        width: 28px;
+        height: 28px;
+        margin-bottom: 4px;
+        stroke: currentColor;
+        fill: none;
+      }
+
+      .nav-item.active .nav-icon {
+        fill: var(--accent);
+        stroke: var(--accent);
+      }
+
+      .nav-label {
+        font-size: 12px;
+        font-weight: 600;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Notification -->
+    <div class="notification" id="notification"></div>
+
+    <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="5"/>
+        <line x1="12" x2="12" y1="1" y2="3"/>
+        <line x1="12" x2="12" y1="21" y2="23"/>
+        <line x1="4.22" x2="5.64" y1="4.22" y2="5.64"/>
+        <line x1="18.36" x2="19.78" y1="18.36" y2="19.78"/>
+        <line x1="1" x2="3" y1="12" y2="12"/>
+        <line x1="21" x2="23" y1="12" y2="12"/>
+        <line x1="4.22" x2="5.64" y1="19.78" y2="18.36"/>
+        <line x1="18.36" x2="19.78" y1="5.64" y2="4.22"/>
+      </svg>
+    </button>
+
+    <div class="header-section">
+      <h1 class="page-title">⚙️ Impostazioni</h1>
+      <p class="page-subtitle">Gestisci le preferenze e sincronizza i dati</p>
+    </div>
+
+    <div class="container">
+      <!-- Settings Section -->
+      <p class="section-title">🔧 Preferenze</p>
+      <div class="settings-card">
+        <div class="setting-item">
+          <div class="setting-info">
+            <div class="setting-title">Conta voti blu</div>
+            <div class="setting-description">Includi i voti blu (che normalmente non fanno media) nel calcolo delle medie</div>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" id="includeBlueGrades">
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Actions Section -->
+      <p class="section-title">🔄 Azioni</p>
+      <div class="settings-card">
+        <div class="setting-item">
+          <div class="setting-info">
+            <div class="setting-title">Sincronizza voti</div>
+            <div class="setting-description">Aggiorna i voti con i dati più recenti da ClasseViva</div>
+          </div>
+          <button class="action-btn" id="syncBtn">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="23 4 23 10 17 10"/>
+              <polyline points="1 20 1 14 7 14"/>
+              <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+            </svg>
+            Sincronizza
+          </button>
+        </div>
+
+        <div class="setting-item">
+          <div class="setting-info">
+            <div class="setting-title">Svuota cache</div>
+            <div class="setting-description">Cancella i dati salvati localmente per forzare il caricamento della versione più recente</div>
+          </div>
+          <button class="action-btn" id="clearCacheBtn">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="3 6 5 6 21 6"/>
+              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+              <line x1="10" y1="11" x2="10" y2="17"/>
+              <line x1="14" y1="11" x2="14" y2="17"/>
+            </svg>
+            Svuota
+          </button>
+        </div>
+      </div>
+
+      <!-- Info Section (condensed) -->
+      <p class="section-title">ℹ️ Informazioni</p>
+      <div class="info-card">
+        <h2>🎓 Che media ho? <span class="version-badge">v{{ version }}</span></h2>
+        <p>
+          App open source per visualizzare e gestire i voti di ClasseViva con calcolo automatico delle medie.
+          Gratuita, sicura e rispettosa della privacy: le credenziali vanno direttamente a ClasseViva senza essere salvate.
+        </p>
+        <p>
+          Rilasciata sotto licenza MIT. Puoi visualizzare il codice, contribuire o self-hostare l'app sul tuo server con Docker.
+        </p>
+        <a href="https://github.com/gablilli/chemediaho" target="_blank" rel="noopener noreferrer" class="github-link">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+          </svg>
+          Vai alla repo
+        </a>
+      </div>
+    </div>
+
+    <!-- Bottom Navigation Bar -->
+    <nav class="bottom-nav">
+      <a href="/grades" class="nav-item">
+        <svg class="nav-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+          <polyline points="9 22 9 12 15 12 15 22"/>
+        </svg>
+        <span class="nav-label">Medie</span>
+      </a>
+      <a href="/charts" class="nav-item">
+        <svg class="nav-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="20" x2="18" y2="10"/>
+          <line x1="12" y1="20" x2="12" y2="4"/>
+          <line x1="6" y1="20" x2="6" y2="14"/>
+        </svg>
+        <span class="nav-label">Grafici</span>
+      </a>
+      <a href="/goal" class="nav-item">
+        <svg class="nav-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"/>
+          <circle cx="12" cy="12" r="6"/>
+          <circle cx="12" cy="12" r="2"/>
+        </svg>
+        <span class="nav-label">Calcoli</span>
+      </a>
+      <a href="/export" class="nav-item">
+        <svg class="nav-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="7 10 12 15 17 10"/>
+          <line x1="12" y1="15" x2="12" y2="3"/>
+        </svg>
+        <span class="nav-label">Esporta</span>
+      </a>
+      <a href="/settings" class="nav-item active">
+        <svg class="nav-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+        </svg>
+        <span class="nav-label">Impostazioni</span>
+      </a>
+      <button type="button" class="nav-item" id="logoutNavBtn">
+        <svg class="nav-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+          <polyline points="16 17 21 12 16 7"/>
+          <line x1="21" y1="12" x2="9" y2="12"/>
+        </svg>
+        <span class="nav-label">Esci</span>
+      </button>
+    </nav>
+
+    <script>
+      // Theme management
+      const themeToggle = document.getElementById('themeToggle');
+      const root = document.documentElement;
+      
+      function getSystemTheme() {
+        if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) {
+          return 'light';
+        }
+        return 'dark';
+      }
+      
+      const savedTheme = localStorage.getItem('theme');
+      const initialTheme = savedTheme || getSystemTheme();
+      
+      if (initialTheme === 'light') {
+        root.setAttribute('data-theme', 'light');
+      }
+      
+      themeToggle.addEventListener('click', () => {
+        const currentTheme = root.getAttribute('data-theme');
+        const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+        
+        if (newTheme === 'light') {
+          root.setAttribute('data-theme', 'light');
+        } else {
+          root.removeAttribute('data-theme');
+        }
+        
+        localStorage.setItem('theme', newTheme);
+      });
+
+      // Notification helper
+      function showNotification(message, type = 'success') {
+        const notification = document.getElementById('notification');
+        notification.textContent = message;
+        notification.className = `notification ${type} show`;
+        setTimeout(() => {
+          notification.classList.remove('show');
+        }, 3000);
+      }
+
+      // Blue grades toggle
+      const blueGradesToggle = document.getElementById('includeBlueGrades');
+      const savedBlueGrades = localStorage.getItem('includeBlueGrades') === 'true';
+      blueGradesToggle.checked = savedBlueGrades;
+
+      blueGradesToggle.addEventListener('change', () => {
+        localStorage.setItem('includeBlueGrades', blueGradesToggle.checked);
+        showNotification(blueGradesToggle.checked ? 'Voti blu inclusi nel calcolo' : 'Voti blu esclusi dal calcolo');
+      });
+
+      // Sync grades button
+      const syncBtn = document.getElementById('syncBtn');
+      syncBtn.addEventListener('click', async () => {
+        syncBtn.classList.add('loading');
+        syncBtn.disabled = true;
+        
+        try {
+          const includeBlueGrades = localStorage.getItem('includeBlueGrades') === 'true';
+          const response = await fetch('/refresh_grades', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ include_blue_grades: includeBlueGrades })
+          });
+          
+          const data = await response.json();
+          
+          if (response.ok) {
+            showNotification('Voti sincronizzati con successo!', 'success');
+            // Optionally reload after a short delay
+            setTimeout(() => {
+              window.location.href = '/grades';
+            }, 1500);
+          } else if (data.redirect) {
+            window.location.href = data.redirect;
+          } else {
+            showNotification(data.error || 'Errore durante la sincronizzazione', 'error');
+          }
+        } catch (error) {
+          showNotification('Errore di connessione', 'error');
+        } finally {
+          syncBtn.classList.remove('loading');
+          syncBtn.disabled = false;
+        }
+      });
+
+      // Clear cache button
+      const clearCacheBtn = document.getElementById('clearCacheBtn');
+      clearCacheBtn.addEventListener('click', async () => {
+        clearCacheBtn.classList.add('loading');
+        clearCacheBtn.disabled = true;
+        
+        try {
+          // Clear Service Worker caches
+          if ('caches' in window) {
+            const cacheNames = await caches.keys();
+            await Promise.all(cacheNames.map(name => caches.delete(name)));
+          }
+          
+          // Unregister Service Worker
+          if ('serviceWorker' in navigator) {
+            const registrations = await navigator.serviceWorker.getRegistrations();
+            await Promise.all(registrations.map(reg => reg.unregister()));
+          }
+          
+          showNotification('Cache svuotata! La pagina si ricaricherà...', 'success');
+          
+          // Reload with cache bypass
+          setTimeout(() => {
+            window.location.reload(true);
+          }, 1500);
+        } catch (error) {
+          showNotification('Errore durante lo svuotamento della cache', 'error');
+          clearCacheBtn.classList.remove('loading');
+          clearCacheBtn.disabled = false;
+        }
+      });
+
+      // Handle logout from bottom nav
+      const logoutNavBtn = document.getElementById('logoutNavBtn');
+      if (logoutNavBtn) {
+        logoutNavBtn.addEventListener('click', () => {
+          const form = document.createElement('form');
+          form.method = 'POST';
+          form.action = '/logout';
+          document.body.appendChild(form);
+          form.submit();
+        });
+      }
+
+      // Register Service Worker for PWA
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js')
+            .then(registration => {
+              console.log('Service Worker registered successfully:', registration.scope);
+            })
+            .catch(error => {
+              console.log('Service Worker registration failed:', error);
+            });
+        });
+      }
+    </script>
+  </body>
+</html>
