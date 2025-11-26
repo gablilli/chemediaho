@@ -470,13 +470,12 @@ def calculate_avr(grades, include_blue_grades=False):
         # Always skip grades without a decimal value
         if grade["decimalValue"] is None:
             continue
-        # Check if this is a blue grade
+        # Check if this is a blue grade or a grade that doesn't count toward average
         is_blue = grade["color"] == "blue"
-        # Skip blue grades unless include_blue_grades is True
-        if is_blue and not include_blue_grades:
-            continue
-        # Skip non-blue grades that don't count toward the average
-        if grade["noAverage"] and not is_blue:
+        has_no_average = grade["noAverage"]
+        # Skip grades that don't count toward average unless include_blue_grades is True
+        # This includes both blue grades and grades explicitly marked as noAverage
+        if (is_blue or has_no_average) and not include_blue_grades:
             continue
         if period not in grades_avr:
             grades_avr[period] = {}
