@@ -475,14 +475,13 @@ def calculate_avr(grades):
         grades_avr[period][grade["subjectDesc"]]["count"] += 1
         
         # Append grade as a dictionary with additional fields
-        is_blue = grade["color"] == "blue"
         grades_avr[period][grade["subjectDesc"]]["grades"].append({
             "decimalValue": grade["decimalValue"],
             "evtDate": grade["evtDate"],
             "notesForFamily": grade["notesForFamily"],
             "componentDesc": grade["componentDesc"],
             "teacherName": grade["teacherName"],
-            "isBlue": is_blue
+            "isBlue": grade["color"] == "blue"
         })
     
     # Calculate average per subject
