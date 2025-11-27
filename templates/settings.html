@@ -498,21 +498,6 @@
     </div>
 
     <div class="container">
-      <!-- Settings Section -->
-      <p class="section-title">🔧 Preferenze</p>
-      <div class="settings-card">
-        <div class="setting-item">
-          <div class="setting-info">
-            <div class="setting-title">Conta voti blu</div>
-            <div class="setting-description">Includi nel calcolo delle medie tutti i voti che normalmente non fanno media (voti blu e voti con flag "non fa media"). Premi "Sincronizza" per applicare la modifica.</div>
-          </div>
-          <label class="toggle-switch">
-            <input type="checkbox" id="includeBlueGrades">
-            <span class="toggle-slider"></span>
-          </label>
-        </div>
-      </div>
-
       <!-- Actions Section -->
       <p class="section-title">🔄 Azioni</p>
       <div class="settings-card">
@@ -660,16 +645,6 @@
         }, 3000);
       }
 
-      // Blue grades toggle
-      const blueGradesToggle = document.getElementById('includeBlueGrades');
-      const savedBlueGrades = localStorage.getItem('includeBlueGrades') === 'true';
-      blueGradesToggle.checked = savedBlueGrades;
-
-      blueGradesToggle.addEventListener('change', () => {
-        localStorage.setItem('includeBlueGrades', blueGradesToggle.checked);
-        showNotification(blueGradesToggle.checked ? 'Voti blu inclusi nel calcolo' : 'Voti blu esclusi dal calcolo');
-      });
-
       // Sync grades button
       const syncBtn = document.getElementById('syncBtn');
       syncBtn.addEventListener('click', async () => {
@@ -677,13 +652,11 @@
         syncBtn.disabled = true;
         
         try {
-          const includeBlueGrades = localStorage.getItem('includeBlueGrades') === 'true';
           const response = await fetch('/refresh_grades', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ include_blue_grades: includeBlueGrades })
+            }
           });
           
           const data = await response.json();

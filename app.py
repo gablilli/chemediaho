@@ -127,12 +127,8 @@ def refresh_grades():
         user_id = flask.session['user_id']
         student_id = "".join(filter(str.isdigit, user_id))
         
-        # Get include_blue_grades preference from request body
-        data = flask.request.get_json() or {}
-        include_blue_grades = data.get('include_blue_grades', False)
-        
-        # Fetch fresh grades from API
-        grades_avr = calculate_avr(get_grades(student_id, token), include_blue_grades)
+        # Fetch fresh grades from API - take all grades as-is without filtering
+        grades_avr = calculate_avr(get_grades(student_id, token))
         
         # Update session with fresh data
         flask.session['grades_avr'] = grades_avr
@@ -462,7 +458,7 @@ def get_grades(student_id, token):
         return response.json()
     else:
         response.raise_for_status()
-def calculate_avr(grades, include_blue_grades=False):
+def calculate_avr(grades):
     grades_avr = {}
     for grade in grades["grades"]:
         # Convert period to string to ensure consistent type for dictionary keys
@@ -470,13 +466,7 @@ def calculate_avr(grades, include_blue_grades=False):
         # Always skip grades without a decimal value
         if grade["decimalValue"] is None:
             continue
-        # Check if this is a blue grade or a grade that doesn't count toward average
-        is_blue = grade["color"] == "blue"
-        has_no_average = grade["noAverage"]
-        # Skip grades that don't count toward average unless include_blue_grades is True
-        # This includes both blue grades and grades explicitly marked as noAverage
-        if (is_blue or has_no_average) and not include_blue_grades:
-            continue
+        # Take all grades from Spaggiari as-is without filtering
         if period not in grades_avr:
             grades_avr[period] = {}
         if grades_avr[period].get(grade["subjectDesc"]) is None:
@@ -491,7 +481,7 @@ def calculate_avr(grades, include_blue_grades=False):
             "notesForFamily": grade["notesForFamily"],
             "componentDesc": grade["componentDesc"],
             "teacherName": grade["teacherName"],
-            "isBlue": is_blue
+            "isBlue": grade["color"] == "blue"
         })
     
     # Calculate average per subject
