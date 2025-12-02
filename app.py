@@ -213,10 +213,10 @@ def calculate_goal():
         if 'grades' not in subject_data or not isinstance(subject_data['grades'], list):
             return flask.jsonify({'error': 'Dati dei voti non validi'}), 400
         
-        # Extract grades with validation
+        # Extract non-blue grades with validation (blue grades don't count towards average)
         current_grades = []
         for g in subject_data['grades']:
-            if isinstance(g, dict) and 'decimalValue' in g and g['decimalValue'] is not None:
+            if isinstance(g, dict) and 'decimalValue' in g and g['decimalValue'] is not None and not g.get('isBlue', False):
                 current_grades.append(g['decimalValue'])
         
         if not current_grades:
@@ -315,10 +315,10 @@ def predict_average():
         if 'grades' not in subject_data or not isinstance(subject_data['grades'], list):
             return flask.jsonify({'error': 'Dati dei voti non validi'}), 400
         
-        # Extract current grades
+        # Extract current non-blue grades (blue grades don't count towards average)
         current_grades = []
         for g in subject_data['grades']:
-            if isinstance(g, dict) and 'decimalValue' in g and g['decimalValue'] is not None:
+            if isinstance(g, dict) and 'decimalValue' in g and g['decimalValue'] is not None and not g.get('isBlue', False):
                 current_grades.append(g['decimalValue'])
         
         if not current_grades:
@@ -484,17 +484,19 @@ def calculate_avr(grades):
             "isBlue": grade["color"] == "blue"
         })
     
-    # Calculate average per subject
+    # Calculate average per subject (excluding blue grades)
     for period in grades_avr:
         for subject in grades_avr[period]:
-            subject_grades = [g['decimalValue'] for g in grades_avr[period][subject]['grades']]
+            # Only include non-blue grades in average calculation
+            subject_grades = [g['decimalValue'] for g in grades_avr[period][subject]['grades'] if not g.get('isBlue', False)]
             grades_avr[period][subject]["avr"] = sum(subject_grades) / len(subject_grades) if subject_grades else 0
     
-    # Calculate period averages
+    # Calculate period averages (excluding blue grades)
     for period in grades_avr:
         period_grades = []
         for subject in grades_avr[period]:
-            period_grades.extend([g['decimalValue'] for g in grades_avr[period][subject]['grades']])
+            # Only include non-blue grades in period average
+            period_grades.extend([g['decimalValue'] for g in grades_avr[period][subject]['grades'] if not g.get('isBlue', False)])
         grades_avr[period]["period_avr"] = sum(period_grades) / len(period_grades) if period_grades else 0
     
     # Calculate overall average
