@@ -6,6 +6,8 @@ import secrets
 import csv
 import io
 from datetime import datetime
+from bs4 import BeautifulSoup
+import re
 
 app = flask.Flask(__name__)
 
@@ -87,8 +89,8 @@ def login_route():
         flask.session['token'] = token
         flask.session['user_id'] = user_id
         
-        student_id = "".join(filter(str.isdigit, user_id))
-        grades_avr = calculate_avr(get_grades(student_id, token))
+        # Use web scraping to get grades (includes proper blue grade detection)
+        grades_avr = calculate_avr(get_grades_web(token, user_id))
         
         # Store grades in session for other pages
         flask.session['grades_avr'] = grades_avr
@@ -125,10 +127,9 @@ def refresh_grades():
             return flask.jsonify({'error': 'User ID not found in session'}), 400
         
         user_id = flask.session['user_id']
-        student_id = "".join(filter(str.isdigit, user_id))
         
-        # Fetch fresh grades from API - take all grades as-is without filtering
-        grades_avr = calculate_avr(get_grades(student_id, token))
+        # Use web scraping to get grades (includes proper blue grade detection)
+        grades_avr = calculate_avr(get_grades_web(token, user_id))
         
         # Update session with fresh data
         flask.session['grades_avr'] = grades_avr
@@ -428,6 +429,178 @@ def login(user_id, user_pass):
         return response.json()
     else:
         response.raise_for_status()
+
+def get_periods_web(token, user_id):
+    """Get periods by scraping the web page"""
+    # Extract numeric student ID from user_id
+    student_id = "".join(filter(str.isdigit, user_id))
+    
+    url = "https://web.spaggiari.eu/cvv/app/default/genitori_voti.php"
+    headers = {
+        "Cookie": f"PHPSESSID={token}; webidentity={student_id};",
+        "User-Agent": "Mozilla/5.0"
+    }
+    
+    try:
+        response = requests.get(url, headers=headers)
+        response.raise_for_status()
+        
+        soup = BeautifulSoup(response.text, 'html.parser')
+        periods = []
+        
+        # Find the periods list (first ul element)
+        periods_container = soup.find('ul')
+        if periods_container:
+            for i, period_li in enumerate(periods_container.find_all('li', recursive=False)):
+                link = period_li.find('a')
+                if link and 'href' in link.attrs:
+                    period_code = link['href'].split('#')[1] if '#' in link['href'] else ""
+                    period_text = period_li.get_text(strip=True)
+                    # Clean up period description (remove duplicate patterns like "1° 1° PERIODO" -> "1° PERIODO")
+                    period_text = re.sub(r'(\d+°)\s+\1', r'\1', period_text)
+                    
+                    periods.append({
+                        'periodCode': period_code,
+                        'periodPos': i + 1,
+                        'periodDesc': period_text
+                    })
+        
+        return periods
+    except Exception as e:
+        print(f"Error fetching periods from web: {e}")
+        return []
+
+def get_grades_web(token, user_id):
+    """Get grades by scraping the web page instead of using REST API"""
+    # Extract numeric student ID from user_id
+    student_id = "".join(filter(str.isdigit, user_id))
+    
+    url = "https://web.spaggiari.eu/cvv/app/default/genitori_voti.php"
+    headers = {
+        "Cookie": f"PHPSESSID={token}; webidentity={student_id};",
+        "User-Agent": "Mozilla/5.0"
+    }
+    
+    # Mark conversion table (from TypeScript reference)
+    mark_table = {
+        "1": 1, "1+": 1.25, "1½": 1.5, "2-": 1.75, "2": 2, "2+": 2.25, "2½": 2.5,
+        "3-": 2.75, "3": 3, "3+": 3.25, "3½": 3.5, "4-": 3.75, "4": 4, "4+": 4.25,
+        "4½": 4.5, "5-": 4.75, "5": 5, "5+": 5.25, "5½": 5.5, "6-": 5.75, "6": 6,
+        "6+": 6.25, "6½": 6.5, "7-": 6.75, "7": 7, "7+": 7.25, "7½": 7.5, "8-": 7.75,
+        "8": 8, "8+": 8.25, "8½": 8.5, "9-": 8.75, "9": 9, "9+": 9.25, "9½": 9.5,
+        "10-": 9.75, "10": 10
+    }
+    
+    # Religion grades (these don't count towards average)
+    religion_grades = {
+        "o": 10, "ottimo": 10,
+        "ds": 9, "distinto": 9,
+        "b": 8, "buono": 8,
+        "d": 7, "discreto": 7,
+        "s": 6, "sufficiente": 6,
+        "ins": 5, "insufficiente": 5, "non sufficiente": 5
+    }
+    
+    try:
+        response = requests.get(url, headers=headers)
+        response.raise_for_status()
+        
+        soup = BeautifulSoup(response.text, 'html.parser')
+        
+        # Get periods first
+        periods = get_periods_web(token, user_id)
+        if not periods:
+            return {"grades": []}
+        
+        all_grades = []
+        
+        for period in periods:
+            # Find the table for this period
+            period_table = soup.find('table', {'sessione': period['periodCode']})
+            if not period_table:
+                continue
+            
+            tbody = period_table.find('tbody')
+            if not tbody:
+                continue
+            
+            # Get subject IDs from riga_competenza_default rows
+            subject_rows = tbody.find_all('tr', class_='riga_competenza_default')
+            subject_ids = []
+            for row in subject_rows:
+                if len(row.find_all('td')) > 1:
+                    materia_id = row.get('materia_id', '0')
+                    subject_ids.append(materia_id)
+            
+            # Get grade rows
+            grade_rows = tbody.find_all('tr', class_='riga_materia_componente')
+            
+            for subject_index, row in enumerate(grade_rows):
+                cells = row.find_all('td')
+                if len(cells) <= 1:
+                    continue
+                
+                # First cell is subject name
+                subject_name = cells[0].get_text(strip=True).upper()
+                
+                # Find grade cells (cells with class cella_voto)
+                grade_cells = row.find_all('td', class_='cella_voto')
+                
+                for grade_cell in grade_cells:
+                    # Find span elements within the grade cell
+                    spans = grade_cell.find_all('span')
+                    
+                    if len(spans) < 2:
+                        continue
+                    
+                    # First span is date, second is grade value
+                    date_elem = spans[0]
+                    grade_elem = spans[1]
+                    
+                    evt_date = date_elem.get_text(strip=True)
+                    display_value = grade_elem.get_text(strip=True)
+                    
+                    if not display_value or display_value == '-':
+                        continue
+                    
+                    # Check if it's a religion grade
+                    is_religion = display_value.lower() in religion_grades
+                    
+                    # Calculate decimal value
+                    if is_religion:
+                        decimal_value = religion_grades.get(display_value.lower(), 0)
+                    else:
+                        decimal_value = mark_table.get(display_value, 0)
+                    
+                    # Check if grade is blue (non-counting)
+                    # Blue grades have class f_reg_voto_dettaglio OR are religion grades
+                    has_blue_class = 'f_reg_voto_dettaglio' in grade_elem.get('class', [])
+                    color = "blue" if (has_blue_class or is_religion) else "green"
+                    
+                    # Get additional info
+                    evt_id = grade_cell.get('evento_id', '0')
+                    component_desc = grade_elem.get('title', '')
+                    
+                    all_grades.append({
+                        'subjectId': int(subject_ids[subject_index]) if subject_index < len(subject_ids) else 0,
+                        'subjectDesc': subject_name,
+                        'evtId': int(evt_id) if evt_id.isdigit() else 0,
+                        'evtDate': evt_date,
+                        'decimalValue': decimal_value if decimal_value > 0 else None,
+                        'displayValue': display_value,
+                        'color': color,
+                        'periodPos': period['periodPos'],
+                        'periodDesc': period['periodDesc'],
+                        'componentDesc': component_desc,
+                        'notesForFamily': '',  # Not available in main page, needs separate fetch
+                        'teacherName': ''  # Not available in main page
+                    })
+        
+        return {"grades": all_grades}
+        
+    except Exception as e:
+        print(f"Error fetching grades from web: {e}")
+        return {"grades": []}
 
 def get_periods(student_id, token):
     url = f"https://web.spaggiari.eu/rest/v1/students/{student_id}/periods"
