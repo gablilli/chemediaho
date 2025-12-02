@@ -8,11 +8,36 @@ import io
 from datetime import datetime
 from bs4 import BeautifulSoup
 import re
+import logging
 
 app = flask.Flask(__name__)
 
 # Application version
 APP_VERSION = "1.6.6"
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# Mark conversion table (from ClasseViva)
+MARK_TABLE = {
+    "1": 1, "1+": 1.25, "1½": 1.5, "2-": 1.75, "2": 2, "2+": 2.25, "2½": 2.5,
+    "3-": 2.75, "3": 3, "3+": 3.25, "3½": 3.5, "4-": 3.75, "4": 4, "4+": 4.25,
+    "4½": 4.5, "5-": 4.75, "5": 5, "5+": 5.25, "5½": 5.5, "6-": 5.75, "6": 6,
+    "6+": 6.25, "6½": 6.5, "7-": 6.75, "7": 7, "7+": 7.25, "7½": 7.5, "8-": 7.75,
+    "8": 8, "8+": 8.25, "8½": 8.5, "9-": 8.75, "9": 9, "9+": 9.25, "9½": 9.5,
+    "10-": 9.75, "10": 10
+}
+
+# Religion grades (these don't count towards average)
+RELIGION_GRADES = {
+    "o": 10, "ottimo": 10,
+    "ds": 9, "distinto": 9,
+    "b": 8, "buono": 8,
+    "d": 7, "discreto": 7,
+    "s": 6, "sufficiente": 6,
+    "ins": 5, "insufficiente": 5, "non sufficiente": 5
+}
 
 # Load or generate a persistent SECRET_KEY
 SECRET_KEY_FILE = 'secret_key.txt'
@@ -467,7 +492,7 @@ def get_periods_web(token, user_id):
         
         return periods
     except Exception as e:
-        print(f"Error fetching periods from web: {e}")
+        logger.error(f"Error fetching periods from web: {e}")
         return []
 
 def get_grades_web(token, user_id):
@@ -479,26 +504,6 @@ def get_grades_web(token, user_id):
     headers = {
         "Cookie": f"PHPSESSID={token}; webidentity={student_id};",
         "User-Agent": "Mozilla/5.0"
-    }
-    
-    # Mark conversion table (from TypeScript reference)
-    mark_table = {
-        "1": 1, "1+": 1.25, "1½": 1.5, "2-": 1.75, "2": 2, "2+": 2.25, "2½": 2.5,
-        "3-": 2.75, "3": 3, "3+": 3.25, "3½": 3.5, "4-": 3.75, "4": 4, "4+": 4.25,
-        "4½": 4.5, "5-": 4.75, "5": 5, "5+": 5.25, "5½": 5.5, "6-": 5.75, "6": 6,
-        "6+": 6.25, "6½": 6.5, "7-": 6.75, "7": 7, "7+": 7.25, "7½": 7.5, "8-": 7.75,
-        "8": 8, "8+": 8.25, "8½": 8.5, "9-": 8.75, "9": 9, "9+": 9.25, "9½": 9.5,
-        "10-": 9.75, "10": 10
-    }
-    
-    # Religion grades (these don't count towards average)
-    religion_grades = {
-        "o": 10, "ottimo": 10,
-        "ds": 9, "distinto": 9,
-        "b": 8, "buono": 8,
-        "d": 7, "discreto": 7,
-        "s": 6, "sufficiente": 6,
-        "ins": 5, "insufficiente": 5, "non sufficiente": 5
     }
     
     try:
@@ -543,6 +548,9 @@ def get_grades_web(token, user_id):
                 # First cell is subject name
                 subject_name = cells[0].get_text(strip=True).upper()
                 
+                # Get subject ID safely
+                subject_id = int(subject_ids[subject_index]) if subject_index < len(subject_ids) and subject_ids[subject_index].isdigit() else 0
+                
                 # Find grade cells (cells with class cella_voto)
                 grade_cells = row.find_all('td', class_='cella_voto')
                 
@@ -564,17 +572,18 @@ def get_grades_web(token, user_id):
                         continue
                     
                     # Check if it's a religion grade
-                    is_religion = display_value.lower() in religion_grades
+                    is_religion = display_value.lower() in RELIGION_GRADES
                     
                     # Calculate decimal value
                     if is_religion:
-                        decimal_value = religion_grades.get(display_value.lower(), 0)
+                        decimal_value = RELIGION_GRADES.get(display_value.lower(), 0)
                     else:
-                        decimal_value = mark_table.get(display_value, 0)
+                        decimal_value = MARK_TABLE.get(display_value, 0)
                     
                     # Check if grade is blue (non-counting)
                     # Blue grades have class f_reg_voto_dettaglio OR are religion grades
-                    has_blue_class = 'f_reg_voto_dettaglio' in grade_elem.get('class', [])
+                    grade_classes = grade_elem.get('class') or []
+                    has_blue_class = 'f_reg_voto_dettaglio' in grade_classes
                     color = "blue" if (has_blue_class or is_religion) else "green"
                     
                     # Get additional info
@@ -582,7 +591,7 @@ def get_grades_web(token, user_id):
                     component_desc = grade_elem.get('title', '')
                     
                     all_grades.append({
-                        'subjectId': int(subject_ids[subject_index]) if subject_index < len(subject_ids) else 0,
+                        'subjectId': subject_id,
                         'subjectDesc': subject_name,
                         'evtId': int(evt_id) if evt_id.isdigit() else 0,
                         'evtDate': evt_date,
@@ -599,7 +608,7 @@ def get_grades_web(token, user_id):
         return {"grades": all_grades}
         
     except Exception as e:
-        print(f"Error fetching grades from web: {e}")
+        logger.error(f"Error fetching grades from web: {e}")
         return {"grades": []}
 
 def get_periods(student_id, token):
