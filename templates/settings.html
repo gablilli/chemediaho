@@ -742,11 +742,9 @@
       // Blue grades toggle
       const includeBlueGradesToggle = document.getElementById('includeBlueGradesToggle');
       
-      // Load saved preference
+      // Load saved preference (default to false if not set)
       const savedPreference = localStorage.getItem('includeBlueGrades');
-      if (savedPreference === 'true') {
-        includeBlueGradesToggle.checked = true;
-      }
+      includeBlueGradesToggle.checked = savedPreference === 'true';
       
       // Sync preference with server on page load (if preference exists)
       if (savedPreference !== null) {

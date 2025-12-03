@@ -279,12 +279,10 @@ def calculate_goal():
         include_blue_grades = flask.session.get('include_blue_grades', False)
         
         # Extract grades with validation (respecting blue grades preference)
-        current_grades = []
-        for g in subject_data['grades']:
-            if isinstance(g, dict) and 'decimalValue' in g and g['decimalValue'] is not None:
-                # Include grade if: not blue, OR (blue AND preference is to include blue)
-                if not g.get('isBlue', False) or include_blue_grades:
-                    current_grades.append(g['decimalValue'])
+        current_grades = [
+            g['decimalValue'] for g in subject_data['grades'] 
+            if should_include_grade(g, include_blue_grades)
+        ]
         
         if not current_grades:
             return flask.jsonify({'error': 'Nessun voto disponibile per questa materia'}), 400
@@ -386,12 +384,10 @@ def predict_average():
         include_blue_grades = flask.session.get('include_blue_grades', False)
         
         # Extract current grades (respecting blue grades preference)
-        current_grades = []
-        for g in subject_data['grades']:
-            if isinstance(g, dict) and 'decimalValue' in g and g['decimalValue'] is not None:
-                # Include grade if: not blue, OR (blue AND preference is to include blue)
-                if not g.get('isBlue', False) or include_blue_grades:
-                    current_grades.append(g['decimalValue'])
+        current_grades = [
+            g['decimalValue'] for g in subject_data['grades'] 
+            if should_include_grade(g, include_blue_grades)
+        ]
         
         if not current_grades:
             return flask.jsonify({'error': 'Nessun voto disponibile per questa materia'}), 400
@@ -686,6 +682,25 @@ def get_grades(student_id, token):
         return response.json()
     else:
         response.raise_for_status()
+
+def should_include_grade(grade, include_blue_grades):
+    """
+    Helper function to determine if a grade should be included in calculations
+    
+    Args:
+        grade: Grade dictionary with 'decimalValue' and 'isBlue' keys
+        include_blue_grades: If True, include blue grades; if False, exclude them
+    
+    Returns:
+        bool: True if grade should be included
+    """
+    if not isinstance(grade, dict):
+        return False
+    if 'decimalValue' not in grade or grade['decimalValue'] is None:
+        return False
+    # Include grade if: not blue, OR (blue AND preference is to include blue)
+    return not grade.get('isBlue', False) or include_blue_grades
+
 def calculate_avr(grades, include_blue_grades=False):
     """
     Calculate averages for grades
