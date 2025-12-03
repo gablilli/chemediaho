@@ -748,6 +748,19 @@
         includeBlueGradesToggle.checked = true;
       }
       
+      // Sync preference with server on page load (if preference exists)
+      if (savedPreference !== null) {
+        fetch('/update_blue_grades_preference', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ includeBlueGrades: savedPreference === 'true' })
+        }).catch(() => {
+          // Silently fail - preference will sync on next toggle
+        });
+      }
+      
       // Handle toggle change
       includeBlueGradesToggle.addEventListener('change', async () => {
         const includeBlueGrades = includeBlueGradesToggle.checked;
