@@ -114,8 +114,13 @@ def login_route():
         flask.session['token'] = token
         flask.session['user_id'] = user_id
         
+        # Default preference is to exclude blue grades (False)
+        if 'include_blue_grades' not in flask.session:
+            flask.session['include_blue_grades'] = False
+        
         # Use web scraping to get grades (includes proper blue grade detection)
-        grades_avr = calculate_avr(get_grades_web(token, user_id))
+        include_blue_grades = flask.session.get('include_blue_grades', False)
+        grades_avr = calculate_avr(get_grades_web(token, user_id), include_blue_grades)
         
         # Store grades in session for other pages
         flask.session['grades_avr'] = grades_avr
@@ -153,8 +158,11 @@ def refresh_grades():
         
         user_id = flask.session['user_id']
         
+        # Get preference for including blue grades (default is False)
+        include_blue_grades = flask.session.get('include_blue_grades', False)
+        
         # Use web scraping to get grades (includes proper blue grade detection)
-        grades_avr = calculate_avr(get_grades_web(token, user_id))
+        grades_avr = calculate_avr(get_grades_web(token, user_id), include_blue_grades)
         
         # Update session with fresh data
         flask.session['grades_avr'] = grades_avr
@@ -168,6 +176,34 @@ def refresh_grades():
         return flask.jsonify({'error': f'Errore durante l\'aggiornamento: {e.response.status_code}'}), 500
     except Exception as e:
         return flask.jsonify({'error': 'Errore durante l\'aggiornamento dei voti'}), 500
+
+@app.route('/update_blue_grades_preference', methods=['POST'])
+def update_blue_grades_preference():
+    """Update preference for including blue grades in averages"""
+    if 'token' not in flask.session:
+        return flask.jsonify({'error': 'No active session'}), 401
+    
+    try:
+        data = flask.request.get_json()
+        include_blue_grades = data.get('includeBlueGrades', False)
+        
+        # Store preference in session
+        flask.session['include_blue_grades'] = include_blue_grades
+        
+        # Recalculate averages with new preference
+        token = flask.session['token']
+        user_id = flask.session['user_id']
+        
+        # Use web scraping to get grades (includes proper blue grade detection)
+        grades_avr = calculate_avr(get_grades_web(token, user_id), include_blue_grades)
+        
+        # Update session with recalculated data
+        flask.session['grades_avr'] = grades_avr
+        
+        return flask.jsonify({'success': True, 'message': 'Preferenza aggiornata'}), 200
+    except Exception as e:
+        logger.error(f"Error updating blue grades preference: {e}")
+        return flask.jsonify({'error': 'Errore durante l\'aggiornamento della preferenza'}), 500
 
 @app.route('/grades')
 def grades_page():
@@ -239,11 +275,16 @@ def calculate_goal():
         if 'grades' not in subject_data or not isinstance(subject_data['grades'], list):
             return flask.jsonify({'error': 'Dati dei voti non validi'}), 400
         
-        # Extract non-blue grades with validation (blue grades don't count towards average)
+        # Get preference for including blue grades
+        include_blue_grades = flask.session.get('include_blue_grades', False)
+        
+        # Extract grades with validation (respecting blue grades preference)
         current_grades = []
         for g in subject_data['grades']:
-            if isinstance(g, dict) and 'decimalValue' in g and g['decimalValue'] is not None and not g.get('isBlue', False):
-                current_grades.append(g['decimalValue'])
+            if isinstance(g, dict) and 'decimalValue' in g and g['decimalValue'] is not None:
+                # Include grade if: not blue, OR (blue AND preference is to include blue)
+                if not g.get('isBlue', False) or include_blue_grades:
+                    current_grades.append(g['decimalValue'])
         
         if not current_grades:
             return flask.jsonify({'error': 'Nessun voto disponibile per questa materia'}), 400
@@ -341,11 +382,16 @@ def predict_average():
         if 'grades' not in subject_data or not isinstance(subject_data['grades'], list):
             return flask.jsonify({'error': 'Dati dei voti non validi'}), 400
         
-        # Extract current non-blue grades (blue grades don't count towards average)
+        # Get preference for including blue grades
+        include_blue_grades = flask.session.get('include_blue_grades', False)
+        
+        # Extract current grades (respecting blue grades preference)
         current_grades = []
         for g in subject_data['grades']:
-            if isinstance(g, dict) and 'decimalValue' in g and g['decimalValue'] is not None and not g.get('isBlue', False):
-                current_grades.append(g['decimalValue'])
+            if isinstance(g, dict) and 'decimalValue' in g and g['decimalValue'] is not None:
+                # Include grade if: not blue, OR (blue AND preference is to include blue)
+                if not g.get('isBlue', False) or include_blue_grades:
+                    current_grades.append(g['decimalValue'])
         
         if not current_grades:
             return flask.jsonify({'error': 'Nessun voto disponibile per questa materia'}), 400
@@ -640,7 +686,14 @@ def get_grades(student_id, token):
         return response.json()
     else:
         response.raise_for_status()
-def calculate_avr(grades):
+def calculate_avr(grades, include_blue_grades=False):
+    """
+    Calculate averages for grades
+    
+    Args:
+        grades: Dictionary with 'grades' key containing list of grade objects
+        include_blue_grades: If True, include blue grades in average calculations
+    """
     grades_avr = {}
     for grade in grades["grades"]:
         # Convert period to string to ensure consistent type for dictionary keys
@@ -666,19 +719,27 @@ def calculate_avr(grades):
             "isBlue": grade["color"] == "blue"
         })
     
-    # Calculate average per subject (excluding blue grades)
+    # Calculate average per subject
     for period in grades_avr:
         for subject in grades_avr[period]:
-            # Only include non-blue grades in average calculation
-            subject_grades = [g['decimalValue'] for g in grades_avr[period][subject]['grades'] if not g.get('isBlue', False)]
+            if include_blue_grades:
+                # Include all grades in average calculation
+                subject_grades = [g['decimalValue'] for g in grades_avr[period][subject]['grades']]
+            else:
+                # Only include non-blue grades in average calculation
+                subject_grades = [g['decimalValue'] for g in grades_avr[period][subject]['grades'] if not g.get('isBlue', False)]
             grades_avr[period][subject]["avr"] = sum(subject_grades) / len(subject_grades) if subject_grades else 0
     
-    # Calculate period averages (excluding blue grades)
+    # Calculate period averages
     for period in grades_avr:
         period_grades = []
         for subject in grades_avr[period]:
-            # Only include non-blue grades in period average
-            period_grades.extend([g['decimalValue'] for g in grades_avr[period][subject]['grades'] if not g.get('isBlue', False)])
+            if include_blue_grades:
+                # Include all grades in period average
+                period_grades.extend([g['decimalValue'] for g in grades_avr[period][subject]['grades']])
+            else:
+                # Only include non-blue grades in period average
+                period_grades.extend([g['decimalValue'] for g in grades_avr[period][subject]['grades'] if not g.get('isBlue', False)])
         grades_avr[period]["period_avr"] = sum(period_grades) / len(period_grades) if period_grades else 0
     
     # Calculate overall average

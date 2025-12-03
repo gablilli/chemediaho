@@ -533,6 +533,21 @@
         </div>
       </div>
 
+      <!-- Preferences Section -->
+      <p class="section-title">⚙️ Preferenze</p>
+      <div class="settings-card">
+        <div class="setting-item">
+          <div class="setting-info">
+            <div class="setting-title">Includi voti blu nelle medie</div>
+            <div class="setting-description">I voti blu (es. pratici, religione) solitamente non fanno media. Attiva per includerli nel calcolo.</div>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" id="includeBlueGradesToggle">
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+      </div>
+
       <!-- Info Section (condensed) -->
       <p class="section-title">ℹ️ Informazioni</p>
       <div class="info-card">
@@ -723,6 +738,53 @@
           form.submit();
         });
       }
+
+      // Blue grades toggle
+      const includeBlueGradesToggle = document.getElementById('includeBlueGradesToggle');
+      
+      // Load saved preference
+      const savedPreference = localStorage.getItem('includeBlueGrades');
+      if (savedPreference === 'true') {
+        includeBlueGradesToggle.checked = true;
+      }
+      
+      // Handle toggle change
+      includeBlueGradesToggle.addEventListener('change', async () => {
+        const includeBlueGrades = includeBlueGradesToggle.checked;
+        
+        // Save preference
+        localStorage.setItem('includeBlueGrades', includeBlueGrades);
+        
+        // Send to server to recalculate averages
+        try {
+          const response = await fetch('/update_blue_grades_preference', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ includeBlueGrades })
+          });
+          
+          if (response.ok) {
+            showNotification(
+              includeBlueGrades 
+                ? 'Voti blu ora inclusi nelle medie' 
+                : 'Voti blu esclusi dalle medie',
+              'success'
+            );
+          } else {
+            showNotification('Errore durante l\'aggiornamento', 'error');
+            // Revert toggle
+            includeBlueGradesToggle.checked = !includeBlueGrades;
+            localStorage.setItem('includeBlueGrades', (!includeBlueGrades).toString());
+          }
+        } catch (error) {
+          showNotification('Errore di connessione', 'error');
+          // Revert toggle
+          includeBlueGradesToggle.checked = !includeBlueGrades;
+          localStorage.setItem('includeBlueGrades', (!includeBlueGrades).toString());
+        }
+      });
 
       // Register Service Worker for PWA
       if ('serviceWorker' in navigator) {
