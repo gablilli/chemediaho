@@ -96,6 +96,7 @@ jobs:
             // Fetch PR details
             const features = [];
             const fixes = [];
+            const breakings = [];
             
             for (const prNumber of prNumbers) {
               try {
@@ -107,6 +108,9 @@ jobs:
                 
                 if (pr.merged_at) {
                   const hasSkipLabel = pr.labels.some(l => l.name === 'changelog:skip');
+                  const hasFeatureLabel = pr.labels.some(l => l.name === 'changelog:feat');
+                  const hasFixLabel = pr.labels.some(l => l.name === 'changelog:fix');
+                  const hasBreakingLabel = pr.labels.some(l => l.name === 'changelog:breaking');
                   
                   // Skip PRs with changelog:skip label
                   if (hasSkipLabel) {
@@ -114,12 +118,11 @@ jobs:
                     continue;
                   }
                   
-                  const hasFeatureLabel = pr.labels.some(l => l.name === 'changelog:feat');
-                  const hasFixLabel = pr.labels.some(l => l.name === 'changelog:fix');
-                  
                   const prEntry = `* ${pr.title} by @${pr.user.login} in https://github.com/${context.repo.owner}/${context.repo.repo}/pull/${prNumber}`;
                   
-                  if (hasFeatureLabel) {
+                  if (hasBreakingLabel) {
+                    breakings.push(prEntry);
+                  } else if (hasFeatureLabel) {
                     features.push(prEntry);
                   } else if (hasFixLabel) {
                     fixes.push(prEntry);
@@ -134,6 +137,11 @@ jobs:
             let changelog = `# che media ho? - ${newVersion}\n`;
             changelog += `## What's Changed\n`;
             
+            if (breakings.length > 0) {
+              changelog += `### BREAKING CHANGES\n`;
+              changelog += breakings.join('\n') + '\n\n';
+            }
+            
             if (features.length > 0) {
               changelog += `### Feats\n`;
               changelog += features.join('\n') + '\n\n';
@@ -144,7 +152,7 @@ jobs:
               changelog += fixes.join('\n') + '\n\n';
             }
             
-            if (features.length === 0 && fixes.length === 0) {
+            if (features.length === 0 && fixes.length === 0 && breakings.length === 0) {
               changelog += `### Changes\n`;
               changelog += `* Version bump to ${newVersion}\n\n`;
             }
@@ -153,7 +161,7 @@ jobs:
             
             core.setOutput('changelog', changelog);
             
-            // Write changelog to file for safe transfer
+            // Write changelog to file
             const fs = require('fs');
             fs.writeFileSync('/tmp/changelog.md', changelog);
             
