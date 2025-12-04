@@ -24,10 +24,7 @@ except ModuleNotFoundError as e:
     print("ERROR: Missing required Python package!")
     print("="*70)
     print(f"\nThe module '{e.name}' is not available.")
-    if e.name != package_name:
-        print(f"You need to install the package: {package_name}\n")
-    else:
-        print(f"You need to install the package: {e.name}\n")
+    print(f"You need to install the package: {package_name}\n")
     print("To fix this, please install all required dependencies by running:")
     print("\n    pip install -r requirements.txt\n")
     print("Or if you're using pip3:")
