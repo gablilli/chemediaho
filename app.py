@@ -649,6 +649,7 @@ def get_grades_web(token, user_id):
                         'decimalValue': decimal_value,
                         'displayValue': display_value,
                         'color': color,
+                        'isBlue': color == "blue",  # Add isBlue field for compatibility with calculate_avr
                         'periodPos': period['periodPos'],
                         'periodDesc': period['periodDesc'],
                         'componentDesc': component_desc,

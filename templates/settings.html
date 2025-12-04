@@ -751,8 +751,8 @@
       includeBlueGradesToggle.addEventListener('change', async () => {
         const includeBlueGrades = includeBlueGradesToggle.checked;
         
-        // Save preference
-        localStorage.setItem('includeBlueGrades', includeBlueGrades);
+        // Save preference (convert boolean to string for consistency)
+        localStorage.setItem('includeBlueGrades', includeBlueGrades.toString());
         
         // Send to server to recalculate averages
         try {
