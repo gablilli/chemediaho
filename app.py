@@ -6,11 +6,38 @@ import secrets
 import csv
 import io
 from datetime import datetime
+from bs4 import BeautifulSoup
+import re
+import logging
 
 app = flask.Flask(__name__)
 
 # Application version
 APP_VERSION = "1.6.6"
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# Mark conversion table (from ClasseViva)
+MARK_TABLE = {
+    "1": 1, "1+": 1.25, "1½": 1.5, "2-": 1.75, "2": 2, "2+": 2.25, "2½": 2.5,
+    "3-": 2.75, "3": 3, "3+": 3.25, "3½": 3.5, "4-": 3.75, "4": 4, "4+": 4.25,
+    "4½": 4.5, "5-": 4.75, "5": 5, "5+": 5.25, "5½": 5.5, "6-": 5.75, "6": 6,
+    "6+": 6.25, "6½": 6.5, "7-": 6.75, "7": 7, "7+": 7.25, "7½": 7.5, "8-": 7.75,
+    "8": 8, "8+": 8.25, "8½": 8.5, "9-": 8.75, "9": 9, "9+": 9.25, "9½": 9.5,
+    "10-": 9.75, "10": 10
+}
+
+# Religion grades (these don't count towards average)
+RELIGION_GRADES = {
+    "o": 10, "ottimo": 10,
+    "ds": 9, "distinto": 9,
+    "b": 8, "buono": 8,
+    "d": 7, "discreto": 7,
+    "s": 6, "sufficiente": 6,
+    "ins": 5, "insufficiente": 5, "non sufficiente": 5
+}
 
 # Load or generate a persistent SECRET_KEY
 SECRET_KEY_FILE = 'secret_key.txt'
@@ -87,8 +114,13 @@ def login_route():
         flask.session['token'] = token
         flask.session['user_id'] = user_id
         
-        student_id = "".join(filter(str.isdigit, user_id))
-        grades_avr = calculate_avr(get_grades(student_id, token))
+        # Default preference is to exclude blue grades (False)
+        if 'include_blue_grades' not in flask.session:
+            flask.session['include_blue_grades'] = False
+        
+        # Use web scraping to get grades (includes proper blue grade detection)
+        include_blue_grades = flask.session.get('include_blue_grades', False)
+        grades_avr = calculate_avr(get_grades_web(token, user_id), include_blue_grades)
         
         # Store grades in session for other pages
         flask.session['grades_avr'] = grades_avr
@@ -125,10 +157,12 @@ def refresh_grades():
             return flask.jsonify({'error': 'User ID not found in session'}), 400
         
         user_id = flask.session['user_id']
-        student_id = "".join(filter(str.isdigit, user_id))
         
-        # Fetch fresh grades from API - take all grades as-is without filtering
-        grades_avr = calculate_avr(get_grades(student_id, token))
+        # Get preference for including blue grades (default is False)
+        include_blue_grades = flask.session.get('include_blue_grades', False)
+        
+        # Use web scraping to get grades (includes proper blue grade detection)
+        grades_avr = calculate_avr(get_grades_web(token, user_id), include_blue_grades)
         
         # Update session with fresh data
         flask.session['grades_avr'] = grades_avr
@@ -142,6 +176,34 @@ def refresh_grades():
         return flask.jsonify({'error': f'Errore durante l\'aggiornamento: {e.response.status_code}'}), 500
     except Exception as e:
         return flask.jsonify({'error': 'Errore durante l\'aggiornamento dei voti'}), 500
+
+@app.route('/update_blue_grades_preference', methods=['POST'])
+def update_blue_grades_preference():
+    """Update preference for including blue grades in averages"""
+    if 'token' not in flask.session:
+        return flask.jsonify({'error': 'No active session'}), 401
+    
+    try:
+        data = flask.request.get_json()
+        include_blue_grades = data.get('includeBlueGrades', False)
+        
+        # Store preference in session
+        flask.session['include_blue_grades'] = include_blue_grades
+        
+        # Recalculate averages with new preference
+        token = flask.session['token']
+        user_id = flask.session['user_id']
+        
+        # Use web scraping to get grades (includes proper blue grade detection)
+        grades_avr = calculate_avr(get_grades_web(token, user_id), include_blue_grades)
+        
+        # Update session with recalculated data
+        flask.session['grades_avr'] = grades_avr
+        
+        return flask.jsonify({'success': True, 'message': 'Preferenza aggiornata'}), 200
+    except Exception as e:
+        logger.error(f"Error updating blue grades preference: {e}")
+        return flask.jsonify({'error': 'Errore durante l\'aggiornamento della preferenza'}), 500
 
 @app.route('/grades')
 def grades_page():
@@ -213,11 +275,14 @@ def calculate_goal():
         if 'grades' not in subject_data or not isinstance(subject_data['grades'], list):
             return flask.jsonify({'error': 'Dati dei voti non validi'}), 400
         
-        # Extract grades with validation
-        current_grades = []
-        for g in subject_data['grades']:
-            if isinstance(g, dict) and 'decimalValue' in g and g['decimalValue'] is not None:
-                current_grades.append(g['decimalValue'])
+        # Get preference for including blue grades
+        include_blue_grades = flask.session.get('include_blue_grades', False)
+        
+        # Extract grades with validation (respecting blue grades preference)
+        current_grades = [
+            g['decimalValue'] for g in subject_data['grades'] 
+            if should_include_grade(g, include_blue_grades)
+        ]
         
         if not current_grades:
             return flask.jsonify({'error': 'Nessun voto disponibile per questa materia'}), 400
@@ -315,11 +380,14 @@ def predict_average():
         if 'grades' not in subject_data or not isinstance(subject_data['grades'], list):
             return flask.jsonify({'error': 'Dati dei voti non validi'}), 400
         
-        # Extract current grades
-        current_grades = []
-        for g in subject_data['grades']:
-            if isinstance(g, dict) and 'decimalValue' in g and g['decimalValue'] is not None:
-                current_grades.append(g['decimalValue'])
+        # Get preference for including blue grades
+        include_blue_grades = flask.session.get('include_blue_grades', False)
+        
+        # Extract current grades (respecting blue grades preference)
+        current_grades = [
+            g['decimalValue'] for g in subject_data['grades'] 
+            if should_include_grade(g, include_blue_grades)
+        ]
         
         if not current_grades:
             return flask.jsonify({'error': 'Nessun voto disponibile per questa materia'}), 400
@@ -429,6 +497,162 @@ def login(user_id, user_pass):
     else:
         response.raise_for_status()
 
+def get_periods_web(token, user_id):
+    """Get periods by scraping the web page"""
+    # Extract numeric student ID from user_id
+    student_id = "".join(filter(str.isdigit, user_id))
+    
+    url = "https://web.spaggiari.eu/cvv/app/default/genitori_voti.php"
+    headers = {
+        "Cookie": f"PHPSESSID={token}; webidentity={student_id};",
+        "User-Agent": "Mozilla/5.0"
+    }
+    
+    try:
+        response = requests.get(url, headers=headers)
+        response.raise_for_status()
+        
+        soup = BeautifulSoup(response.text, 'html.parser')
+        periods = []
+        
+        # Find the periods list (first ul element)
+        periods_container = soup.find('ul')
+        if periods_container:
+            for i, period_li in enumerate(periods_container.find_all('li', recursive=False)):
+                link = period_li.find('a')
+                if link and 'href' in link.attrs:
+                    period_code = link['href'].split('#')[1] if '#' in link['href'] else ""
+                    period_text = period_li.get_text(strip=True)
+                    # Clean up period description (remove duplicate patterns like "1° 1° PERIODO" -> "1° PERIODO")
+                    period_text = re.sub(r'(\d+°)\s+\1', r'\1', period_text)
+                    
+                    periods.append({
+                        'periodCode': period_code,
+                        'periodPos': i + 1,
+                        'periodDesc': period_text
+                    })
+        
+        return periods
+    except Exception as e:
+        logger.error(f"Error fetching periods from web: {e}")
+        return []
+
+def get_grades_web(token, user_id):
+    """Get grades by scraping the web page instead of using REST API"""
+    # Extract numeric student ID from user_id
+    student_id = "".join(filter(str.isdigit, user_id))
+    
+    url = "https://web.spaggiari.eu/cvv/app/default/genitori_voti.php"
+    headers = {
+        "Cookie": f"PHPSESSID={token}; webidentity={student_id};",
+        "User-Agent": "Mozilla/5.0"
+    }
+    
+    try:
+        response = requests.get(url, headers=headers)
+        response.raise_for_status()
+        
+        soup = BeautifulSoup(response.text, 'html.parser')
+        
+        # Get periods first
+        periods = get_periods_web(token, user_id)
+        if not periods:
+            return {"grades": []}
+        
+        all_grades = []
+        
+        for period in periods:
+            # Find the table for this period
+            period_table = soup.find('table', {'sessione': period['periodCode']})
+            if not period_table:
+                continue
+            
+            tbody = period_table.find('tbody')
+            if not tbody:
+                continue
+            
+            # Get subject IDs from riga_competenza_default rows
+            subject_rows = tbody.find_all('tr', class_='riga_competenza_default')
+            subject_ids = []
+            for row in subject_rows:
+                if len(row.find_all('td')) > 1:
+                    materia_id = row.get('materia_id', '0')
+                    subject_ids.append(materia_id)
+            
+            # Get grade rows
+            grade_rows = tbody.find_all('tr', class_='riga_materia_componente')
+            
+            for subject_index, row in enumerate(grade_rows):
+                cells = row.find_all('td')
+                if len(cells) <= 1:
+                    continue
+                
+                # First cell is subject name
+                subject_name = cells[0].get_text(strip=True).upper()
+                
+                # Get subject ID safely
+                subject_id = int(subject_ids[subject_index]) if subject_index < len(subject_ids) and subject_ids[subject_index].isdigit() else 0
+                
+                # Find grade cells (cells with class cella_voto)
+                grade_cells = row.find_all('td', class_='cella_voto')
+                
+                for grade_cell in grade_cells:
+                    # Find span elements within the grade cell
+                    spans = grade_cell.find_all('span')
+                    
+                    if len(spans) < 2:
+                        continue
+                    
+                    # First span is date, second is grade value
+                    date_elem = spans[0]
+                    grade_elem = spans[1]
+                    
+                    evt_date = date_elem.get_text(strip=True)
+                    display_value = grade_elem.get_text(strip=True)
+                    
+                    if not display_value or display_value == '-':
+                        continue
+                    
+                    # Check if it's a religion grade
+                    is_religion = display_value.lower() in RELIGION_GRADES
+                    
+                    # Calculate decimal value
+                    if is_religion:
+                        decimal_value = RELIGION_GRADES.get(display_value.lower(), 0)
+                    else:
+                        decimal_value = MARK_TABLE.get(display_value, 0)
+                    
+                    # Check if grade is blue (non-counting)
+                    # Blue grades have class f_reg_voto_dettaglio OR are religion grades
+                    grade_classes = grade_elem.get('class') or []
+                    has_blue_class = 'f_reg_voto_dettaglio' in grade_classes
+                    color = "blue" if (has_blue_class or is_religion) else "green"
+                    
+                    # Get additional info
+                    evt_id = grade_cell.get('evento_id', '0')
+                    component_desc = grade_elem.get('title', '')
+                    
+                    all_grades.append({
+                        'subjectId': subject_id,
+                        'subjectDesc': subject_name,
+                        'evtId': int(evt_id) if evt_id.isdigit() else 0,
+                        'evtDate': evt_date,
+                        'decimalValue': decimal_value if decimal_value > 0 else None,
+                        'displayValue': display_value,
+                        'color': color,
+                        'periodPos': period['periodPos'],
+                        'periodDesc': period['periodDesc'],
+                        'componentDesc': component_desc,
+                        'notesForFamily': '',  # Not available in main page, needs separate fetch
+                        'teacherName': ''  # Not available in main page
+                    })
+        
+        return {"grades": all_grades}
+        
+    except Exception as e:
+        logger.error(f"Error fetching grades from web: {e}")
+        return {"grades": []}
+
 def get_periods(student_id, token):
     url = f"https://web.spaggiari.eu/rest/v1/students/{student_id}/periods"
     headers = {
@@ -458,7 +682,33 @@ def get_grades(student_id, token):
         return response.json()
     else:
         response.raise_for_status()
-def calculate_avr(grades):
+
+def should_include_grade(grade, include_blue_grades):
+    """
+    Helper function to determine if a grade should be included in calculations
+    
+    Args:
+        grade: Grade dictionary with 'decimalValue' and 'isBlue' keys
+        include_blue_grades: If True, include blue grades; if False, exclude them
+    
+    Returns:
+        bool: True if grade should be included
+    """
+    if not isinstance(grade, dict):
+        return False
+    if 'decimalValue' not in grade or grade['decimalValue'] is None:
+        return False
+    # Include grade if: not blue, OR (blue AND preference is to include blue)
+    return not grade.get('isBlue', False) or include_blue_grades
+
+def calculate_avr(grades, include_blue_grades=False):
+    """
+    Calculate averages for grades
+    
+    Args:
+        grades: Dictionary with 'grades' key containing list of grade objects
+        include_blue_grades: If True, include blue grades in average calculations
+    """
     grades_avr = {}
     for grade in grades["grades"]:
         # Convert period to string to ensure consistent type for dictionary keys
@@ -487,14 +737,24 @@ def calculate_avr(grades):
     # Calculate average per subject
     for period in grades_avr:
         for subject in grades_avr[period]:
-            subject_grades = [g['decimalValue'] for g in grades_avr[period][subject]['grades']]
+            if include_blue_grades:
+                # Include all grades in average calculation
+                subject_grades = [g['decimalValue'] for g in grades_avr[period][subject]['grades']]
+            else:
+                # Only include non-blue grades in average calculation
+                subject_grades = [g['decimalValue'] for g in grades_avr[period][subject]['grades'] if not g.get('isBlue', False)]
             grades_avr[period][subject]["avr"] = sum(subject_grades) / len(subject_grades) if subject_grades else 0
     
     # Calculate period averages
     for period in grades_avr:
         period_grades = []
         for subject in grades_avr[period]:
-            period_grades.extend([g['decimalValue'] for g in grades_avr[period][subject]['grades']])
+            if include_blue_grades:
+                # Include all grades in period average
+                period_grades.extend([g['decimalValue'] for g in grades_avr[period][subject]['grades']])
+            else:
+                # Only include non-blue grades in period average
+                period_grades.extend([g['decimalValue'] for g in grades_avr[period][subject]['grades'] if not g.get('isBlue', False)])
         grades_avr[period]["period_avr"] = sum(period_grades) / len(period_grades) if period_grades else 0
     
     # Calculate overall average
