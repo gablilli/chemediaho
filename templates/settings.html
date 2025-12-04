@@ -765,12 +765,7 @@
           });
           
           if (response.ok) {
-            showNotification(
-              includeBlueGrades 
-                ? 'Voti blu ora inclusi nelle medie' 
-                : 'Voti blu esclusi dalle medie',
-              'success'
-            );
+            showNotification(includeBlueGrades ? 'Voti blu ora inclusi nelle medie' : 'Voti blu esclusi dalle medie', 'success');
           } else {
             showNotification('Errore durante l\'aggiornamento', 'error');
             // Revert toggle

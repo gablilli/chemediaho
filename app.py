@@ -741,7 +741,7 @@ def calculate_avr(grades, include_blue_grades=False):
             "notesForFamily": grade["notesForFamily"],
             "componentDesc": grade["componentDesc"],
             "teacherName": grade["teacherName"],
-            "isBlue": grade["color"] == "blue"
+            "isBlue": grade.get("color", "") == "blue"
         })
     
     # Calculate average per subject
@@ -767,8 +767,9 @@ def calculate_avr(grades, include_blue_grades=False):
                 period_grades.extend([g['decimalValue'] for g in grades_avr[period][subject]['grades'] if not g.get('isBlue', False)])
         grades_avr[period]["period_avr"] = sum(period_grades) / len(period_grades) if period_grades else 0
     
-    # Calculate overall average
-    grades_avr["all_avr"] = sum([grades_avr[period]["period_avr"] for period in grades_avr]) / len(grades_avr) if grades_avr else 0
+    # Calculate overall average (exclude 'all_avr' key from the count)
+    period_averages = [grades_avr[period]["period_avr"] for period in grades_avr if period != "all_avr"]
+    grades_avr["all_avr"] = sum(period_averages) / len(period_averages) if period_averages else 0
     
     return grades_avr
     
