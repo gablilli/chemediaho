@@ -601,18 +601,16 @@ def get_grades_web(token, user_id):
                 grade_cells = row.find_all('td', class_='cella_voto')
                 
                 for grade_cell in grade_cells:
-                    # Find all child elements - usually contains date and grade spans
-                    children = list(grade_cell.children)
+                    # Get child elements (similar to TypeScript grade.children)
+                    # Skip text nodes and get actual element children
+                    children = [child for child in grade_cell.children if hasattr(child, 'name')]
                     
-                    # Filter out text nodes and get only tag elements
-                    spans = [child for child in children if hasattr(child, 'name') and child.name == 'span']
-                    
-                    if len(spans) < 2:
+                    if len(children) < 2:
                         continue
                     
-                    # First span is date, second is grade value
-                    date_elem = spans[0]
-                    grade_elem = spans[1]
+                    # First child is date (index 0), second is grade value (index 1)
+                    date_elem = children[0]
+                    grade_elem = children[1]
                     
                     evt_date = date_elem.get_text(strip=True)
                     display_value = grade_elem.get_text(strip=True)
