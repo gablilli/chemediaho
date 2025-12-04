@@ -39,6 +39,9 @@ RELIGION_GRADES = {
     "ins": 5, "insufficiente": 5, "non sufficiente": 5
 }
 
+# Default preference for including blue grades in averages
+DEFAULT_INCLUDE_BLUE_GRADES = False
+
 # Load or generate a persistent SECRET_KEY
 SECRET_KEY_FILE = 'secret_key.txt'
 
@@ -114,12 +117,12 @@ def login_route():
         flask.session['token'] = token
         flask.session['user_id'] = user_id
         
-        # Default preference is to exclude blue grades (False)
+        # Default preference is to exclude blue grades
         if 'include_blue_grades' not in flask.session:
-            flask.session['include_blue_grades'] = False
+            flask.session['include_blue_grades'] = DEFAULT_INCLUDE_BLUE_GRADES
         
         # Use web scraping to get grades (includes proper blue grade detection)
-        include_blue_grades = flask.session.get('include_blue_grades', False)
+        include_blue_grades = flask.session.get('include_blue_grades', DEFAULT_INCLUDE_BLUE_GRADES)
         grades_avr = calculate_avr(get_grades_web(token, user_id), include_blue_grades)
         
         # Store grades in session for other pages
@@ -158,8 +161,8 @@ def refresh_grades():
         
         user_id = flask.session['user_id']
         
-        # Get preference for including blue grades (default is False)
-        include_blue_grades = flask.session.get('include_blue_grades', False)
+        # Get preference for including blue grades
+        include_blue_grades = flask.session.get('include_blue_grades', DEFAULT_INCLUDE_BLUE_GRADES)
         
         # Use web scraping to get grades (includes proper blue grade detection)
         grades_avr = calculate_avr(get_grades_web(token, user_id), include_blue_grades)
@@ -185,7 +188,7 @@ def update_blue_grades_preference():
     
     try:
         data = flask.request.get_json()
-        include_blue_grades = data.get('includeBlueGrades', False)
+        include_blue_grades = data.get('includeBlueGrades', DEFAULT_INCLUDE_BLUE_GRADES)
         
         # Store preference in session
         flask.session['include_blue_grades'] = include_blue_grades
@@ -276,7 +279,7 @@ def calculate_goal():
             return flask.jsonify({'error': 'Dati dei voti non validi'}), 400
         
         # Get preference for including blue grades
-        include_blue_grades = flask.session.get('include_blue_grades', False)
+        include_blue_grades = flask.session.get('include_blue_grades', DEFAULT_INCLUDE_BLUE_GRADES)
         
         # Extract grades with validation (respecting blue grades preference)
         current_grades = [
@@ -381,7 +384,7 @@ def predict_average():
             return flask.jsonify({'error': 'Dati dei voti non validi'}), 400
         
         # Get preference for including blue grades
-        include_blue_grades = flask.session.get('include_blue_grades', False)
+        include_blue_grades = flask.session.get('include_blue_grades', DEFAULT_INCLUDE_BLUE_GRADES)
         
         # Extract current grades (respecting blue grades preference)
         current_grades = [
@@ -711,7 +714,7 @@ def should_include_grade(grade, include_blue_grades):
     # Include grade if: not blue, OR (blue AND preference is to include blue)
     return not grade.get('isBlue', False) or include_blue_grades
 
-def calculate_avr(grades, include_blue_grades=False):
+def calculate_avr(grades, include_blue_grades=DEFAULT_INCLUDE_BLUE_GRADES):
     """
     Calculate averages for grades
     

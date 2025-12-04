@@ -761,6 +761,7 @@
             headers: {
               'Content-Type': 'application/json',
             },
+            // Note: JavaScript uses camelCase (includeBlueGrades), Python uses snake_case (include_blue_grades)
             body: JSON.stringify({ includeBlueGrades })
           });
           
