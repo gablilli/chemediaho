@@ -1,0 +1,126 @@
+name: Pre-Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      prerelease_version:
+        description: 'Versione pre-release (es: 1.7.0-rc.1)'
+        required: true
+        type: string
+
+jobs:
+  prerelease:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: read
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get last tag
+        id: last_release
+        run: |
+          LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          if [ -z "$LAST_TAG" ]; then
+            LAST_TAG=$(git rev-list --max-parents=0 HEAD)
+          fi
+          echo "last_tag=$LAST_TAG" >> $GITHUB_OUTPUT
+
+      - name: Generate changelog for prerelease
+        id: changelog
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const lastTag = '${{ steps.last_release.outputs.last_tag }}';
+            const newVersion = '${{ inputs.prerelease_version }}';
+
+            const compare = await github.rest.repos.compareCommits({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              base: lastTag,
+              head: 'main'
+            });
+
+            const prNumbers = new Set();
+            for (const commit of compare.data.commits) {
+              const match = commit.commit.message.match(/#(\d+)/);
+              if (match) prNumbers.add(Number(match[1]));
+            }
+
+            const features = [];
+            const fixes = [];
+            const breakings = [];
+
+            for (const prNumber of prNumbers) {
+              try {
+                const { data: pr } = await github.rest.pulls.get({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  pull_number: prNumber
+                });
+
+                if (!pr.merged_at) continue;
+
+                const hasSkip = pr.labels.some(l => l.name === 'changelog:skip');
+                if (hasSkip) continue;
+
+                const entry = `* ${pr.title} by @${pr.user.login} in https://github.com/${context.repo.owner}/${context.repo.repo}/pull/${prNumber}`;
+                const isFeat = pr.labels.some(l => l.name === 'changelog:feat');
+                const isFix = pr.labels.some(l => l.name === 'changelog:fix');
+                const isBreaking = pr.labels.some(l => l.name === 'changelog:breaking');
+
+                if (isBreaking) breakings.push(entry);
+                else if (isFeat) features.push(entry);
+                else if (isFix) fixes.push(entry);
+
+              } catch {}
+            }
+
+            let changelog = `# Pre-release ${newVersion}\n`;
+            changelog += `## What's Changed\n`;
+
+            if (breakings.length) {
+              changelog += `### BREAKING CHANGES\n`;
+              changelog += breakings.join("\n") + "\n\n";
+            }
+
+            if (features.length) {
+              changelog += `### Feats\n`;
+              changelog += features.join("\n") + "\n\n";
+            }
+
+            if (fixes.length) {
+              changelog += `### Fixes\n`;
+              changelog += fixes.join("\n") + "\n\n";
+            }
+
+            if (!features.length && !fixes.length && !breakings.length) {
+              changelog += `* No labelled PRs since last release\n\n`;
+            }
+
+            changelog += `**Compare**: https://github.com/${context.repo.owner}/${context.repo.repo}/compare/${lastTag}...${newVersion}`;
+
+            const fs = require("fs");
+            fs.writeFileSync("/tmp/changelog.md", changelog);
+            core.setOutput("changelog", changelog);
+
+      - name: Create pre-release on GitHub
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const body = fs.readFileSync('/tmp/changelog.md', 'utf8');
+
+            await github.rest.repos.createRelease({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              tag_name: 'v${{ inputs.prerelease_version }}',
+              name: 'Pre-release v${{ inputs.prerelease_version }}',
+              body,
+              draft: false,
+              prerelease: true
+            });
