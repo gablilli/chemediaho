@@ -1,14 +1,30 @@
-import requests
-import json
-import flask
-import os
-import secrets
-import csv
-import io
-from datetime import datetime
-from bs4 import BeautifulSoup
-import re
-import logging
+import sys
+
+# Check for required dependencies and provide helpful error messages
+try:
+    import requests
+    import json
+    import flask
+    import os
+    import secrets
+    import csv
+    import io
+    from datetime import datetime
+    from bs4 import BeautifulSoup
+    import re
+    import logging
+except ModuleNotFoundError as e:
+    print("\n" + "="*70)
+    print("ERROR: Missing required Python package!")
+    print("="*70)
+    print(f"\nThe package '{e.name}' is not installed.\n")
+    print("To fix this, please install all required dependencies by running:")
+    print("\n    pip install -r requirements.txt\n")
+    print("Or if you're using pip3:")
+    print("\n    pip3 install -r requirements.txt\n")
+    print("Then try running the app again.")
+    print("="*70 + "\n")
+    sys.exit(1)
 
 app = flask.Flask(__name__)
 
