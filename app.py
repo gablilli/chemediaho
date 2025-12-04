@@ -14,10 +14,20 @@ try:
     import re
     import logging
 except ModuleNotFoundError as e:
+    # Map import names to package names where they differ
+    import_to_package = {
+        'bs4': 'beautifulsoup4',
+    }
+    package_name = import_to_package.get(e.name, e.name)
+    
     print("\n" + "="*70)
     print("ERROR: Missing required Python package!")
     print("="*70)
-    print(f"\nThe package '{e.name}' is not installed.\n")
+    print(f"\nThe module '{e.name}' is not available.")
+    if e.name != package_name:
+        print(f"You need to install the package: {package_name}\n")
+    else:
+        print(f"You need to install the package: {e.name}\n")
     print("To fix this, please install all required dependencies by running:")
     print("\n    pip install -r requirements.txt\n")
     print("Or if you're using pip3:")
