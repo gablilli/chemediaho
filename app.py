@@ -21,6 +21,10 @@ APP_VERSION = "1.7.6"
 GRADE_ROUNDING_THRESHOLD = 9.5  # Grades >= 9.5 can be rounded to 10
 DEFAULT_INCLUDE_BLUE_GRADES = False  # Default: don't include blue grades
 
+# Constants for intelligent subject suggestions
+SUGGESTION_IMPACT_WEIGHT = 0.1  # Weight for impact factor in scoring algorithm
+MAX_SUGGESTIONS = 5  # Maximum number of subject suggestions to return
+
 # Load or generate a persistent SECRET_KEY
 SECRET_KEY_FILE = 'secret_key.txt'
 
@@ -500,9 +504,6 @@ def calculate_subject_suggestions(grades_avr, target_overall_average, num_grades
     - Impact: Fewer existing grades = higher impact per new grade
     - Combined score balances both factors to find optimal subjects
     """
-    # Weight for impact factor in combined score calculation
-    IMPACT_WEIGHT = 0.1
-    
     suggestions = []
     
     # Get all unique subjects across all periods
@@ -541,7 +542,7 @@ def calculate_subject_suggestions(grades_avr, target_overall_average, num_grades
         impact_factor = 1.0 / (len(subject_grades) + num_grades) * 100
         
         # Combined score: prioritize subjects that are both easier AND have higher impact
-        combined_score = difficulty_score - (impact_factor * IMPACT_WEIGHT)
+        combined_score = difficulty_score - (impact_factor * SUGGESTION_IMPACT_WEIGHT)
         
         suggestions.append({
             'subject': subject,
@@ -555,8 +556,8 @@ def calculate_subject_suggestions(grades_avr, target_overall_average, num_grades
     # Sort by combined difficulty score (ascending) - lower = better target
     suggestions.sort(key=lambda x: x['difficulty'])
     
-    # Return top 5 suggestions
-    return suggestions[:5]
+    # Return top suggestions
+    return suggestions[:MAX_SUGGESTIONS]
 
 def get_smart_suggestion_message(suggestions, target_average, num_grades):
     """Generate an intelligent message about which subjects to focus on"""
