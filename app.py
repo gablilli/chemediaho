@@ -439,6 +439,29 @@ def get_predict_message(change, predicted_average, num_grades):
     else:
         return f"Attenzione! Con {grade_text} la tua media scenderebbe significativamente a {round(predicted_average, 2)} ({change:.2f}). 📉"
 
+def get_all_grades(grades_avr, include_blue_grades):
+    """
+    Collect all grades from all subjects in all periods
+    
+    Args:
+        grades_avr: Dictionary containing grades organized by period and subject
+        include_blue_grades: Whether to include blue grades in the collection
+    
+    Returns:
+        List of decimal grade values
+    """
+    all_grades_list = []
+    for period in grades_avr:
+        if period == 'all_avr':
+            continue
+        for subject in grades_avr[period]:
+            if subject == 'period_avr':
+                continue
+            for grade in grades_avr[period][subject].get('grades', []):
+                if should_include_grade(grade, include_blue_grades):
+                    all_grades_list.append(grade['decimalValue'])
+    return all_grades_list
+
 @app.route('/calculate_goal_overall', methods=['POST'])
 def calculate_goal_overall():
     """Calculate what grades are needed in a specific subject to reach a target overall average"""
@@ -475,16 +498,7 @@ def calculate_goal_overall():
         include_blue_grades = flask.session.get('include_blue_grades', DEFAULT_INCLUDE_BLUE_GRADES)
         
         # Collect all current grades from all subjects in all periods
-        all_grades_list = []
-        for p in grades_avr:
-            if p == 'all_avr':
-                continue
-            for subj in grades_avr[p]:
-                if subj == 'period_avr':
-                    continue
-                for grade in grades_avr[p][subj].get('grades', []):
-                    if should_include_grade(grade, include_blue_grades):
-                        all_grades_list.append(grade['decimalValue'])
+        all_grades_list = get_all_grades(grades_avr, include_blue_grades)
         
         if not all_grades_list:
             return flask.jsonify({'error': 'Nessun voto disponibile'}), 400
@@ -577,16 +591,7 @@ def predict_average_overall():
         include_blue_grades = flask.session.get('include_blue_grades', DEFAULT_INCLUDE_BLUE_GRADES)
         
         # Collect all current grades from all subjects in all periods
-        all_grades_list = []
-        for p in grades_avr:
-            if p == 'all_avr':
-                continue
-            for subj in grades_avr[p]:
-                if subj == 'period_avr':
-                    continue
-                for grade in grades_avr[p][subj].get('grades', []):
-                    if should_include_grade(grade, include_blue_grades):
-                        all_grades_list.append(grade['decimalValue'])
+        all_grades_list = get_all_grades(grades_avr, include_blue_grades)
         
         if not all_grades_list:
             return flask.jsonify({'error': 'Nessun voto disponibile'}), 400
