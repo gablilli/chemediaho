@@ -505,7 +505,7 @@ def calculate_subject_suggestions(grades_avr, target_overall_average, num_grades
             if subject != 'period_avr':
                 all_subjects.add(subject)
     
-    # For each subject, calculate what grade is needed
+    # For each subject, calculate what grade is needed and score difficulty
     for subject in all_subjects:
         # Get current average for this subject (across all periods)
         subject_grades = []
@@ -522,24 +522,27 @@ def calculate_subject_suggestions(grades_avr, target_overall_average, num_grades
         
         current_subject_avg = sum(subject_grades) / len(subject_grades)
         
-        # Simple heuristic: subjects with lower current averages are "easier" to improve
-        # because the required grade is the same for all subjects (baseline_required_grade)
-        # but subjects with lower averages benefit more from good grades
-        difficulty_score = baseline_required_grade
+        # Difficulty calculation: subjects with lower current averages have more "room to grow"
+        # and benefit more from good grades, making them easier targets for improvement
+        # Lower score = easier to improve
+        difficulty_score = baseline_required_grade - (target_overall_average - current_subject_avg)
         
-        # Add bonus for subjects with fewer grades (more impact per grade)
+        # Impact factor: subjects with fewer grades have more impact per new grade
         impact_factor = 1.0 / (len(subject_grades) + num_grades) * 100
+        
+        # Combined score: prioritize subjects that are both easier AND have higher impact
+        combined_score = difficulty_score - (impact_factor * 0.1)
         
         suggestions.append({
             'subject': subject,
             'current_average': round(current_subject_avg, 2),
             'required_grade': round(min(baseline_required_grade, 10), 2),
             'num_current_grades': len(subject_grades),
-            'difficulty': round(difficulty_score, 2),
+            'difficulty': round(combined_score, 2),
             'impact': round(impact_factor, 2)
         })
     
-    # Sort by difficulty (ascending) - lower required grade = easier
+    # Sort by combined difficulty score (ascending) - lower = better target
     suggestions.sort(key=lambda x: x['difficulty'])
     
     # Return top 5 suggestions

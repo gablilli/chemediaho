@@ -1235,6 +1235,11 @@
         return count === 1 ? 'voto' : 'voti';
       }
 
+      // Helper function for Italian pluralization of "voto attuale"
+      function pluralizeCurrentGrades(count) {
+        return count === 1 ? 'voto attuale' : 'voti attuali';
+      }
+
       // Add grade input for goal calculator
       function addGradeInput() {
         numGradesGoal++;
@@ -1807,7 +1812,7 @@
                 <span class="required-grade">Voto necessario: ${suggestion.required_grade}</span>
               </div>
               <div style="font-size: 12px; margin-top: 4px; opacity: 0.7;">
-                ${suggestion.num_current_grades} ${suggestion.num_current_grades === 1 ? 'voto attuale' : 'voti attuali'}
+                ${suggestion.num_current_grades} ${pluralizeCurrentGrades(suggestion.num_current_grades)}
               </div>
             `;
             
