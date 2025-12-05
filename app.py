@@ -15,7 +15,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Application version
-APP_VERSION = "1.7.5"
+APP_VERSION = "1.7.6"
 
 # Constants for grade calculations
 GRADE_ROUNDING_THRESHOLD = 9.5  # Grades >= 9.5 can be rounded to 10
