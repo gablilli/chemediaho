@@ -10,7 +10,7 @@ from datetime import datetime
 app = flask.Flask(__name__)
 
 # Application version
-APP_VERSION = "1.6.6"
+APP_VERSION = "1.7.5"
 
 # Load or generate a persistent SECRET_KEY
 SECRET_KEY_FILE = 'secret_key.txt'
