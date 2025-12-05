@@ -374,31 +374,15 @@ def get_predict_message(change, predicted_average, num_grades):
     else:
         return f"Attenzione! Con {grade_text} la tua media scenderebbe significativamente a {round(predicted_average, 2)} ({change:.2f}). 📉"
 
-def should_include_grade(grade, include_blue_grades):
+def get_all_grades(grades_avr):
     """
-    Determine if a grade should be included based on its properties
-    
-    Args:
-        grade: Grade dictionary with properties including 'isBlue'
-        include_blue_grades: Whether to include blue grades
-    
-    Returns:
-        Boolean indicating if the grade should be included
-    """
-    # Since we're removing blue grades functionality, always include non-blue grades
-    # and exclude blue grades
-    return not grade.get('isBlue', False)
-
-def get_all_grades(grades_avr, include_blue_grades=False):
-    """
-    Collect all grades from all subjects in all periods
+    Collect all grades from all subjects in all periods (excluding blue grades)
     
     Args:
         grades_avr: Dictionary containing grades organized by period and subject
-        include_blue_grades: Whether to include blue grades in the collection (deprecated, always False)
     
     Returns:
-        List of decimal grade values
+        List of decimal grade values (blue grades excluded)
     """
     all_grades_list = []
     for period in grades_avr:
