@@ -602,6 +602,9 @@
         <button class="tab-button" onclick="switchTab('predict')">
           🔮 Previsione
         </button>
+        <button class="tab-button" onclick="switchTab('overall')">
+          🌍 Media Generale
+        </button>
       </div>
 
       <!-- Goal Calculator Tab -->
@@ -805,6 +808,220 @@
           </div>
         </div>
       </div>
+
+      <!-- Overall Average Tab -->
+      <div class="tab-content" id="overallTab">
+        <!-- Tabs within overall average -->
+        <div class="tabs-container" style="margin-bottom: 20px; border-bottom: 1px solid var(--secondary); padding-bottom: 0;">
+          <button class="tab-button active" onclick="switchOverallSubTab('overallGoal')" style="font-size: 14px; padding: 10px 16px;">
+            🎯 Obiettivo
+          </button>
+          <button class="tab-button" onclick="switchOverallSubTab('overallPredict')" style="font-size: 14px; padding: 10px 16px;">
+            🔮 Previsione
+          </button>
+        </div>
+
+        <!-- Overall Goal Sub-tab -->
+        <div class="tab-content active" id="overallGoalTab">
+          <div class="calculator-card">
+            <form id="overallGoalForm">
+              <div class="form-group">
+                <label class="form-label" for="periodSelectOverallGoal">Periodo</label>
+                <select class="form-select" id="periodSelectOverallGoal" required>
+                  <option value="">Seleziona un periodo...</option>
+                  {% for period in grades_avr.keys() if period != 'all_avr' %}
+                  <option value="{{ period }}">Periodo {{ period }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="subjectSelectOverallGoal">Materia</label>
+                <select class="form-select" id="subjectSelectOverallGoal" required disabled>
+                  <option value="">Prima seleziona un periodo...</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="targetOverallAverage">Media Generale Target <span id="targetOverallRangeLabel">(1-10)</span></label>
+                <input 
+                  type="number" 
+                  class="form-input" 
+                  id="targetOverallAverage" 
+                  min="1" 
+                  max="10" 
+                  step="0.1" 
+                  placeholder="Es: 7.5"
+                  required
+                />
+                <small id="targetOverallHelp" style="display: block; margin-top: 6px; font-size: 12px; opacity: 0.7;"></small>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">
+                  Numero di voti da prendere nella materia selezionata
+                  <span style="font-size: 12px; opacity: 0.7; font-weight: normal;">(per raggiungere la media generale)</span>
+                </label>
+                <div class="grades-input-container" id="overallGoalGradesContainer">
+                  <div class="grade-input-group">
+                    <span style="font-size: 14px; opacity: 0.8;">1 voto</span>
+                  </div>
+                </div>
+                <button type="button" class="add-grade-btn" onclick="addOverallGoalGradeInput()">+ Aggiungi voto</button>
+              </div>
+
+              <button type="submit" class="calculate-btn" id="calculateBtnOverallGoal">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="10"/>
+                  <polyline points="12 6 12 12 16 14"/>
+                </svg>
+                Calcola
+              </button>
+            </form>
+          </div>
+
+          <!-- Result Card for Overall Goal -->
+          <div class="result-card" id="resultCardOverallGoal">
+            <div class="result-header">
+              <div class="result-icon" id="resultIconOverallGoal">
+                <span id="resultEmojiOverallGoal">🎯</span>
+              </div>
+              <h2 class="result-title" id="resultTitleOverallGoal">Risultato</h2>
+            </div>
+            <div class="result-content">
+              <div class="result-row">
+                <span class="result-label">Media Generale Attuale</span>
+                <span class="result-value" id="currentOverallAverageGoal">-</span>
+              </div>
+              <div class="result-row">
+                <span class="result-label">Media Generale Target</span>
+                <span class="result-value" id="targetOverallAverageDisplay">-</span>
+              </div>
+              <div class="result-row">
+                <span class="result-label">Voti Necessari</span>
+                <span class="result-value highlight" id="requiredOverallGrades">-</span>
+              </div>
+            </div>
+            <div class="result-message" id="resultMessageOverallGoal">
+              Completa il form per vedere i risultati
+            </div>
+          </div>
+
+          <!-- Info Box -->
+          <div class="info-box">
+            <div class="info-box-title">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"/>
+                <line x1="12" y1="16" x2="12" y2="12"/>
+                <line x1="12" y1="8" x2="12.01" y2="8"/>
+              </svg>
+              Come funziona?
+            </div>
+            <div class="info-box-content">
+              Calcola quali voti ti servono in una materia specifica per raggiungere una 
+              media generale target. La media generale include tutti i voti di tutte le materie 
+              in tutti i periodi. Utile per pianificare i tuoi obiettivi a lungo termine!
+            </div>
+          </div>
+        </div>
+
+        <!-- Overall Predict Sub-tab -->
+        <div class="tab-content" id="overallPredictTab">
+          <div class="calculator-card">
+            <form id="overallPredictForm">
+              <div class="form-group">
+                <label class="form-label" for="periodSelectOverallPredict">Periodo</label>
+                <select class="form-select" id="periodSelectOverallPredict" required>
+                  <option value="">Seleziona un periodo...</option>
+                  {% for period in grades_avr.keys() if period != 'all_avr' %}
+                  <option value="{{ period }}">Periodo {{ period }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="subjectSelectOverallPredict">Materia</label>
+                <select class="form-select" id="subjectSelectOverallPredict" required disabled>
+                  <option value="">Prima seleziona un periodo...</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">
+                  Voti che pensi di prendere nella materia selezionata
+                  <span style="font-size: 12px; opacity: 0.7; font-weight: normal;">(vedi impatto sulla media generale)</span>
+                </label>
+                <div class="grades-input-container" id="overallPredictGradesContainer">
+                  <div class="grade-input-group">
+                    <input 
+                      type="number" 
+                      class="grade-input-small overall-predict-grade-input" 
+                      min="1" 
+                      max="10" 
+                      step="0.5" 
+                      placeholder="Voto"
+                      required
+                    />
+                  </div>
+                </div>
+                <button type="button" class="add-grade-btn" onclick="addOverallPredictGradeInput()">+ Aggiungi voto</button>
+              </div>
+
+              <button type="submit" class="calculate-btn" id="calculateBtnOverallPredict">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="10"/>
+                  <polyline points="12 6 12 12 16 14"/>
+                </svg>
+                Prevedi
+              </button>
+            </form>
+          </div>
+
+          <!-- Result Card for Overall Predict -->
+          <div class="result-card" id="resultCardOverallPredict">
+            <div class="result-header">
+              <div class="result-icon" id="resultIconOverallPredict">
+                <span id="resultEmojiOverallPredict">🔮</span>
+              </div>
+              <h2 class="result-title" id="resultTitleOverallPredict">Previsione</h2>
+            </div>
+            <div class="result-content">
+              <div class="result-row">
+                <span class="result-label">Media Generale Attuale</span>
+                <span class="result-value" id="currentOverallAveragePredict">-</span>
+              </div>
+              <div class="result-row">
+                <span class="result-label">Media Generale Prevista</span>
+                <span class="result-value highlight" id="predictedOverallAverage">-</span>
+              </div>
+              <div class="result-row">
+                <span class="result-label">Variazione</span>
+                <span class="result-value" id="overallAverageChange">-</span>
+              </div>
+            </div>
+            <div class="result-message" id="resultMessageOverallPredict">
+              Completa il form per vedere la previsione
+            </div>
+          </div>
+
+          <!-- Info Box -->
+          <div class="info-box">
+            <div class="info-box-title">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"/>
+                <line x1="12" y1="16" x2="12" y2="12"/>
+                <line x1="12" y1="8" x2="12.01" y2="8"/>
+              </svg>
+              Come funziona?
+            </div>
+            <div class="info-box-content">
+              La previsione calcola come cambierà la tua media generale se ricevi i voti 
+              che inserisci in una materia specifica. La media generale include tutti i voti 
+              di tutte le materie in tutti i periodi. Utile per capire l'impatto reale dei voti futuri!
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Bottom Navigation Bar -->
@@ -864,6 +1081,8 @@
       // Track number of grades for goal calculator
       let numGradesGoal = 1;
       let numGradesPredict = 1;
+      let numGradesOverallGoal = 1;
+      let numGradesOverallPredict = 1;
 
       // Theme management
       const themeToggle = document.getElementById('themeToggle');
@@ -901,9 +1120,10 @@
         // Hide all tabs
         document.getElementById('goalTab').classList.remove('active');
         document.getElementById('predictTab').classList.remove('active');
+        document.getElementById('overallTab').classList.remove('active');
         
-        // Deactivate all tab buttons
-        const tabButtons = document.querySelectorAll('.tab-button');
+        // Deactivate all tab buttons (only top-level tabs)
+        const tabButtons = document.querySelectorAll('.tabs-container:first-of-type .tab-button');
         tabButtons.forEach(btn => btn.classList.remove('active'));
         
         // Show selected tab
@@ -913,6 +1133,29 @@
         } else if (tabName === 'predict') {
           document.getElementById('predictTab').classList.add('active');
           tabButtons[1].classList.add('active');
+        } else if (tabName === 'overall') {
+          document.getElementById('overallTab').classList.add('active');
+          tabButtons[2].classList.add('active');
+        }
+      }
+
+      // Sub-tab switching for overall average tab
+      function switchOverallSubTab(subTabName) {
+        // Hide all sub-tabs
+        document.getElementById('overallGoalTab').classList.remove('active');
+        document.getElementById('overallPredictTab').classList.remove('active');
+        
+        // Deactivate all sub-tab buttons
+        const subTabButtons = document.querySelectorAll('#overallTab .tabs-container .tab-button');
+        subTabButtons.forEach(btn => btn.classList.remove('active'));
+        
+        // Show selected sub-tab
+        if (subTabName === 'overallGoal') {
+          document.getElementById('overallGoalTab').classList.add('active');
+          subTabButtons[0].classList.add('active');
+        } else if (subTabName === 'overallPredict') {
+          document.getElementById('overallPredictTab').classList.add('active');
+          subTabButtons[1].classList.add('active');
         }
       }
 
@@ -1284,6 +1527,346 @@
 
         resultCardPredict.classList.add('show');
         resultCardPredict.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+
+      // ===== Overall Average Handlers =====
+
+      // Add grade input for overall goal calculator
+      function addOverallGoalGradeInput() {
+        numGradesOverallGoal++;
+        const container = document.getElementById('overallGoalGradesContainer');
+        const gradeGroup = document.createElement('div');
+        gradeGroup.className = 'grade-input-group';
+        gradeGroup.innerHTML = `
+          <span style="font-size: 14px; opacity: 0.8;">${numGradesOverallGoal} ${pluralizeVoto(numGradesOverallGoal)}</span>
+          <button type="button" class="remove-grade-btn" onclick="removeOverallGoalGradeInput(this)">×</button>
+        `;
+        container.appendChild(gradeGroup);
+      }
+
+      function removeOverallGoalGradeInput(btn) {
+        if (numGradesOverallGoal > 1) {
+          btn.parentElement.remove();
+          numGradesOverallGoal--;
+          // Update labels
+          const groups = document.querySelectorAll('#overallGoalGradesContainer .grade-input-group');
+          groups.forEach((group, index) => {
+            const span = group.querySelector('span');
+            if (span) {
+              span.textContent = `${index + 1} ${pluralizeVoto(index + 1)}`;
+            }
+          });
+        }
+      }
+
+      // Add grade input for overall predict calculator
+      function addOverallPredictGradeInput() {
+        numGradesOverallPredict++;
+        const container = document.getElementById('overallPredictGradesContainer');
+        const gradeGroup = document.createElement('div');
+        gradeGroup.className = 'grade-input-group';
+        gradeGroup.innerHTML = `
+          <input 
+            type="number" 
+            class="grade-input-small overall-predict-grade-input" 
+            min="1" 
+            max="10" 
+            step="0.5" 
+            placeholder="Voto"
+            required
+          />
+          <button type="button" class="remove-grade-btn" onclick="removeOverallPredictGradeInput(this)">×</button>
+        `;
+        container.appendChild(gradeGroup);
+      }
+
+      function removeOverallPredictGradeInput(btn) {
+        if (numGradesOverallPredict > 1) {
+          btn.parentElement.remove();
+          numGradesOverallPredict--;
+        }
+      }
+
+      // Handle period selection for Overall Goal
+      const periodSelectOverallGoal = document.getElementById('periodSelectOverallGoal');
+      const subjectSelectOverallGoal = document.getElementById('subjectSelectOverallGoal');
+
+      periodSelectOverallGoal.addEventListener('change', function() {
+        const period = this.value;
+        subjectSelectOverallGoal.disabled = false;
+        subjectSelectOverallGoal.innerHTML = '<option value="">Seleziona una materia...</option>';
+        
+        if (period && gradesData[period]) {
+          const subjects = Object.keys(gradesData[period]).filter(s => s !== 'period_avr');
+          subjects.forEach(subject => {
+            const option = document.createElement('option');
+            option.value = subject;
+            option.textContent = subject;
+            subjectSelectOverallGoal.appendChild(option);
+          });
+        } else {
+          subjectSelectOverallGoal.disabled = true;
+          subjectSelectOverallGoal.innerHTML = '<option value="">Prima seleziona un periodo...</option>';
+        }
+        
+        updateOverallTargetInput();
+      });
+
+      subjectSelectOverallGoal.addEventListener('change', function() {
+        updateOverallTargetInput();
+      });
+
+      function updateOverallTargetInput() {
+        const targetInput = document.getElementById('targetOverallAverage');
+        const targetRangeLabel = document.getElementById('targetOverallRangeLabel');
+        const targetHelp = document.getElementById('targetOverallHelp');
+        
+        const currentOverallAverage = gradesData.all_avr || 0;
+        
+        targetInput.min = Math.max(1, Math.ceil(currentOverallAverage * 10) / 10);
+        targetRangeLabel.textContent = `(${targetInput.min}-10)`;
+        targetHelp.textContent = `La tua media generale attuale è ${currentOverallAverage.toFixed(2)}. Imposta un obiettivo superiore.`;
+        
+        if (targetInput.value && parseFloat(targetInput.value) < targetInput.min) {
+          targetInput.value = '';
+        }
+      }
+
+      // Handle period selection for Overall Predict
+      const periodSelectOverallPredict = document.getElementById('periodSelectOverallPredict');
+      const subjectSelectOverallPredict = document.getElementById('subjectSelectOverallPredict');
+
+      periodSelectOverallPredict.addEventListener('change', function() {
+        const period = this.value;
+        subjectSelectOverallPredict.disabled = false;
+        subjectSelectOverallPredict.innerHTML = '<option value="">Seleziona una materia...</option>';
+        
+        if (period && gradesData[period]) {
+          const subjects = Object.keys(gradesData[period]).filter(s => s !== 'period_avr');
+          subjects.forEach(subject => {
+            const option = document.createElement('option');
+            option.value = subject;
+            option.textContent = subject;
+            subjectSelectOverallPredict.appendChild(option);
+          });
+        } else {
+          subjectSelectOverallPredict.disabled = true;
+          subjectSelectOverallPredict.innerHTML = '<option value="">Prima seleziona un periodo...</option>';
+        }
+      });
+
+      // Handle overall goal form submission
+      const overallGoalForm = document.getElementById('overallGoalForm');
+      const resultCardOverallGoal = document.getElementById('resultCardOverallGoal');
+      const calculateBtnOverallGoal = document.getElementById('calculateBtnOverallGoal');
+
+      overallGoalForm.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const period = periodSelectOverallGoal.value;
+        const subject = subjectSelectOverallGoal.value;
+        const targetAverage = parseFloat(document.getElementById('targetOverallAverage').value);
+
+        if (!period || !subject || !targetAverage) {
+          showError('Compila tutti i campi!');
+          return;
+        }
+
+        calculateBtnOverallGoal.disabled = true;
+        calculateBtnOverallGoal.textContent = 'Calcolo in corso...';
+
+        try {
+          const response = await fetch('/calculate_goal_overall', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              period: period,
+              subject: subject,
+              target_average: targetAverage,
+              num_grades: numGradesOverallGoal
+            })
+          });
+
+          const data = await response.json();
+
+          if (response.ok && data.success) {
+            displayOverallGoalResult(data);
+          } else {
+            showError(data.error || 'Errore durante il calcolo');
+          }
+        } catch (error) {
+          showError('Errore di connessione');
+        } finally {
+          calculateBtnOverallGoal.disabled = false;
+          calculateBtnOverallGoal.innerHTML = `
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"/>
+              <polyline points="12 6 12 12 16 14"/>
+            </svg>
+            Calcola
+          `;
+        }
+      });
+
+      function displayOverallGoalResult(data) {
+        document.getElementById('currentOverallAverageGoal').textContent = data.current_overall_average.toFixed(2);
+        document.getElementById('targetOverallAverageDisplay').textContent = data.target_average.toFixed(2);
+        
+        const requiredGradesEl = document.getElementById('requiredOverallGrades');
+        if (data.required_grades && Array.isArray(data.required_grades)) {
+          requiredGradesEl.textContent = data.required_grades.map(g => g.toFixed(2)).join(', ');
+        } else {
+          requiredGradesEl.textContent = data.required_grade.toFixed(2);
+        }
+        
+        document.getElementById('resultMessageOverallGoal').textContent = data.message;
+
+        // Set result card style
+        resultCardOverallGoal.classList.remove('success', 'warning', 'error');
+        
+        const avgGrade = data.required_grades ? 
+          data.required_grades.reduce((a, b) => a + b, 0) / data.required_grades.length : 
+          data.required_grade;
+        
+        if (avgGrade < 1) {
+          resultCardOverallGoal.classList.add('success');
+          document.getElementById('resultEmojiOverallGoal').textContent = '🎉';
+          document.getElementById('resultTitleOverallGoal').textContent = 'Fantastico!';
+        } else if (avgGrade > 10) {
+          resultCardOverallGoal.classList.add('error');
+          document.getElementById('resultEmojiOverallGoal').textContent = '😅';
+          document.getElementById('resultTitleOverallGoal').textContent = 'Difficile...';
+        } else if (avgGrade >= 9) {
+          resultCardOverallGoal.classList.add('warning');
+          document.getElementById('resultEmojiOverallGoal').textContent = '💪';
+          document.getElementById('resultTitleOverallGoal').textContent = 'Impegnati!';
+        } else if (avgGrade >= 7) {
+          resultCardOverallGoal.classList.add('success');
+          document.getElementById('resultEmojiOverallGoal').textContent = '👍';
+          document.getElementById('resultTitleOverallGoal').textContent = 'Fattibile!';
+        } else {
+          resultCardOverallGoal.classList.add('success');
+          document.getElementById('resultEmojiOverallGoal').textContent = '✅';
+          document.getElementById('resultTitleOverallGoal').textContent = 'Ottimo!';
+        }
+
+        resultCardOverallGoal.classList.add('show');
+        resultCardOverallGoal.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+
+      // Handle overall predict form submission
+      const overallPredictForm = document.getElementById('overallPredictForm');
+      const resultCardOverallPredict = document.getElementById('resultCardOverallPredict');
+      const calculateBtnOverallPredict = document.getElementById('calculateBtnOverallPredict');
+
+      overallPredictForm.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const period = periodSelectOverallPredict.value;
+        const subject = subjectSelectOverallPredict.value;
+        const gradeInputs = document.querySelectorAll('.overall-predict-grade-input');
+        const predictedGrades = [];
+        
+        for (let input of gradeInputs) {
+          const value = parseFloat(input.value);
+          if (!value || value < 1 || value > 10) {
+            showError('Inserisci voti validi (1-10)!');
+            return;
+          }
+          predictedGrades.push(value);
+        }
+
+        if (!period || !subject || predictedGrades.length === 0) {
+          showError('Compila tutti i campi!');
+          return;
+        }
+
+        calculateBtnOverallPredict.disabled = true;
+        calculateBtnOverallPredict.textContent = 'Calcolo in corso...';
+
+        try {
+          const response = await fetch('/predict_average_overall', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              period: period,
+              subject: subject,
+              predicted_grades: predictedGrades
+            })
+          });
+
+          const data = await response.json();
+
+          if (response.ok && data.success) {
+            displayOverallPredictResult(data);
+          } else {
+            showError(data.error || 'Errore durante il calcolo');
+          }
+        } catch (error) {
+          showError('Errore di connessione');
+        } finally {
+          calculateBtnOverallPredict.disabled = false;
+          calculateBtnOverallPredict.innerHTML = `
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"/>
+              <polyline points="12 6 12 12 16 14"/>
+            </svg>
+            Prevedi
+          `;
+        }
+      });
+
+      function displayOverallPredictResult(data) {
+        document.getElementById('currentOverallAveragePredict').textContent = data.current_overall_average.toFixed(2);
+        document.getElementById('predictedOverallAverage').textContent = data.predicted_overall_average.toFixed(2);
+        
+        const change = data.predicted_overall_average - data.current_overall_average;
+        const changeEl = document.getElementById('overallAverageChange');
+        const changeText = change >= 0 ? `+${change.toFixed(2)}` : change.toFixed(2);
+        changeEl.textContent = changeText;
+        
+        // Color the change based on positive/negative
+        if (change > 0) {
+          changeEl.style.color = 'var(--success)';
+        } else if (change < 0) {
+          changeEl.style.color = 'var(--primary)';
+        } else {
+          changeEl.style.color = 'var(--text)';
+        }
+        
+        document.getElementById('resultMessageOverallPredict').textContent = data.message;
+
+        // Set result card style
+        resultCardOverallPredict.classList.remove('success', 'warning', 'error');
+        
+        if (change > 0.5) {
+          resultCardOverallPredict.classList.add('success');
+          document.getElementById('resultEmojiOverallPredict').textContent = '📈';
+          document.getElementById('resultTitleOverallPredict').textContent = 'Ottima crescita!';
+        } else if (change > 0) {
+          resultCardOverallPredict.classList.add('success');
+          document.getElementById('resultEmojiOverallPredict').textContent = '✅';
+          document.getElementById('resultTitleOverallPredict').textContent = 'In miglioramento!';
+        } else if (change === 0) {
+          resultCardOverallPredict.classList.add('warning');
+          document.getElementById('resultEmojiOverallPredict').textContent = '➡️';
+          document.getElementById('resultTitleOverallPredict').textContent = 'Stabile';
+        } else if (change > -0.5) {
+          resultCardOverallPredict.classList.add('warning');
+          document.getElementById('resultEmojiOverallPredict').textContent = '⚠️';
+          document.getElementById('resultTitleOverallPredict').textContent = 'Leggero calo';
+        } else {
+          resultCardOverallPredict.classList.add('error');
+          document.getElementById('resultEmojiOverallPredict').textContent = '📉';
+          document.getElementById('resultTitleOverallPredict').textContent = 'Attenzione!';
+        }
+
+        resultCardOverallPredict.classList.add('show');
+        resultCardOverallPredict.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
       }
 
       // Handle logout from bottom nav
