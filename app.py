@@ -5,12 +5,21 @@ import os
 import secrets
 import csv
 import io
+import logging
 from datetime import datetime
 
 app = flask.Flask(__name__)
 
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 # Application version
 APP_VERSION = "1.7.5"
+
+# Constants for grade calculations
+GRADE_ROUNDING_THRESHOLD = 9.5  # Grades >= 9.5 can be rounded to 10
+DEFAULT_INCLUDE_BLUE_GRADES = False  # Default: don't include blue grades
 
 # Load or generate a persistent SECRET_KEY
 SECRET_KEY_FILE = 'secret_key.txt'
@@ -365,16 +374,15 @@ def get_predict_message(change, predicted_average, num_grades):
     else:
         return f"Attenzione! Con {grade_text} la tua media scenderebbe significativamente a {round(predicted_average, 2)} ({change:.2f}). 📉"
 
-def get_all_grades(grades_avr, include_blue_grades):
+def get_all_grades(grades_avr):
     """
-    Collect all grades from all subjects in all periods
+    Collect all grades from all subjects in all periods (excluding blue grades)
     
     Args:
         grades_avr: Dictionary containing grades organized by period and subject
-        include_blue_grades: Whether to include blue grades in the collection
     
     Returns:
-        List of decimal grade values
+        List of decimal grade values (blue grades excluded)
     """
     all_grades_list = []
     for period in grades_avr:
@@ -384,7 +392,8 @@ def get_all_grades(grades_avr, include_blue_grades):
             if subject == 'period_avr':
                 continue
             for grade in grades_avr[period][subject].get('grades', []):
-                if should_include_grade(grade, include_blue_grades):
+                # Always exclude blue grades as requested
+                if not grade.get('isBlue', False):
                     all_grades_list.append(grade['decimalValue'])
     return all_grades_list
 
@@ -420,11 +429,8 @@ def calculate_goal_overall():
         if target_overall_average < current_overall_average:
             return flask.jsonify({'error': f'La media target ({target_overall_average}) non può essere inferiore alla media generale attuale ({round(current_overall_average, 2)}).'}), 400
         
-        # Get preference for including blue grades
-        include_blue_grades = flask.session.get('include_blue_grades', DEFAULT_INCLUDE_BLUE_GRADES)
-        
-        # Collect all current grades from all subjects in all periods
-        all_grades_list = get_all_grades(grades_avr, include_blue_grades)
+        # Collect all current grades from all subjects in all periods (excluding blue grades)
+        all_grades_list = get_all_grades(grades_avr)
         
         if not all_grades_list:
             return flask.jsonify({'error': 'Nessun voto disponibile'}), 400
@@ -513,11 +519,8 @@ def predict_average_overall():
         # Get current overall average
         current_overall_average = grades_avr.get('all_avr', 0)
         
-        # Get preference for including blue grades
-        include_blue_grades = flask.session.get('include_blue_grades', DEFAULT_INCLUDE_BLUE_GRADES)
-        
-        # Collect all current grades from all subjects in all periods
-        all_grades_list = get_all_grades(grades_avr, include_blue_grades)
+        # Collect all current grades from all subjects in all periods (excluding blue grades)
+        all_grades_list = get_all_grades(grades_avr)
         
         if not all_grades_list:
             return flask.jsonify({'error': 'Nessun voto disponibile'}), 400

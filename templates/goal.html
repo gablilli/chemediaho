@@ -811,18 +811,16 @@
 
       <!-- Overall Average Tab -->
       <div class="tab-content" id="overallTab">
-        <!-- Tabs within overall average -->
-        <div class="tabs-container" style="margin-bottom: 20px; border-bottom: 1px solid var(--secondary); padding-bottom: 0;">
-          <button class="tab-button active" onclick="switchOverallSubTab('overallGoal')" style="font-size: 14px; padding: 10px 16px;">
-            🎯 Obiettivo
-          </button>
-          <button class="tab-button" onclick="switchOverallSubTab('overallPredict')" style="font-size: 14px; padding: 10px 16px;">
-            🔮 Previsione
-          </button>
-        </div>
+        <!-- Section Header for Goal -->
+        <h3 style="font-size: 22px; font-weight: bold; color: var(--text); margin-bottom: 16px; padding-left: 8px; border-left: 4px solid var(--accent);">
+          🎯 Calcola Obiettivo per Media Generale
+        </h3>
+        <p style="font-size: 14px; opacity: 0.8; margin-bottom: 24px; padding-left: 12px;">
+          Scopri quali voti ti servono in una materia per raggiungere una media generale target
+        </p>
 
-        <!-- Overall Goal Sub-tab -->
-        <div class="tab-content active" id="overallGoalTab">
+        <!-- Overall Goal Section -->
+        <div>
           <div class="calculator-card">
             <form id="overallGoalForm">
               <div class="form-group">
@@ -925,8 +923,19 @@
           </div>
         </div>
 
-        <!-- Overall Predict Sub-tab -->
-        <div class="tab-content" id="overallPredictTab">
+        <!-- Divider -->
+        <div style="height: 2px; background: linear-gradient(to right, transparent, var(--secondary), transparent); margin: 48px 0;"></div>
+
+        <!-- Section Header for Predict -->
+        <h3 style="font-size: 22px; font-weight: bold; color: var(--text); margin-bottom: 16px; padding-left: 8px; border-left: 4px solid var(--accent);">
+          🔮 Prevedi Impatto sulla Media Generale
+        </h3>
+        <p style="font-size: 14px; opacity: 0.8; margin-bottom: 24px; padding-left: 12px;">
+          Vedi come cambierà la tua media generale con i voti che pensi di prendere
+        </p>
+
+        <!-- Overall Predict Section -->
+        <div>
           <div class="calculator-card">
             <form id="overallPredictForm">
               <div class="form-group">
@@ -1122,8 +1131,8 @@
         document.getElementById('predictTab').classList.remove('active');
         document.getElementById('overallTab').classList.remove('active');
         
-        // Deactivate all tab buttons (only top-level tabs)
-        const tabButtons = document.querySelectorAll('.tabs-container:first-of-type .tab-button');
+        // Deactivate all tab buttons
+        const tabButtons = document.querySelectorAll('.tabs-container .tab-button');
         tabButtons.forEach(btn => btn.classList.remove('active'));
         
         // Show selected tab
@@ -1136,26 +1145,6 @@
         } else if (tabName === 'overall') {
           document.getElementById('overallTab').classList.add('active');
           tabButtons[2].classList.add('active');
-        }
-      }
-
-      // Sub-tab switching for overall average tab
-      function switchOverallSubTab(subTabName) {
-        // Hide all sub-tabs
-        document.getElementById('overallGoalTab').classList.remove('active');
-        document.getElementById('overallPredictTab').classList.remove('active');
-        
-        // Deactivate all sub-tab buttons
-        const subTabButtons = document.querySelectorAll('#overallTab .tabs-container .tab-button');
-        subTabButtons.forEach(btn => btn.classList.remove('active'));
-        
-        // Show selected sub-tab
-        if (subTabName === 'overallGoal') {
-          document.getElementById('overallGoalTab').classList.add('active');
-          subTabButtons[0].classList.add('active');
-        } else if (subTabName === 'overallPredict') {
-          document.getElementById('overallPredictTab').classList.add('active');
-          subTabButtons[1].classList.add('active');
         }
       }
 
