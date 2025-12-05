@@ -493,7 +493,16 @@ def calculate_goal_overall():
 
 def calculate_subject_suggestions(grades_avr, target_overall_average, num_grades, baseline_required_grade):
     """Calculate which subjects would be easiest to focus on to reach the target overall average.
-    Returns suggestions sorted by difficulty (easiest first)."""
+    Returns suggestions sorted by difficulty (easiest first).
+    
+    The algorithm uses a combined scoring approach:
+    - Difficulty: Lower current averages = easier targets (more room for improvement)
+    - Impact: Fewer existing grades = higher impact per new grade
+    - Combined score balances both factors to find optimal subjects
+    """
+    # Weight for impact factor in combined score calculation
+    IMPACT_WEIGHT = 0.1
+    
     suggestions = []
     
     # Get all unique subjects across all periods
@@ -522,16 +531,17 @@ def calculate_subject_suggestions(grades_avr, target_overall_average, num_grades
         
         current_subject_avg = sum(subject_grades) / len(subject_grades)
         
-        # Difficulty calculation: subjects with lower current averages have more "room to grow"
-        # and benefit more from good grades, making them easier targets for improvement
-        # Lower score = easier to improve
+        # Difficulty calculation: measures how much "easier" a subject is to improve
+        # Formula: baseline_grade - (target - current_avg)
+        # - If current_avg is low, (target - current_avg) is high, making the result lower (easier)
+        # - Lower scores = easier targets
         difficulty_score = baseline_required_grade - (target_overall_average - current_subject_avg)
         
         # Impact factor: subjects with fewer grades have more impact per new grade
         impact_factor = 1.0 / (len(subject_grades) + num_grades) * 100
         
         # Combined score: prioritize subjects that are both easier AND have higher impact
-        combined_score = difficulty_score - (impact_factor * 0.1)
+        combined_score = difficulty_score - (impact_factor * IMPACT_WEIGHT)
         
         suggestions.append({
             'subject': subject,
