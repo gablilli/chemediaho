@@ -44,30 +44,17 @@ python app.py
 
 poi apri il browser su **[http://localhost:5000](http://localhost:5000)**, inserisci le tue credenziali di classeviva e… buona media! 🧮
 
-## 📱 installazione come PWA
-
-l'app può essere installata sul tuo dispositivo mobile per un'esperienza nativa:
-
-### su android (chrome)
-1. apri l'app nel browser
-2. tocca il menu (⋮) e seleziona "installa app" o "aggiungi a schermata home"
-3. conferma l'installazione
-
-### su ios (safari)
-1. apri l'app in safari
-2. tocca il pulsante condividi (□↑)
-3. scorri e seleziona "aggiungi a home"
-4. conferma l'installazione
-
-una volta installata, l'app funzionerà come un'applicazione nativa!
-
-
 ## installazione con docker
 
 ### prerequisiti
 
 * docker e docker compose installati
   👉 guida ufficiale: [https://docs.docker.com/engine/install/](https://docs.docker.com/engine/install/)
+
+### clona la repo
+```bash
+git clone https://github.com/gablilli/chemediaho
+```
 
 ### crea e avvia il container
 
@@ -101,6 +88,23 @@ environment:
 ```
 
 questo abiliterà il flag `Secure` sui cookie di sessione, garantendo che vengano inviati solo su connessioni https.
+
+## 📱 installazione come PWA
+
+l'app può essere installata sul tuo dispositivo mobile per un'esperienza nativa:
+
+### su android (chrome)
+1. apri l'app nel browser
+2. tocca il menu (⋮) e seleziona "installa app" o "aggiungi a schermata home"
+3. conferma l'installazione
+
+### su ios (safari)
+1. apri l'app in safari
+2. tocca il pulsante condividi (□↑)
+3. scorri e seleziona "aggiungi a home"
+4. conferma l'installazione
+
+una volta installata, l'app funzionerà come un'applicazione nativa!
 
 ### chiave segreta e sessioni
 
