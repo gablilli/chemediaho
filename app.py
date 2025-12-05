@@ -43,6 +43,8 @@ RELIGION_GRADES = {
 DEFAULT_INCLUDE_BLUE_GRADES = False
 
 # Grade rounding threshold - grades >= this value are rounded to 10
+# This threshold (9.75) represents the highest possible grade before 10
+# in the Italian grading system, where 10- equals 9.75
 GRADE_ROUNDING_THRESHOLD = 9.75
 
 # Load or generate a persistent SECRET_KEY
