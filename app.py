@@ -436,6 +436,200 @@ def get_predict_message(change, predicted_average, num_grades):
     else:
         return f"Attenzione! Con {grade_text} la tua media scenderebbe significativamente a {round(predicted_average, 2)} ({change:.2f}). 📉"
 
+@app.route('/calculate_goal_overall', methods=['POST'])
+def calculate_goal_overall():
+    """Calculate what grades are needed in a specific subject to reach a target overall average"""
+    if 'grades_avr' not in flask.session:
+        return flask.jsonify({'error': 'No active session'}), 401
+    
+    try:
+        data = flask.request.get_json()
+        period = data.get('period')
+        subject = data.get('subject')
+        target_overall_average = float(data.get('target_average'))
+        num_grades = int(data.get('num_grades', 1))
+        
+        grades_avr = flask.session['grades_avr']
+        
+        # Validate inputs
+        if period not in grades_avr or subject not in grades_avr[period]:
+            return flask.jsonify({'error': 'Materia o periodo non trovato'}), 400
+        
+        if target_overall_average < 1 or target_overall_average > 10:
+            return flask.jsonify({'error': 'La media target deve essere tra 1 e 10'}), 400
+        
+        if num_grades < 1 or num_grades > 10:
+            return flask.jsonify({'error': 'Il numero di voti deve essere tra 1 e 10'}), 400
+        
+        # Get current overall average
+        current_overall_average = grades_avr.get('all_avr', 0)
+        
+        # Validate that target is achievable
+        if target_overall_average < current_overall_average:
+            return flask.jsonify({'error': f'La media target ({target_overall_average}) non può essere inferiore alla media generale attuale ({round(current_overall_average, 2)}).'}), 400
+        
+        # Get preference for including blue grades
+        include_blue_grades = flask.session.get('include_blue_grades', DEFAULT_INCLUDE_BLUE_GRADES)
+        
+        # Collect all current grades from all subjects in all periods
+        all_grades_list = []
+        for p in grades_avr:
+            if p == 'all_avr':
+                continue
+            for subj in grades_avr[p]:
+                if subj == 'period_avr':
+                    continue
+                for grade in grades_avr[p][subj].get('grades', []):
+                    if should_include_grade(grade, include_blue_grades):
+                        all_grades_list.append(grade['decimalValue'])
+        
+        if not all_grades_list:
+            return flask.jsonify({'error': 'Nessun voto disponibile'}), 400
+        
+        current_total = sum(all_grades_list)
+        current_count = len(all_grades_list)
+        
+        # Calculate required sum for new grades
+        # Formula: (current_total + required_sum) / (current_count + num_grades) = target_overall_average
+        # required_sum = target_overall_average * (current_count + num_grades) - current_total
+        required_sum = target_overall_average * (current_count + num_grades) - current_total
+        required_average_grade = required_sum / num_grades
+        
+        # Round grades >= 9.75 to 10 for display
+        display_grade = required_average_grade
+        if 9.75 <= required_average_grade <= 10:
+            display_grade = 10
+        
+        required_grades = [display_grade] * num_grades
+        achievable = 1 <= required_average_grade <= 10
+        
+        return flask.jsonify({
+            'success': True,
+            'current_overall_average': round(current_overall_average, 2),
+            'target_average': target_overall_average,
+            'required_grade': round(display_grade, 2),
+            'required_grades': [round(g, 2) for g in required_grades],
+            'current_grades_count': current_count,
+            'achievable': achievable,
+            'subject': subject,
+            'period': period,
+            'message': get_goal_overall_message(required_average_grade, display_grade, target_overall_average, current_overall_average, num_grades, subject)
+        }), 200
+        
+    except ValueError as e:
+        return flask.jsonify({'error': 'Valori non validi'}), 400
+    except Exception as e:
+        logger.error(f"Error calculating overall goal: {e}", exc_info=True)
+        return flask.jsonify({'error': 'Errore durante il calcolo'}), 500
+
+def get_goal_overall_message(raw_grade, display_grade, target_average, current_average, num_grades, subject):
+    """Generate message for overall average goal calculation"""
+    grade_text = "voto" if num_grades == 1 else f"{num_grades} voti"
+    
+    if raw_grade < 1:
+        return f"Ottimo! La tua media generale è già sopra l'obiettivo. Anche con voti minimi in {subject} raggiungerai {target_average}."
+    elif raw_grade > 10:
+        return f"Purtroppo non è possibile raggiungere {target_average} di media generale con {grade_text} in {subject}. Prova un obiettivo più realistico!"
+    elif 9.75 <= raw_grade <= 10:
+        return f"Ci vuole impegno! Ti servono {grade_text} da 10 in {subject} (arrotondato da {round(raw_grade, 2)}) per raggiungere la media generale di {target_average}."
+    elif raw_grade >= 9:
+        return f"Devi impegnarti molto: ti servono {grade_text} da almeno {round(raw_grade, 1)} in {subject} per raggiungere la media generale di {target_average}."
+    elif raw_grade >= 7:
+        return f"È fattibile: Con {grade_text} da {round(raw_grade, 1)} in {subject} puoi raggiungere la media generale di {target_average}."
+    elif raw_grade >= 6:
+        return f"Ci sei quasi! {grade_text.capitalize()} da {round(raw_grade, 1)} in {subject} ti permetteranno di raggiungere la media generale di {target_average}."
+    else:
+        return f"Ottimo! Anche con {grade_text} modesti ({round(raw_grade, 1)}) in {subject} raggiungerai la media generale di {target_average}."
+
+@app.route('/predict_average_overall', methods=['POST'])
+def predict_average_overall():
+    """Predict how hypothetical grades in a subject will affect the overall average"""
+    if 'grades_avr' not in flask.session:
+        return flask.jsonify({'error': 'No active session'}), 401
+    
+    try:
+        data = flask.request.get_json()
+        period = data.get('period')
+        subject = data.get('subject')
+        predicted_grades = data.get('predicted_grades', [])
+        
+        grades_avr = flask.session['grades_avr']
+        
+        # Validate inputs
+        if period not in grades_avr or subject not in grades_avr[period]:
+            return flask.jsonify({'error': 'Materia o periodo non trovato'}), 400
+        
+        if not predicted_grades or not isinstance(predicted_grades, list):
+            return flask.jsonify({'error': 'Inserisci almeno un voto previsto'}), 400
+        
+        # Validate predicted grades
+        for grade in predicted_grades:
+            if not isinstance(grade, (int, float)) or grade < 1 or grade > 10:
+                return flask.jsonify({'error': 'Tutti i voti devono essere tra 1 e 10'}), 400
+        
+        # Get current overall average
+        current_overall_average = grades_avr.get('all_avr', 0)
+        
+        # Get preference for including blue grades
+        include_blue_grades = flask.session.get('include_blue_grades', DEFAULT_INCLUDE_BLUE_GRADES)
+        
+        # Collect all current grades from all subjects in all periods
+        all_grades_list = []
+        for p in grades_avr:
+            if p == 'all_avr':
+                continue
+            for subj in grades_avr[p]:
+                if subj == 'period_avr':
+                    continue
+                for grade in grades_avr[p][subj].get('grades', []):
+                    if should_include_grade(grade, include_blue_grades):
+                        all_grades_list.append(grade['decimalValue'])
+        
+        if not all_grades_list:
+            return flask.jsonify({'error': 'Nessun voto disponibile'}), 400
+        
+        # Calculate predicted overall average with new grades added
+        all_grades_with_predicted = all_grades_list + predicted_grades
+        predicted_overall_average = sum(all_grades_with_predicted) / len(all_grades_with_predicted)
+        
+        # Calculate change
+        change = predicted_overall_average - current_overall_average
+        
+        # Generate message
+        message = get_predict_overall_message(change, predicted_overall_average, len(predicted_grades), subject)
+        
+        return flask.jsonify({
+            'success': True,
+            'current_overall_average': round(current_overall_average, 2),
+            'predicted_overall_average': round(predicted_overall_average, 2),
+            'change': round(change, 2),
+            'num_predicted_grades': len(predicted_grades),
+            'subject': subject,
+            'period': period,
+            'message': message
+        }), 200
+        
+    except ValueError as e:
+        return flask.jsonify({'error': 'Valori non validi'}), 400
+    except Exception as e:
+        logger.error(f"Error predicting overall average: {e}", exc_info=True)
+        return flask.jsonify({'error': 'Errore durante il calcolo'}), 500
+
+def get_predict_overall_message(change, predicted_average, num_grades, subject):
+    """Generate a helpful message for overall average prediction"""
+    grade_text = "voto" if num_grades == 1 else f"{num_grades} voti"
+    
+    if change > 0.5:
+        return f"Ottimo! Con {grade_text} in {subject} la tua media generale salirebbe a {round(predicted_average, 2)} ({change:+.2f})! 📈"
+    elif change > 0:
+        return f"Bene! Con {grade_text} in {subject} la tua media generale migliorerebbe leggermente a {round(predicted_average, 2)} ({change:+.2f}). ✅"
+    elif change == 0:
+        return f"Con {grade_text} in {subject} la tua media generale rimarrebbe stabile a {round(predicted_average, 2)}. ➡️"
+    elif change > -0.5:
+        return f"Attenzione! Con {grade_text} in {subject} la tua media generale scenderebbe leggermente a {round(predicted_average, 2)} ({change:.2f}). ⚠️"
+    else:
+        return f"Attenzione! Con {grade_text} in {subject} la tua media generale scenderebbe significativamente a {round(predicted_average, 2)} ({change:.2f}). 📉"
+
 @app.route('/export/csv', methods=['POST'])
 def export_csv():
     """Export grades as CSV file"""
