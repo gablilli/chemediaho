@@ -22,8 +22,14 @@ GRADE_ROUNDING_THRESHOLD = 9.5  # Grades >= 9.5 can be rounded to 10
 DEFAULT_INCLUDE_BLUE_GRADES = False  # Default: don't include blue grades
 
 # Constants for intelligent subject suggestions
-SUGGESTION_IMPACT_WEIGHT = 0.1  # Weight for impact factor in scoring algorithm
-MAX_SUGGESTIONS = 5  # Maximum number of subject suggestions to return
+# SUGGESTION_IMPACT_WEIGHT: Balances difficulty vs. impact in scoring
+#   - Lower values (e.g., 0.05) prioritize subjects with lower current averages
+#   - Higher values (e.g., 0.2) prioritize subjects with fewer grades (higher impact per grade)
+#   - 0.1 provides a good balance between both factors
+SUGGESTION_IMPACT_WEIGHT = 0.1
+# MAX_SUGGESTIONS: Number of subject suggestions to return
+#   - 5 provides enough variety without overwhelming the user
+MAX_SUGGESTIONS = 5
 
 # Load or generate a persistent SECRET_KEY
 SECRET_KEY_FILE = 'secret_key.txt'
