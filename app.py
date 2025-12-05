@@ -42,6 +42,9 @@ RELIGION_GRADES = {
 # Default preference for including blue grades in averages
 DEFAULT_INCLUDE_BLUE_GRADES = False
 
+# Grade rounding threshold - grades >= this value are rounded to 10
+GRADE_ROUNDING_THRESHOLD = 9.75
+
 # Load or generate a persistent SECRET_KEY
 SECRET_KEY_FILE = 'secret_key.txt'
 
@@ -305,16 +308,16 @@ def calculate_goal():
         required_sum = target_average * (current_count + num_grades) - current_sum
         required_average_grade = required_sum / num_grades
         
-        # Round grades >= 9.75 to 10 for display purposes
+        # Round grades >= GRADE_ROUNDING_THRESHOLD to 10 for display purposes
         display_grade = required_average_grade
-        if 9.75 <= required_average_grade <= 10:
+        if GRADE_ROUNDING_THRESHOLD <= required_average_grade <= 10:
             display_grade = 10
         
         # Note: For simplicity and clarity, we assume all required grades are the same
         # This gives the student a single, clear target to aim for across all tests
         required_grades = [display_grade] * num_grades
         
-        # Determine if it's achievable (use original value for comparison, but allow 9.75+ to round to 10)
+        # Determine if it's achievable (use original value for comparison, but allow GRADE_ROUNDING_THRESHOLD+ to round to 10)
         achievable = 1 <= required_average_grade <= 10
         
         return flask.jsonify({
@@ -341,7 +344,7 @@ def get_goal_message_multiple(raw_grade, display_grade, target_average, current_
         return f"Ottimo! La tua media attuale è già sopra l'obiettivo. Anche con voti minimi raggiungerai {target_average}."
     elif raw_grade > 10:
         return f"Purtroppo non è possibile raggiungere {target_average} con {grade_text}. Prova a impostare un obiettivo più realistico o aggiungere più voti!"
-    elif 9.75 <= raw_grade <= 10:
+    elif GRADE_ROUNDING_THRESHOLD <= raw_grade <= 10:
         return f"Ci vuole impegno! Ti servono {grade_text} da 10 (arrotondato da {round(raw_grade, 2)}) per raggiungere l'obiettivo."
     elif raw_grade >= 9:
         return f"Devi impegnarti molto: ti servono {grade_text} da almeno {round(raw_grade, 1)} per raggiungere l'obiettivo."
@@ -495,9 +498,9 @@ def calculate_goal_overall():
         required_sum = target_overall_average * (current_count + num_grades) - current_total
         required_average_grade = required_sum / num_grades
         
-        # Round grades >= 9.75 to 10 for display
+        # Round grades >= GRADE_ROUNDING_THRESHOLD to 10 for display
         display_grade = required_average_grade
-        if 9.75 <= required_average_grade <= 10:
+        if GRADE_ROUNDING_THRESHOLD <= required_average_grade <= 10:
             display_grade = 10
         
         required_grades = [display_grade] * num_grades
@@ -530,7 +533,7 @@ def get_goal_overall_message(raw_grade, display_grade, target_average, current_a
         return f"Ottimo! La tua media generale è già sopra l'obiettivo. Anche con voti minimi in {subject} raggiungerai {target_average}."
     elif raw_grade > 10:
         return f"Purtroppo non è possibile raggiungere {target_average} di media generale con {grade_text} in {subject}. Prova un obiettivo più realistico!"
-    elif 9.75 <= raw_grade <= 10:
+    elif GRADE_ROUNDING_THRESHOLD <= raw_grade <= 10:
         return f"Ci vuole impegno! Ti servono {grade_text} da 10 in {subject} (arrotondato da {round(raw_grade, 2)}) per raggiungere la media generale di {target_average}."
     elif raw_grade >= 9:
         return f"Devi impegnarti molto: ti servono {grade_text} da almeno {round(raw_grade, 1)} in {subject} per raggiungere la media generale di {target_average}."
