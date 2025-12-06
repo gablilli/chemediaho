@@ -67,7 +67,6 @@ app.config.update(
 
 @app.route('/manifest.json')
 def manifest():
-    # Use adaptive icons that work well in both light and dark themes
     manifest_data = {
         "name": "che media ho?",
         "short_name": "chemediaho?",
