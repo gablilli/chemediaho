@@ -664,10 +664,11 @@ def calculate_period_subject_suggestions(grades_avr, period, target_average, num
         sum_subject_grades = sum(subject_grades)
         
         # Calculate what grade is needed in this subject to reach the period target
-        # We need to find the grade X such that:
-        # (sum_of_all_period_grades - sum_of_this_subject_grades + X*num_grades) / (total_period_grades - num_current_subject_grades + num_grades) = target_average
-        # Solving for X (the required grade in this subject):
-        # X = (target_average * (total_period_grades - num_current_subject_grades + num_grades) - (sum_of_all_period_grades - sum_of_this_subject_grades)) / num_grades
+        # Formula derivation:
+        # Let X = required grade in this subject
+        # Target equation: (period_total_without_subject + X*num_grades) / (period_count_without_subject + num_grades) = target_average
+        # Solving for X:
+        # X = (target_average * (period_count_without_subject + num_grades) - period_total_without_subject) / num_grades
         
         # Remove this subject's current grades from the period total
         period_total_without_subject = current_period_total - sum_subject_grades
