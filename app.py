@@ -21,6 +21,16 @@ APP_VERSION = "1.7.6"
 GRADE_ROUNDING_THRESHOLD = 9.5  # Grades >= 9.5 can be rounded to 10
 DEFAULT_INCLUDE_BLUE_GRADES = False  # Default: don't include blue grades
 
+# Constants for intelligent subject suggestions
+# SUGGESTION_IMPACT_WEIGHT: Balances difficulty vs. impact in scoring
+#   - Lower values (e.g., 0.05) prioritize subjects with lower current averages
+#   - Higher values (e.g., 0.2) prioritize subjects with fewer grades (higher impact per grade)
+#   - 0.1 provides a good balance between both factors
+SUGGESTION_IMPACT_WEIGHT = 0.1
+# MAX_SUGGESTIONS: Number of subject suggestions to return
+#   - 5 provides enough variety without overwhelming the user
+MAX_SUGGESTIONS = 5
+
 # Load or generate a persistent SECRET_KEY
 SECRET_KEY_FILE = 'secret_key.txt'
 
@@ -399,23 +409,20 @@ def get_all_grades(grades_avr):
 
 @app.route('/calculate_goal_overall', methods=['POST'])
 def calculate_goal_overall():
-    """Calculate what grades are needed in a specific subject to reach a target overall average"""
+    """Calculate what grades are needed to reach a target overall average.
+    If subject is provided, calculates for that subject. Otherwise, suggests best subjects to focus on."""
     if 'grades_avr' not in flask.session:
         return flask.jsonify({'error': 'No active session'}), 401
     
     try:
         data = flask.request.get_json()
-        period = data.get('period')
-        subject = data.get('subject')
+        subject = data.get('subject')  # Optional now
         target_overall_average = float(data.get('target_average'))
         num_grades = int(data.get('num_grades', 1))
         
         grades_avr = flask.session['grades_avr']
         
         # Validate inputs
-        if period not in grades_avr or subject not in grades_avr[period]:
-            return flask.jsonify({'error': 'Materia o periodo non trovato'}), 400
-        
         if target_overall_average < 1 or target_overall_average > 10:
             return flask.jsonify({'error': 'La media target deve essere tra 1 e 10'}), 400
         
@@ -439,10 +446,34 @@ def calculate_goal_overall():
         current_count = len(all_grades_list)
         
         # Calculate required sum for new grades
-        # Formula: (current_total + required_sum) / (current_count + num_grades) = target_overall_average
-        # required_sum = target_overall_average * (current_count + num_grades) - current_total
         required_sum = target_overall_average * (current_count + num_grades) - current_total
         required_average_grade = required_sum / num_grades
+        
+        # If no subject specified, suggest the best subjects to focus on
+        if not subject:
+            suggestions = calculate_subject_suggestions(grades_avr, target_overall_average, num_grades, required_average_grade)
+            
+            return flask.jsonify({
+                'success': True,
+                'current_overall_average': round(current_overall_average, 2),
+                'target_average': target_overall_average,
+                'suggestions': suggestions,
+                'num_grades': num_grades,
+                'message': get_smart_suggestion_message(suggestions, target_overall_average, num_grades)
+            }), 200
+        
+        # If subject is specified, calculate for that specific subject
+        # Find the subject in any period
+        subject_found = False
+        for period in grades_avr:
+            if period == 'all_avr':
+                continue
+            if subject in grades_avr[period] and grades_avr[period][subject] != 'period_avr':
+                subject_found = True
+                break
+        
+        if not subject_found:
+            return flask.jsonify({'error': 'Materia non trovata'}), 400
         
         # Round grades >= GRADE_ROUNDING_THRESHOLD to 10 for display
         display_grade = required_average_grade
@@ -461,7 +492,6 @@ def calculate_goal_overall():
             'current_grades_count': current_count,
             'achievable': achievable,
             'subject': subject,
-            'period': period,
             'message': get_goal_overall_message(required_average_grade, display_grade, target_overall_average, current_overall_average, num_grades, subject)
         }), 200
         
@@ -470,6 +500,87 @@ def calculate_goal_overall():
     except Exception as e:
         logger.error(f"Error calculating overall goal: {e}", exc_info=True)
         return flask.jsonify({'error': 'Errore durante il calcolo'}), 500
+
+def calculate_subject_suggestions(grades_avr, target_overall_average, num_grades, baseline_required_grade):
+    """Calculate which subjects would be easiest to focus on to reach the target overall average.
+    Returns suggestions sorted by difficulty (easiest first).
+    
+    The algorithm uses a combined scoring approach:
+    - Difficulty: Lower current averages = easier targets (more room for improvement)
+    - Impact: Fewer existing grades = higher impact per new grade
+    - Combined score balances both factors to find optimal subjects
+    """
+    suggestions = []
+    
+    # Get all unique subjects across all periods
+    all_subjects = set()
+    for period in grades_avr:
+        if period == 'all_avr':
+            continue
+        for subject in grades_avr[period]:
+            if subject != 'period_avr':
+                all_subjects.add(subject)
+    
+    # For each subject, calculate what grade is needed and score difficulty
+    for subject in all_subjects:
+        # Get current average for this subject (across all periods)
+        subject_grades = []
+        for period in grades_avr:
+            if period == 'all_avr':
+                continue
+            if subject in grades_avr[period]:
+                subject_data = grades_avr[period][subject]
+                if 'grades' in subject_data:
+                    subject_grades.extend([g['decimalValue'] for g in subject_data['grades'] if not g.get('isBlue', False)])
+        
+        if not subject_grades:
+            continue
+        
+        current_subject_avg = sum(subject_grades) / len(subject_grades)
+        
+        # Difficulty calculation: measures how much "easier" a subject is to improve
+        # Formula: baseline_grade - (target - current_avg)
+        # - If current_avg is low, (target - current_avg) is high, making the result lower (easier)
+        # - Lower scores = easier targets
+        difficulty_score = baseline_required_grade - (target_overall_average - current_subject_avg)
+        
+        # Impact factor: subjects with fewer grades have more impact per new grade
+        impact_factor = 1.0 / (len(subject_grades) + num_grades) * 100
+        
+        # Combined score: prioritize subjects that are both easier AND have higher impact
+        combined_score = difficulty_score - (impact_factor * SUGGESTION_IMPACT_WEIGHT)
+        
+        suggestions.append({
+            'subject': subject,
+            'current_average': round(current_subject_avg, 2),
+            'required_grade': round(min(baseline_required_grade, 10), 2),
+            'num_current_grades': len(subject_grades),
+            'difficulty': round(combined_score, 2),
+            'impact': round(impact_factor, 2)
+        })
+    
+    # Sort by combined difficulty score (ascending) - lower = better target
+    suggestions.sort(key=lambda x: x['difficulty'])
+    
+    # Return top suggestions
+    return suggestions[:MAX_SUGGESTIONS]
+
+def get_smart_suggestion_message(suggestions, target_average, num_grades):
+    """Generate an intelligent message about which subjects to focus on"""
+    if not suggestions:
+        return "Nessuna materia disponibile per il calcolo."
+    
+    grade_text = "voto" if num_grades == 1 else f"{num_grades} voti"
+    
+    if suggestions[0]['required_grade'] > 10:
+        return f"⚠️ Raggiungere {target_average} di media generale è molto difficile. Serve impegno in tutte le materie!"
+    elif suggestions[0]['required_grade'] >= 9:
+        top_subject = suggestions[0]['subject']
+        return f"💪 Concentrati su {top_subject}! Servono {grade_text} da {suggestions[0]['required_grade']} per raggiungere la media generale di {target_average}."
+    elif suggestions[0]['required_grade'] >= 7:
+        return f"✅ Obiettivo raggiungibile! Le materie consigliate sono elencate sotto - concentrati su quelle con voti più bassi!"
+    else:
+        return f"🎉 Ottimo! Anche con {grade_text} modesti puoi raggiungere {target_average} di media generale!"
 
 def get_goal_overall_message(raw_grade, display_grade, target_average, current_average, num_grades, subject):
     """Generate message for overall average goal calculation"""

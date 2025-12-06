@@ -557,6 +557,35 @@
         font-weight: 600;
       }
 
+      .suggestion-item {
+        padding: 12px;
+        margin-bottom: 8px;
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.05);
+        border-left: 3px solid var(--accent);
+      }
+
+      .suggestion-item .subject-name {
+        font-weight: bold;
+        font-size: 16px;
+        color: var(--accent);
+        margin-bottom: 4px;
+      }
+
+      .suggestion-item .suggestion-details {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 13px;
+        opacity: 0.9;
+      }
+
+      .suggestion-item .required-grade {
+        font-size: 18px;
+        font-weight: bold;
+        color: var(--primary);
+      }
+
       @media (max-width: 768px) {
         .page-title {
           font-size: 24px;
@@ -824,23 +853,6 @@
           <div class="calculator-card">
             <form id="overallGoalForm">
               <div class="form-group">
-                <label class="form-label" for="periodSelectOverallGoal">Periodo</label>
-                <select class="form-select" id="periodSelectOverallGoal" required>
-                  <option value="">Seleziona un periodo...</option>
-                  {% for period in grades_avr.keys() if period != 'all_avr' %}
-                  <option value="{{ period }}">Periodo {{ period }}</option>
-                  {% endfor %}
-                </select>
-              </div>
-
-              <div class="form-group">
-                <label class="form-label" for="subjectSelectOverallGoal">Materia</label>
-                <select class="form-select" id="subjectSelectOverallGoal" required disabled>
-                  <option value="">Prima seleziona un periodo...</option>
-                </select>
-              </div>
-
-              <div class="form-group">
                 <label class="form-label" for="targetOverallAverage">Media Generale Target <span id="targetOverallRangeLabel">(1-10)</span></label>
                 <input 
                   type="number" 
@@ -857,7 +869,7 @@
 
               <div class="form-group">
                 <label class="form-label">
-                  Numero di voti da prendere nella materia selezionata
+                  Numero di voti da prendere
                   <span style="font-size: 12px; opacity: 0.7; font-weight: normal;">(per raggiungere la media generale)</span>
                 </label>
                 <div class="grades-input-container" id="overallGoalGradesContainer">
@@ -868,12 +880,45 @@
                 <button type="button" class="add-grade-btn" onclick="addOverallGoalGradeInput()">+ Aggiungi voto</button>
               </div>
 
+              <button type="button" class="calculate-btn" id="smartSuggestBtn" style="background: var(--accent); margin-bottom: 12px;" onclick="getSmartSuggestion()">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="10"/>
+                  <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
+                  <line x1="12" y1="17" x2="12.01" y2="17"/>
+                </svg>
+                🎯 Suggerimenti Intelligenti
+              </button>
+
+              <details style="margin-bottom: 16px;">
+                <summary style="cursor: pointer; font-weight: 600; color: var(--text); opacity: 0.8; font-size: 14px; padding: 8px 0;">
+                  ⚙️ Opzionale: Calcola per una materia specifica
+                </summary>
+                <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--secondary);">
+                  <div class="form-group">
+                    <label class="form-label" for="periodSelectOverallGoal">Periodo</label>
+                    <select class="form-select" id="periodSelectOverallGoal">
+                      <option value="">Tutte le materie</option>
+                      {% for period in grades_avr.keys() if period != 'all_avr' %}
+                      <option value="{{ period }}">Periodo {{ period }}</option>
+                      {% endfor %}
+                    </select>
+                  </div>
+
+                  <div class="form-group">
+                    <label class="form-label" for="subjectSelectOverallGoal">Materia</label>
+                    <select class="form-select" id="subjectSelectOverallGoal" disabled>
+                      <option value="">Prima seleziona un periodo...</option>
+                    </select>
+                  </div>
+                </div>
+              </details>
+
               <button type="submit" class="calculate-btn" id="calculateBtnOverallGoal">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <circle cx="12" cy="12" r="10"/>
                   <polyline points="12 6 12 12 16 14"/>
                 </svg>
-                Calcola
+                Calcola per Materia Specifica
               </button>
             </form>
           </div>
@@ -905,6 +950,32 @@
             </div>
           </div>
 
+          <!-- Smart Suggestions Result Card -->
+          <div class="result-card" id="resultCardSmartSuggestions" style="display: none;">
+            <div class="result-header">
+              <div class="result-icon" style="background: var(--accent);">
+                <span>🎯</span>
+              </div>
+              <h2 class="result-title">Suggerimenti Intelligenti</h2>
+            </div>
+            <div class="result-content">
+              <div class="result-row">
+                <span class="result-label">Media Generale Attuale</span>
+                <span class="result-value" id="currentOverallAverageSmart">-</span>
+              </div>
+              <div class="result-row">
+                <span class="result-label">Media Generale Target</span>
+                <span class="result-value" id="targetOverallAverageSmart">-</span>
+              </div>
+            </div>
+            <div id="suggestionsContainer" style="margin-top: 16px;">
+              <!-- Suggestions will be populated here -->
+            </div>
+            <div class="result-message" id="resultMessageSmart">
+              Completa il form per vedere i suggerimenti
+            </div>
+          </div>
+
           <!-- Info Box -->
           <div class="info-box">
             <div class="info-box-title">
@@ -916,9 +987,10 @@
               Come funziona?
             </div>
             <div class="info-box-content">
-              Calcola quali voti ti servono in una materia specifica per raggiungere una 
-              media generale target. La media generale include tutti i voti di tutte le materie 
-              in tutti i periodi. Utile per pianificare i tuoi obiettivi a lungo termine!
+              <strong>🎯 Suggerimenti Intelligenti:</strong> Ricevi automaticamente una lista delle materie 
+              su cui concentrarti per raggiungere più facilmente la tua media generale target!<br><br>
+              <strong>📊 Calcolo Specifico:</strong> Oppure calcola per una materia specifica se hai già in mente 
+              quale materia vuoi migliorare. La media generale include tutti i voti di tutte le materie in tutti i periodi.
             </div>
           </div>
         </div>
@@ -1161,6 +1233,11 @@
       // Helper function for Italian pluralization of "voto"
       function pluralizeVoto(count) {
         return count === 1 ? 'voto' : 'voti';
+      }
+
+      // Helper function for Italian pluralization of "voto attuale"
+      function pluralizeCurrentGrades(count) {
+        return count === 1 ? 'voto attuale' : 'voti attuali';
       }
 
       // Add grade input for goal calculator
@@ -1621,6 +1698,9 @@
         }
       }
 
+      // Initialize on page load
+      updateOverallTargetInput();
+
       // Handle period selection for Overall Predict
       const periodSelectOverallPredict = document.getElementById('periodSelectOverallPredict');
       const subjectSelectOverallPredict = document.getElementById('subjectSelectOverallPredict');
@@ -1649,20 +1729,21 @@
       const resultCardOverallGoal = document.getElementById('resultCardOverallGoal');
       const calculateBtnOverallGoal = document.getElementById('calculateBtnOverallGoal');
 
-      overallGoalForm.addEventListener('submit', async function(e) {
-        e.preventDefault();
-        
-        const period = periodSelectOverallGoal.value;
-        const subject = subjectSelectOverallGoal.value;
+      // Smart suggestion function
+      async function getSmartSuggestion() {
         const targetAverage = parseFloat(document.getElementById('targetOverallAverage').value);
 
-        if (!period || !subject || !targetAverage) {
-          showError('Compila tutti i campi!');
+        if (!targetAverage) {
+          showError('Inserisci una media target!');
           return;
         }
 
-        calculateBtnOverallGoal.disabled = true;
-        calculateBtnOverallGoal.textContent = 'Calcolo in corso...';
+        const smartBtn = document.getElementById('smartSuggestBtn');
+        smartBtn.disabled = true;
+        smartBtn.textContent = 'Calcolo in corso...';
+
+        // Hide other result cards
+        resultCardOverallGoal.classList.remove('show');
 
         try {
           const response = await fetch('/calculate_goal_overall', {
@@ -1671,7 +1752,108 @@
               'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-              period: period,
+              target_average: targetAverage,
+              num_grades: numGradesOverallGoal
+              // No subject - triggers smart suggestions
+            })
+          });
+
+          const data = await response.json();
+
+          if (response.ok && data.success) {
+            displaySmartSuggestions(data);
+          } else {
+            showError(data.error || 'Errore durante il calcolo');
+          }
+        } catch (error) {
+          showError('Errore di connessione');
+        } finally {
+          smartBtn.disabled = false;
+          smartBtn.innerHTML = `
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"/>
+              <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
+              <line x1="12" y1="17" x2="12.01" y2="17"/>
+            </svg>
+            🎯 Suggerimenti Intelligenti
+          `;
+        }
+      }
+
+      function displaySmartSuggestions(data) {
+        const resultCard = document.getElementById('resultCardSmartSuggestions');
+        
+        document.getElementById('currentOverallAverageSmart').textContent = data.current_overall_average.toFixed(2);
+        document.getElementById('targetOverallAverageSmart').textContent = data.target_average.toFixed(2);
+        
+        const suggestionsContainer = document.getElementById('suggestionsContainer');
+        suggestionsContainer.innerHTML = '';
+        
+        if (data.suggestions && data.suggestions.length > 0) {
+          const header = document.createElement('h3');
+          header.style.fontSize = '16px';
+          header.style.fontWeight = 'bold';
+          header.style.marginBottom = '12px';
+          header.style.color = 'var(--text)';
+          header.textContent = '📚 Materie Consigliate (ordinate per facilità):';
+          suggestionsContainer.appendChild(header);
+          
+          data.suggestions.forEach((suggestion, index) => {
+            const suggestionItem = document.createElement('div');
+            suggestionItem.className = 'suggestion-item';
+            
+            const rank = index + 1;
+            const emoji = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : '📌';
+            
+            suggestionItem.innerHTML = `
+              <div class="subject-name">${emoji} ${suggestion.subject}</div>
+              <div class="suggestion-details">
+                <span>Media attuale: ${suggestion.current_average}</span>
+                <span class="required-grade">Voto necessario: ${suggestion.required_grade}</span>
+              </div>
+              <div style="font-size: 12px; margin-top: 4px; opacity: 0.7;">
+                ${suggestion.num_current_grades} ${pluralizeCurrentGrades(suggestion.num_current_grades)}
+              </div>
+            `;
+            
+            suggestionsContainer.appendChild(suggestionItem);
+          });
+        } else {
+          suggestionsContainer.innerHTML = '<p style="opacity: 0.7;">Nessun suggerimento disponibile.</p>';
+        }
+        
+        document.getElementById('resultMessageSmart').textContent = data.message;
+        
+        resultCard.classList.add('show');
+        resultCard.style.display = 'block';
+        resultCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+
+      overallGoalForm.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const subject = subjectSelectOverallGoal.value;
+        const targetAverage = parseFloat(document.getElementById('targetOverallAverage').value);
+
+        if (!subject || !targetAverage) {
+          showError('Seleziona una materia e inserisci una media target!');
+          return;
+        }
+
+        calculateBtnOverallGoal.disabled = true;
+        calculateBtnOverallGoal.textContent = 'Calcolo in corso...';
+
+        // Hide smart suggestions card
+        document.getElementById('resultCardSmartSuggestions').classList.remove('show');
+        document.getElementById('resultCardSmartSuggestions').style.display = 'none';
+
+        try {
+          const response = await fetch('/calculate_goal_overall', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
               subject: subject,
               target_average: targetAverage,
               num_grades: numGradesOverallGoal
@@ -1694,7 +1876,7 @@
               <circle cx="12" cy="12" r="10"/>
               <polyline points="12 6 12 12 16 14"/>
             </svg>
-            Calcola
+            Calcola per Materia Specifica
           `;
         }
       });
