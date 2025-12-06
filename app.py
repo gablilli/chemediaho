@@ -662,15 +662,24 @@ def calculate_period_subject_suggestions(grades_avr, period, target_average, num
         current_subject_avg = sum(subject_grades) / len(subject_grades)
         
         # Calculate what grade is needed in this subject to reach the period target
-        # Formula: (all_period_grades + new_grades_in_subject) / (total_count + num_grades) = target_average
-        # Solving for required grade in this subject
-        required_sum_subject = target_average * (current_period_count + num_grades) - current_period_total
-        required_grade_subject = required_sum_subject / num_grades
+        # We need to find the grade X such that:
+        # (sum_of_all_period_grades - sum_of_this_subject_grades + X*num_grades) / (total_period_grades - num_current_subject_grades + num_grades) = target_average
+        # Solving for X (the required grade in this subject):
+        # X = (target_average * (total_period_grades - num_current_subject_grades + num_grades) - (sum_of_all_period_grades - sum_of_this_subject_grades)) / num_grades
         
-        # Difficulty calculation: measures how much "easier" a subject is to improve
-        # Formula: baseline_grade - (target - current_avg)
-        # - If current_avg is low, (target - current_avg) is high, making the result lower (easier)
-        # - Lower scores = easier targets
+        # Remove this subject's current grades from the period total
+        period_total_without_subject = current_period_total - sum(subject_grades)
+        period_count_without_subject = current_period_count - len(subject_grades)
+        
+        # Calculate required grade in this subject
+        required_grade_subject = (target_average * (period_count_without_subject + num_grades) - period_total_without_subject) / num_grades
+        
+        # Difficulty calculation: Lower scores = easier targets
+        # The formula considers two factors:
+        # 1. Gap to target (target - current_avg): Larger gaps make it harder
+        # 2. Baseline difficulty (baseline_required_grade): Overall difficulty level
+        # Combined: baseline_grade - gap_to_target
+        # Result: Subjects with low current averages get lower (easier) scores
         difficulty_score = baseline_required_grade - (target_average - current_subject_avg)
         
         # Impact factor: subjects with fewer grades have more impact per new grade
