@@ -660,6 +660,8 @@ def calculate_period_subject_suggestions(grades_avr, period, target_average, num
             continue
         
         current_subject_avg = sum(subject_grades) / len(subject_grades)
+        num_subject_grades = len(subject_grades)
+        sum_subject_grades = sum(subject_grades)
         
         # Calculate what grade is needed in this subject to reach the period target
         # We need to find the grade X such that:
@@ -668,8 +670,8 @@ def calculate_period_subject_suggestions(grades_avr, period, target_average, num
         # X = (target_average * (total_period_grades - num_current_subject_grades + num_grades) - (sum_of_all_period_grades - sum_of_this_subject_grades)) / num_grades
         
         # Remove this subject's current grades from the period total
-        period_total_without_subject = current_period_total - sum(subject_grades)
-        period_count_without_subject = current_period_count - len(subject_grades)
+        period_total_without_subject = current_period_total - sum_subject_grades
+        period_count_without_subject = current_period_count - num_subject_grades
         
         # Calculate required grade in this subject
         required_grade_subject = (target_average * (period_count_without_subject + num_grades) - period_total_without_subject) / num_grades
@@ -683,7 +685,7 @@ def calculate_period_subject_suggestions(grades_avr, period, target_average, num
         difficulty_score = baseline_required_grade - (target_average - current_subject_avg)
         
         # Impact factor: subjects with fewer grades have more impact per new grade
-        impact_factor = 1.0 / (len(subject_grades) + num_grades) * 100
+        impact_factor = 1.0 / (num_subject_grades + num_grades) * 100
         
         # Combined score: prioritize subjects that are both easier AND have higher impact
         combined_score = difficulty_score - (impact_factor * SUGGESTION_IMPACT_WEIGHT)
@@ -692,7 +694,7 @@ def calculate_period_subject_suggestions(grades_avr, period, target_average, num
             'subject': subject,
             'current_average': round(current_subject_avg, 2),
             'required_grade': round(min(required_grade_subject, 10), 2),
-            'num_current_grades': len(subject_grades),
+            'num_current_grades': num_subject_grades,
             'difficulty': round(combined_score, 2),
             'impact': round(impact_factor, 2)
         })
