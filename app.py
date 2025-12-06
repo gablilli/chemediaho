@@ -77,7 +77,32 @@ app.config.update(
 
 @app.route('/manifest.json')
 def manifest():
-    return flask.send_from_directory('static', 'manifest.json', mimetype='application/manifest+json')
+    manifest_data = {
+        "name": "che media ho?",
+        "short_name": "chemediaho?",
+        "description": "Visualizza la media dei voti di ClasseViva",
+        "start_url": "/",
+        "display": "standalone",
+        "background_color": "#130909",
+        "theme_color": "#f03333",
+        "orientation": "portrait",
+        "icons": [
+            {
+                "src": "/static/icons/icon-192.png",
+                "sizes": "192x192",
+                "type": "image/png",
+                "purpose": "any maskable"
+            },
+            {
+                "src": "/static/icons/icon-512.png",
+                "sizes": "512x512",
+                "type": "image/png",
+                "purpose": "any maskable"
+            }
+        ]
+    }
+    
+    return flask.jsonify(manifest_data)
 
 @app.route('/sw.js')
 def service_worker():
