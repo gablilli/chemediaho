@@ -25,10 +25,9 @@
         --primary: #f03333;
         --secondary: #7f2929;
         --accent: #c83737;
-        --excellent: #4caf50;
-        --good: #4facfe;
-        --pass: #ffa500;
-        --fail: #f03333;
+        --excellent: #4caf50;  /* Green for 6.5+ */
+        --pass: #ffa500;      /* Orange for 5.5-6.4 */
+        --fail: #f03333;      /* Red for <5.5 */
       }
 
       :root[data-theme="light"] {
@@ -37,10 +36,9 @@
         --primary: #f03333;
         --secondary: #f5cccc;
         --accent: #c83737;
-        --excellent: #4caf50;
-        --good: #4facfe;
-        --pass: #ffa500;
-        --fail: #f03333;
+        --excellent: #4caf50;  /* Green for 6.5+ */
+        --pass: #ffa500;      /* Orange for 5.5-6.4 */
+        --fail: #f03333;      /* Red for <5.5 */
       }
 
       body {
@@ -100,10 +98,6 @@
 
       .circle-grade.grade-excellent::before {
         background: var(--excellent);
-      }
-
-      .circle-grade.grade-good::before {
-        background: var(--good);
       }
 
       .circle-grade.grade-pass::before {
@@ -199,10 +193,6 @@
         border-left-color: var(--excellent);
       }
 
-      .subject-card.good {
-        border-left-color: var(--good);
-      }
-
       .subject-card.pass {
         border-left-color: var(--pass);
       }
@@ -258,10 +248,6 @@
 
       .grade-badge.excellent {
         background: var(--excellent);
-      }
-
-      .grade-badge.good {
-        background: var(--good);
       }
 
       .grade-badge.pass {
@@ -499,7 +485,7 @@
     <div class="header-section">
       <h1 class="page-title">I tuoi voti</h1>
       <div class="overall-average">
-        <div class="circle-grade {% if grades_avr['all_avr'] >= 8 %}grade-excellent{% elif grades_avr['all_avr'] >= 7 %}grade-good{% elif grades_avr['all_avr'] >= 6 %}grade-pass{% else %}grade-fail{% endif %}">
+        <div class="circle-grade {% if grades_avr['all_avr'] >= 6.5 %}grade-excellent{% elif grades_avr['all_avr'] >= 5.5 %}grade-pass{% else %}grade-fail{% endif %}">
           {{ grades_avr["all_avr"] | round(1) }}
         </div>
         <div class="grade-label">Media Generale</div>
@@ -512,7 +498,7 @@
         <div class="period-header">
           <h2 class="period-title">Periodo {{ period }}</h2>
           <div class="period-average">
-            <div class="circle-grade circle-grade-small {% if grades_avr[period]['period_avr'] >= 8 %}grade-excellent{% elif grades_avr[period]['period_avr'] >= 7 %}grade-good{% elif grades_avr[period]['period_avr'] >= 6 %}grade-pass{% else %}grade-fail{% endif %}">
+            <div class="circle-grade circle-grade-small {% if grades_avr[period]['period_avr'] >= 6.5 %}grade-excellent{% elif grades_avr[period]['period_avr'] >= 5.5 %}grade-pass{% else %}grade-fail{% endif %}">
               {{ grades_avr[period]['period_avr'] | round(1) }}
             </div>
           </div>
@@ -520,7 +506,7 @@
 
         {% for subject, data in subjects.items() %}
         {% if subject != 'period_avr' %}
-        <div class="subject-card {% if data.avr >= 8 %}excellent{% elif data.avr >= 7 %}good{% elif data.avr >= 6 %}pass{% else %}fail{% endif %}">
+        <div class="subject-card {% if data.avr >= 6.5 %}excellent{% elif data.avr >= 5.5 %}pass{% else %}fail{% endif %}">
           <div class="subject-header">
             <div class="subject-name">{{ subject }}</div>
             <div class="subject-average">{{ (data.avr) | round(1) }}</div>
@@ -529,7 +515,7 @@
             {% for grade in data.grades %}
             <button
               type="button"
-              class="grade-badge {% if grade.isBlue %}blue{% elif grade.decimalValue >= 8 %}excellent{% elif grade.decimalValue >= 7 %}good{% elif grade.decimalValue >= 6 %}pass{% else %}fail{% endif %}"
+              class="grade-badge {% if grade.isBlue %}blue{% elif grade.decimalValue >= 6.5 %}excellent{% elif grade.decimalValue >= 5.5 %}pass{% else %}fail{% endif %}"
               onclick='showModal({{ grade | tojson | safe }})'
             >
               {{ grade.decimalValue }}
