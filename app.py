@@ -218,6 +218,35 @@ def settings_page():
     """Display settings page"""
     return flask.render_template('settings.html', version=APP_VERSION)
 
+@app.route('/overall_average_detail')
+def overall_average_detail_page():
+    """Display overall average detail page with graphs and smart suggestions"""
+    if 'grades_avr' not in flask.session:
+        return flask.redirect('/')
+    
+    grades_avr = flask.session['grades_avr']
+    return flask.render_template('overall_average_detail.html', grades_avr=grades_avr)
+
+@app.route('/subject_detail/<subject_name>')
+def subject_detail_page(subject_name):
+    """Display subject detail page with graphs and smart suggestions"""
+    if 'grades_avr' not in flask.session:
+        return flask.redirect('/')
+    
+    grades_avr = flask.session['grades_avr']
+    
+    # Verify subject exists
+    subject_found = False
+    for period in grades_avr:
+        if period != 'all_avr' and subject_name in grades_avr[period]:
+            subject_found = True
+            break
+    
+    if not subject_found:
+        return flask.redirect('/grades')
+    
+    return flask.render_template('subject_detail.html', grades_avr=grades_avr, subject_name=subject_name)
+
 @app.route('/goal')
 def goal_page():
     """Display goal calculator page - requires active session"""
