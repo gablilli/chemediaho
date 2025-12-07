@@ -501,8 +501,8 @@
               'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-              target_average: targetAverage,
-              num_grades: 1  // Will be auto-calculated in future
+              target_average: targetAverage
+              // num_grades is now auto-calculated by backend
             })
           });
 
@@ -530,6 +530,17 @@
       function displaySmartSuggestions(data) {
         const suggestionsContainer = document.getElementById('suggestionsContainer');
         suggestionsContainer.innerHTML = '';
+        
+        // Add info about number of grades if auto-calculated
+        if (data.auto_calculated && data.num_grades) {
+          const infoBox = document.createElement('div');
+          infoBox.style.cssText = 'background: rgba(255,255,255,0.05); padding: 12px; border-radius: 8px; margin-bottom: 16px; font-size: 14px;';
+          infoBox.innerHTML = `
+            <strong>📊 Piano Ottimale</strong><br/>
+            Numero di voti consigliati: <strong>${data.num_grades}</strong> ${data.num_grades === 1 ? 'voto' : 'voti'}
+          `;
+          suggestionsContainer.appendChild(infoBox);
+        }
         
         if (data.suggestions && data.suggestions.length > 0) {
           const header = document.createElement('h3');

@@ -490,18 +490,15 @@ def calculate_goal_overall():
     
     try:
         data = flask.request.get_json()
-        subject = data.get('subject')  # Optional now
+        subject = data.get('subject')  # Optional
         target_overall_average = float(data.get('target_average'))
-        num_grades = int(data.get('num_grades', 1))
+        num_grades_input = data.get('num_grades')  # Optional - will auto-calculate if not provided
         
         grades_avr = flask.session['grades_avr']
         
         # Validate inputs
         if target_overall_average < 1 or target_overall_average > 10:
             return flask.jsonify({'error': 'La media target deve essere tra 1 e 10'}), 400
-        
-        if num_grades < 1 or num_grades > 10:
-            return flask.jsonify({'error': 'Il numero di voti deve essere tra 1 e 10'}), 400
         
         # Get current overall average
         current_overall_average = grades_avr.get('all_avr', 0)
@@ -519,6 +516,16 @@ def calculate_goal_overall():
         current_total = sum(all_grades_list)
         current_count = len(all_grades_list)
         
+        # Auto-calculate num_grades if not provided, otherwise use provided value
+        if num_grades_input is None:
+            num_grades, _ = calculate_optimal_grades_needed(current_total, current_count, target_overall_average)
+            auto_calculated = True
+        else:
+            num_grades = int(num_grades_input)
+            auto_calculated = False
+            if num_grades < 1 or num_grades > 10:
+                return flask.jsonify({'error': 'Il numero di voti deve essere tra 1 e 10'}), 400
+        
         # Calculate required sum for new grades
         required_sum = target_overall_average * (current_count + num_grades) - current_total
         required_average_grade = required_sum / num_grades
@@ -533,6 +540,7 @@ def calculate_goal_overall():
                 'target_average': target_overall_average,
                 'suggestions': suggestions,
                 'num_grades': num_grades,
+                'auto_calculated': auto_calculated,
                 'message': get_smart_suggestion_message(suggestions, target_overall_average, num_grades)
             }), 200
         
@@ -574,6 +582,44 @@ def calculate_goal_overall():
     except Exception as e:
         logger.error(f"Error calculating overall goal: {e}", exc_info=True)
         return flask.jsonify({'error': 'Errore durante il calcolo'}), 500
+
+def calculate_optimal_grades_needed(current_total, current_count, target_average):
+    """Calculate the optimal/minimum number of grades needed to reach target average.
+    
+    Uses a heuristic: assume we can get perfect 10s, calculate minimum grades needed.
+    Then provide a realistic plan with achievable grades.
+    """
+    # If already at or above target, no grades needed
+    if current_count > 0 and (current_total / current_count) >= target_average:
+        return 0, []
+    
+    # Calculate minimum grades needed assuming perfect 10s
+    # Formula: (current_total + 10*n) / (current_count + n) = target_average
+    # Solving for n: n = (current_total - target_average * current_count) / (target_average - 10)
+    
+    min_grades_needed = 1
+    if target_average < 10:
+        numerator = target_average * current_count - current_total
+        denominator = 10 - target_average
+        if denominator > 0:
+            min_grades_needed = max(1, int(numerator / denominator) + 1)
+    
+    # Cap at reasonable number
+    min_grades_needed = min(min_grades_needed, 5)
+    
+    # Calculate what grades are actually needed (realistic, not just 10s)
+    required_sum = target_average * (current_count + min_grades_needed) - current_total
+    required_average_grade = required_sum / min_grades_needed
+    
+    # If required grade is too high (>10), we need more grades at lower values
+    while required_average_grade > 10 and min_grades_needed < 10:
+        min_grades_needed += 1
+        required_sum = target_average * (current_count + min_grades_needed) - current_total
+        required_average_grade = required_sum / min_grades_needed
+    
+    grades_plan = [round(required_average_grade, 1)] * min_grades_needed
+    
+    return min_grades_needed, grades_plan
 
 def calculate_subject_suggestions(grades_avr, target_overall_average, num_grades, baseline_required_grade):
     """Calculate which subjects would be easiest to focus on to reach the target overall average.
