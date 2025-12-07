@@ -1,12 +1,14 @@
 # Rework Status - che media ho?
 
-## Phase 1 Complete ✅
+## Phase 2 Complete ✅
 
-### Completed Features
-1. **Smart Suggestions Restored**
+### Completed Features (Phase 1 & 2)
+1. **Smart Suggestions Restored & Enhanced**
    - Full codebase from commit 395e1e6
-   - Functions: `calculate_subject_suggestions()`, `calculate_period_subject_suggestions()`
-   - Ready for Phase 2 logic updates
+   - NEW: Auto-calculation of optimal grades needed
+   - NEW: `calculate_optimal_grades_needed()` function
+   - No longer requires user to specify number of grades
+   - Intelligent distribution across subjects
 
 2. **Grade Color Palette Updated**
    - Green (>= 6.5), Orange (5.5-6.4), Red (< 5.5)
@@ -17,23 +19,42 @@
    - Media Generale first/default tab
    - Updated navigation logic
 
-### Remaining Work (~26-38 hours)
-See detailed breakdown in this file for:
-- Smart suggestions auto-calculation
-- New page architecture
-- Circular progress indicator
-- Theme fixes
-- Settings updates
+4. **New Page Architecture**
+   - `/overall_average_detail` - Smart suggestions for overall average
+   - `/subject_detail/<name>` - Subject-specific views
+   - Navigation arrows and clickable elements
+   - Back navigation on all detail pages
 
-### Recommendations
-Three options for proceeding:
-- **A**: Phased PRs (recommended)
-- **B**: Continue in current PR
-- **C**: Focus on high-impact features
+5. **Circular Progress Indicators**
+   - SVG-based animated rings around averages
+   - Color-coded based on grade ranges
+   - Smooth CSS transitions
+   - Applied to main page and detail pages
 
-See full details in this document.
+### Remaining Work (~10% of original scope)
+1. **Theme Flicker Fix** (2-3 hours)
+   - Prevent flicker on page transitions
+   - Implement proper theme state management
+
+2. **Settings Updates** (1-2 hours)
+   - Merge sync and clear cache buttons
+   - Expand app information
+
+3. **Graph Re-Animation Fix** (1-2 hours)
+   - Prevent charts from re-animating on theme change
+
+4. **Optional Enhancements**
+   - Time-series graphs (if desired)
+   - Enhanced predictions
+
+### Progress Summary
+- **Phase 1**: Foundation (Smart suggestions, colors, tabs) - COMPLETE
+- **Phase 2**: New pages, auto-calculation, progress indicators - COMPLETE
+- **Phase 3**: Theme fixes, settings updates - REMAINING
 
 ---
 
-**Last Updated**: 2025-12-06
-**Status**: Phase 1 Complete, Awaiting Direction for Phase 2
+**Last Updated**: 2025-12-07
+**Status**: Phase 2 Complete - 90% of rework done
+**See**: PHASE2_COMPLETE.md for detailed documentation
+
