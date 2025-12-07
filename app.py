@@ -31,6 +31,9 @@ SUGGESTION_IMPACT_WEIGHT = 0.1
 #   - 5 provides enough variety without overwhelming the user
 MAX_SUGGESTIONS = 5
 
+# Allowed grade values for smart calculator
+ALLOWED_GRADES = [4, 4.25, 4.5, 4.75, 5, 5.25, 5.5, 5.75, 6, 6.25, 6.5, 6.75, 7, 7.25, 7.5, 7.75, 8, 8.25, 8.5, 8.75, 9, 9.25, 9.5, 9.75, 10]
+
 # Load or generate a persistent SECRET_KEY
 SECRET_KEY_FILE = 'secret_key.txt'
 
@@ -328,24 +331,22 @@ def calculate_goal():
         required_sum = target_average * (current_count + num_grades) - current_sum
         required_average_grade = required_sum / num_grades
         
-        # Round grades >= GRADE_ROUNDING_THRESHOLD to 10 for display purposes
-        display_grade = required_average_grade
-        if GRADE_ROUNDING_THRESHOLD <= required_average_grade <= 10:
-            display_grade = 10
+        # Round to nearest allowed grade
+        display_grade = round_to_allowed_grade(required_average_grade)
         
         # Note: For simplicity and clarity, we assume all required grades are the same
         # This gives the student a single, clear target to aim for across all tests
         required_grades = [display_grade] * num_grades
         
-        # Determine if it's achievable (use original value for comparison, but allow GRADE_ROUNDING_THRESHOLD+ to round to 10)
-        achievable = 1 <= required_average_grade <= 10
+        # Determine if it's achievable (use original value for comparison)
+        achievable = min(ALLOWED_GRADES) <= required_average_grade <= max(ALLOWED_GRADES)
         
         return flask.jsonify({
             'success': True,
             'current_average': round(current_average, 2),
             'target_average': target_average,
-            'required_grade': round(display_grade, 2),
-            'required_grades': [round(g, 2) for g in required_grades],
+            'required_grade': display_grade,
+            'required_grades': required_grades,
             'current_grades_count': current_count,
             'achievable': achievable,
             'subject': subject,
@@ -358,24 +359,35 @@ def calculate_goal():
         logger.error(f"Error calculating goal: {e}", exc_info=True)
         return flask.jsonify({'error': 'Errore durante il calcolo'}), 500
 
+def round_to_allowed_grade(grade):
+    """Round a grade to the nearest allowed value"""
+    if grade < min(ALLOWED_GRADES):
+        return min(ALLOWED_GRADES)
+    if grade > max(ALLOWED_GRADES):
+        return max(ALLOWED_GRADES)
+    
+    # Find the closest allowed grade
+    closest = min(ALLOWED_GRADES, key=lambda x: abs(x - grade))
+    return closest
+
 def get_goal_message_multiple(raw_grade, display_grade, target_average, current_average, num_grades):
     """Generate a helpful message based on the calculation result for multiple grades"""
-    grade_text = "voto" if num_grades == 1 else f"{num_grades} voti"
+    grade_text = "un voto" if num_grades == 1 else f"{num_grades} voti"
     
     if raw_grade < 1:
         return f"Ottimo! La tua media attuale è già sopra l'obiettivo. Anche con voti minimi raggiungerai {target_average}."
     elif raw_grade > 10:
         return f"Purtroppo non è possibile raggiungere {target_average} con {grade_text}. Prova a impostare un obiettivo più realistico o aggiungere più voti!"
     elif GRADE_ROUNDING_THRESHOLD <= raw_grade <= 10:
-        return f"Ci vuole impegno! Ti servono {grade_text} da 10 (arrotondato da {round(raw_grade, 2)}) per raggiungere l'obiettivo."
+        return f"Ci vuole impegno! Ti serve {grade_text} da 10 (arrotondato da {display_grade}) per raggiungere l'obiettivo."
     elif raw_grade >= 9:
-        return f"Devi impegnarti molto: ti servono {grade_text} da almeno {round(raw_grade, 1)} per raggiungere l'obiettivo."
+        return f"Devi impegnarti molto: ti serve {grade_text} da almeno {display_grade} per raggiungere l'obiettivo."
     elif raw_grade >= 7:
-        return f"È fattibile: Con {grade_text} da {round(raw_grade, 1)} puoi raggiungere {target_average}."
+        return f"È fattibile: Con {grade_text} da {display_grade} puoi raggiungere {target_average}."
     elif raw_grade >= 6:
-        return f"Ci sei quasi! {grade_text.capitalize()} da {round(raw_grade, 1)} ti permetteranno di raggiungere l'obiettivo."
+        return f"Ci sei quasi! {grade_text.capitalize()} da {display_grade} ti permetterà di raggiungere l'obiettivo."
     else:
-        return f"Ottimo! Anche con {grade_text} modesti ({round(raw_grade, 1)}) raggiungerai {target_average}."
+        return f"Ottimo! Anche con {grade_text} modesti ({display_grade}) raggiungerai {target_average}."
 
 @app.route('/predict_average', methods=['POST'])
 def predict_average():
@@ -445,7 +457,7 @@ def predict_average():
 
 def get_predict_message(change, predicted_average, num_grades):
     """Generate a helpful message based on the prediction result"""
-    grade_text = "voto" if num_grades == 1 else f"{num_grades} voti"
+    grade_text = "un voto" if num_grades == 1 else f"{num_grades} voti"
     
     if change > 0.5:
         return f"Ottimo! Con {grade_text} la tua media salirebbe a {round(predicted_average, 2)} ({change:+.2f})! 📈"
@@ -557,20 +569,18 @@ def calculate_goal_overall():
         if not subject_found:
             return flask.jsonify({'error': 'Materia non trovata'}), 400
         
-        # Round grades >= GRADE_ROUNDING_THRESHOLD to 10 for display
-        display_grade = required_average_grade
-        if GRADE_ROUNDING_THRESHOLD <= required_average_grade <= 10:
-            display_grade = 10
+        # Round to nearest allowed grade
+        display_grade = round_to_allowed_grade(required_average_grade)
         
         required_grades = [display_grade] * num_grades
-        achievable = 1 <= required_average_grade <= 10
+        achievable = min(ALLOWED_GRADES) <= required_average_grade <= max(ALLOWED_GRADES)
         
         return flask.jsonify({
             'success': True,
             'current_overall_average': round(current_overall_average, 2),
             'target_average': target_overall_average,
-            'required_grade': round(display_grade, 2),
-            'required_grades': [round(g, 2) for g in required_grades],
+            'required_grade': display_grade,
+            'required_grades': required_grades,
             'current_grades_count': current_count,
             'achievable': achievable,
             'subject': subject,
@@ -673,7 +683,7 @@ def calculate_subject_suggestions(grades_avr, target_overall_average, num_grades
         suggestions.append({
             'subject': subject,
             'current_average': round(current_subject_avg, 2),
-            'required_grade': round(min(baseline_required_grade, 10), 2),
+            'required_grade': round_to_allowed_grade(min(baseline_required_grade, 10)),
             'num_current_grades': len(subject_grades),
             'difficulty': round(combined_score, 2),
             'impact': round(impact_factor, 2)
@@ -769,7 +779,7 @@ def calculate_period_subject_suggestions(grades_avr, period, target_average, num
         suggestions.append({
             'subject': subject,
             'current_average': round(current_subject_avg, 2),
-            'required_grade': round(min(required_grade_subject, 10), 2),
+            'required_grade': round_to_allowed_grade(min(required_grade_subject, 10)),
             'num_current_grades': num_subject_grades,
             'difficulty': round(combined_score, 2),
             'impact': round(impact_factor, 2)
@@ -786,7 +796,7 @@ def get_period_suggestion_message(suggestions, target_average, num_grades, perio
     if not suggestions:
         return f"Nessuna materia disponibile per il periodo {period}."
     
-    grade_text = "voto" if num_grades == 1 else f"{num_grades} voti"
+    grade_text = "un voto" if num_grades == 1 else f"{num_grades} voti"
     
     if suggestions[0]['required_grade'] > 10:
         return f"⚠️ Raggiungere {target_average} nel periodo {period} è molto difficile. Serve impegno in tutte le materie!"
@@ -803,7 +813,7 @@ def get_smart_suggestion_message(suggestions, target_average, num_grades):
     if not suggestions:
         return "Nessuna materia disponibile per il calcolo."
     
-    grade_text = "voto" if num_grades == 1 else f"{num_grades} voti"
+    grade_text = "un voto" if num_grades == 1 else f"{num_grades} voti"
     
     if suggestions[0]['required_grade'] > 10:
         return f"⚠️ Raggiungere {target_average} di media generale è molto difficile. Serve impegno in tutte le materie!"
@@ -817,22 +827,22 @@ def get_smart_suggestion_message(suggestions, target_average, num_grades):
 
 def get_goal_overall_message(raw_grade, display_grade, target_average, current_average, num_grades, subject):
     """Generate message for overall average goal calculation"""
-    grade_text = "voto" if num_grades == 1 else f"{num_grades} voti"
+    grade_text = "un voto" if num_grades == 1 else f"{num_grades} voti"
     
-    if raw_grade < 1:
+    if raw_grade < min(ALLOWED_GRADES):
         return f"Ottimo! La tua media generale è già sopra l'obiettivo. Anche con voti minimi in {subject} raggiungerai {target_average}."
-    elif raw_grade > 10:
+    elif raw_grade > max(ALLOWED_GRADES):
         return f"Purtroppo non è possibile raggiungere {target_average} di media generale con {grade_text} in {subject}. Prova un obiettivo più realistico!"
-    elif GRADE_ROUNDING_THRESHOLD <= raw_grade <= 10:
-        return f"Ci vuole impegno! Ti servono {grade_text} da 10 in {subject} (arrotondato da {round(raw_grade, 2)}) per raggiungere la media generale di {target_average}."
+    elif display_grade >= 9.5:
+        return f"Ci vuole impegno! Ti serve {grade_text} da {display_grade} in {subject} per raggiungere la media generale di {target_average}."
     elif raw_grade >= 9:
-        return f"Devi impegnarti molto: ti servono {grade_text} da almeno {round(raw_grade, 1)} in {subject} per raggiungere la media generale di {target_average}."
+        return f"Devi impegnarti molto: ti serve {grade_text} da almeno {display_grade} in {subject} per raggiungere la media generale di {target_average}."
     elif raw_grade >= 7:
-        return f"È fattibile: Con {grade_text} da {round(raw_grade, 1)} in {subject} puoi raggiungere la media generale di {target_average}."
+        return f"È fattibile: Con {grade_text} da {display_grade} in {subject} puoi raggiungere la media generale di {target_average}."
     elif raw_grade >= 6:
-        return f"Ci sei quasi! {grade_text.capitalize()} da {round(raw_grade, 1)} in {subject} ti permetteranno di raggiungere la media generale di {target_average}."
+        return f"Ci sei quasi! {grade_text.capitalize()} da {display_grade} in {subject} ti permetterà di raggiungere la media generale di {target_average}."
     else:
-        return f"Ottimo! Anche con {grade_text} modesti ({round(raw_grade, 1)}) in {subject} raggiungerai la media generale di {target_average}."
+        return f"Ottimo! Anche con {grade_text} modesti ({display_grade}) in {subject} raggiungerai la media generale di {target_average}."
 
 @app.route('/predict_average_overall', methods=['POST'])
 def predict_average_overall():
@@ -898,7 +908,7 @@ def predict_average_overall():
 
 def get_predict_overall_message(change, predicted_average, num_grades, subject):
     """Generate a helpful message for overall average prediction"""
-    grade_text = "voto" if num_grades == 1 else f"{num_grades} voti"
+    grade_text = "un voto" if num_grades == 1 else f"{num_grades} voti"
     
     if change > 0.5:
         return f"Ottimo! Con {grade_text} in {subject} la tua media generale salirebbe a {round(predicted_average, 2)} ({change:+.2f})! 📈"

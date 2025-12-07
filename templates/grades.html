@@ -176,29 +176,19 @@
         top: 10px;
         left: 10px;
         overflow: hidden;
-      }
-
-      .circle-grade::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        right: 0;
-        bottom: 0;
-        left: 0;
-        opacity: 0.9;
-        z-index: -1;
+        background: var(--background);
       }
 
       .circle-grade.grade-excellent::before {
-        background: var(--excellent);
+        display: none;
       }
 
       .circle-grade.grade-pass::before {
-        background: var(--pass);
+        display: none;
       }
 
       .circle-grade.grade-fail::before {
-        background: var(--fail);
+        display: none;
       }
 
       .grade-label {
@@ -594,7 +584,9 @@
                 cx="60" 
                 cy="60" 
                 r="52"
-                stroke-dasharray="{{ (grades_avr['all_avr'] / 10 * 327) | round }}, 327"
+                stroke-dasharray="327"
+                stroke-dashoffset="327"
+                data-target="{{ (grades_avr['all_avr'] / 10 * 327) | round }}"
               ></circle>
             </svg>
             <div class="circle-grade {% if grades_avr['all_avr'] >= 6.5 %}grade-excellent{% elif grades_avr['all_avr'] >= 5.5 %}grade-pass{% else %}grade-fail{% endif %}">
@@ -616,11 +608,6 @@
       <div class="period-section">
         <div class="period-header">
           <h2 class="period-title">Periodo {{ period }}</h2>
-          <div class="period-average">
-            <div class="circle-grade circle-grade-small {% if grades_avr[period]['period_avr'] >= 6.5 %}grade-excellent{% elif grades_avr[period]['period_avr'] >= 5.5 %}grade-pass{% else %}grade-fail{% endif %}">
-              {{ grades_avr[period]['period_avr'] | round(1) }}
-            </div>
-          </div>
         </div>
 
         {% for subject, data in subjects.items() %}
@@ -656,22 +643,6 @@
           <polyline points="9 22 9 12 15 12 15 22"/>
         </svg>
         <span class="nav-label">Medie</span>
-      </a>
-      <a href="/charts" class="nav-item">
-        <svg class="nav-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <line x1="18" y1="20" x2="18" y2="10"/>
-          <line x1="12" y1="20" x2="12" y2="4"/>
-          <line x1="6" y1="20" x2="6" y2="14"/>
-        </svg>
-        <span class="nav-label">Grafici</span>
-      </a>
-      <a href="/goal" class="nav-item">
-        <svg class="nav-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="12" cy="12" r="10"/>
-          <circle cx="12" cy="12" r="6"/>
-          <circle cx="12" cy="12" r="2"/>
-        </svg>
-        <span class="nav-label">Calcoli</span>
       </a>
       <a href="/export" class="nav-item">
         <svg class="nav-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -748,6 +719,27 @@
         }
         
         localStorage.setItem('theme', newTheme);
+      });
+
+      // Animate circle progress bars
+      function animateCircle(circle) {
+        const target = parseFloat(circle.getAttribute('data-target'));
+        const circumference = 327; // 2 * PI * r where r = 52
+        
+        // Start from full (no progress)
+        circle.style.strokeDashoffset = circumference;
+        
+        // Animate to target
+        setTimeout(() => {
+          circle.style.strokeDashoffset = circumference - target;
+        }, 100);
+      }
+      
+      // Animate all circles on page load
+      document.addEventListener('DOMContentLoaded', () => {
+        document.querySelectorAll('.circle-progress-fill[data-target]').forEach(circle => {
+          animateCircle(circle);
+        });
       });
 
       function showModal(gradeData) {
