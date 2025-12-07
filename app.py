@@ -457,7 +457,7 @@ def predict_average():
 
 def get_predict_message(change, predicted_average, num_grades):
     """Generate a helpful message based on the prediction result"""
-    grade_text = "voto" if num_grades == 1 else f"{num_grades} voti"
+    grade_text = "un voto" if num_grades == 1 else f"{num_grades} voti"
     
     if change > 0.5:
         return f"Ottimo! Con {grade_text} la tua media salirebbe a {round(predicted_average, 2)} ({change:+.2f})! 📈"
@@ -796,7 +796,7 @@ def get_period_suggestion_message(suggestions, target_average, num_grades, perio
     if not suggestions:
         return f"Nessuna materia disponibile per il periodo {period}."
     
-    grade_text = "voto" if num_grades == 1 else f"{num_grades} voti"
+    grade_text = "un voto" if num_grades == 1 else f"{num_grades} voti"
     
     if suggestions[0]['required_grade'] > 10:
         return f"⚠️ Raggiungere {target_average} nel periodo {period} è molto difficile. Serve impegno in tutte le materie!"
@@ -813,7 +813,7 @@ def get_smart_suggestion_message(suggestions, target_average, num_grades):
     if not suggestions:
         return "Nessuna materia disponibile per il calcolo."
     
-    grade_text = "voto" if num_grades == 1 else f"{num_grades} voti"
+    grade_text = "un voto" if num_grades == 1 else f"{num_grades} voti"
     
     if suggestions[0]['required_grade'] > 10:
         return f"⚠️ Raggiungere {target_average} di media generale è molto difficile. Serve impegno in tutte le materie!"
@@ -908,7 +908,7 @@ def predict_average_overall():
 
 def get_predict_overall_message(change, predicted_average, num_grades, subject):
     """Generate a helpful message for overall average prediction"""
-    grade_text = "voto" if num_grades == 1 else f"{num_grades} voti"
+    grade_text = "un voto" if num_grades == 1 else f"{num_grades} voti"
     
     if change > 0.5:
         return f"Ottimo! Con {grade_text} in {subject} la tua media generale salirebbe a {round(predicted_average, 2)} ({change:+.2f})! 📈"
