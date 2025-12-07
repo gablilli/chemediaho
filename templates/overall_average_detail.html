@@ -463,9 +463,55 @@
       <!-- Predictions Section -->
       <div class="section-card">
         <div class="section-title">🔮 Previsioni</div>
-        <p style="opacity: 0.8;">
-          Questa sezione sarà disponibile a breve per simulare l'impatto di nuovi voti sulla tua media generale.
+        <p style="opacity: 0.8; margin-bottom: 16px;">
+          Simula l'impatto di nuovi voti sulla tua media generale.
         </p>
+        
+        <form id="predictionsForm">
+          <div class="form-group">
+            <label class="form-label" for="predictSubject">Materia</label>
+            <select class="form-select" id="predictSubject" required>
+              <option value="">Seleziona una materia...</option>
+              {% for period in grades_avr.keys() if period != 'all_avr' %}
+                {% for subject in grades_avr[period].keys() if subject != 'period_avr' %}
+                  <option value="{{ subject }}|{{ period }}">{{ subject }} (Periodo {{ period }})</option>
+                {% endfor %}
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="predictGrades">Voti Previsti (separati da virgola)</label>
+            <input 
+              type="text" 
+              class="form-input" 
+              id="predictGrades" 
+              placeholder="Es: 7.5, 8, 9"
+              required
+            />
+          </div>
+
+          <button type="submit" class="calculate-btn" id="predictBtn">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+            </svg>
+            Simula
+          </button>
+        </form>
+
+        <!-- Prediction Result Card -->
+        <div class="result-card" id="predictionResult">
+          <div class="result-header">
+            <div class="result-icon">
+              <span>🔮</span>
+            </div>
+            <div class="result-title">Risultato Simulazione</div>
+          </div>
+          <div class="result-content" id="predictionContent">
+            <!-- Prediction details will be populated here -->
+          </div>
+          <div class="result-message" id="predictionMessage"></div>
+        </div>
       </div>
     </div>
 
@@ -607,6 +653,90 @@
         setTimeout(() => {
           notification.classList.remove('show');
         }, 3000);
+      }
+
+      // Predictions form handler
+      const predictionsForm = document.getElementById('predictionsForm');
+      const predictBtn = document.getElementById('predictBtn');
+      const predictionResult = document.getElementById('predictionResult');
+
+      predictionsForm.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const subjectPeriod = document.getElementById('predictSubject').value.split('|');
+        const subject = subjectPeriod[0];
+        const period = subjectPeriod[1];
+        const gradesInput = document.getElementById('predictGrades').value;
+        
+        // Parse grades
+        const predictedGrades = gradesInput.split(',').map(g => parseFloat(g.trim())).filter(g => !isNaN(g) && g >= 1 && g <= 10);
+        
+        if (predictedGrades.length === 0) {
+          showError('Inserisci almeno un voto valido (1-10)!');
+          return;
+        }
+
+        predictBtn.disabled = true;
+        predictBtn.textContent = 'Calcolo in corso...';
+
+        try {
+          const response = await fetch('/predict_average_overall', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              period: period,
+              subject: subject,
+              predicted_grades: predictedGrades
+            })
+          });
+
+          const data = await response.json();
+
+          if (response.ok && data.success) {
+            displayPrediction(data);
+          } else {
+            showError(data.error || 'Errore durante il calcolo');
+          }
+        } catch (error) {
+          showError('Errore di connessione');
+        } finally {
+          predictBtn.disabled = false;
+          predictBtn.innerHTML = `
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+            </svg>
+            Simula
+          `;
+        }
+      });
+
+      function displayPrediction(data) {
+        const predictionContent = document.getElementById('predictionContent');
+        predictionContent.innerHTML = '';
+        
+        const rows = [
+          { label: 'Media Generale Attuale', value: data.current_overall_average },
+          { label: 'Media Generale Prevista', value: data.predicted_overall_average, highlight: true },
+          { label: 'Variazione', value: (data.change >= 0 ? '+' : '') + data.change, highlight: true },
+          { label: 'Materia', value: data.subject },
+          { label: 'Voti Simulati', value: data.num_predicted_grades }
+        ];
+        
+        rows.forEach(row => {
+          const rowEl = document.createElement('div');
+          rowEl.className = 'result-row';
+          rowEl.innerHTML = `
+            <span class="result-label">${row.label}</span>
+            <span class="result-value ${row.highlight ? 'highlight' : ''}">${row.value}</span>
+          `;
+          predictionContent.appendChild(rowEl);
+        });
+        
+        document.getElementById('predictionMessage').textContent = data.message || '';
+        predictionResult.classList.add('show');
+        predictionResult.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
       }
     </script>
   </body>
