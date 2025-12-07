@@ -21,6 +21,7 @@
         }
       })();
     </script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <style>
       * {
         margin: 0;
@@ -375,6 +376,17 @@
           transform: translate(-50%, 0);
         }
       }
+
+      /* Chart styles */
+      .chart-container {
+        position: relative;
+        height: 300px;
+        margin-top: 20px;
+      }
+
+      .chart-canvas {
+        max-height: 300px;
+      }
     </style>
   </head>
   <body>
@@ -522,6 +534,17 @@
           <div class="result-message" id="predictionMessage"></div>
         </div>
       </div>
+
+      <!-- Time Series Chart -->
+      <div class="section-card">
+        <div class="section-title">📈 Andamento Media Generale</div>
+        <p style="opacity: 0.8; margin-bottom: 16px;">
+          Visualizza l'evoluzione della media generale per periodo.
+        </p>
+        <div class="chart-container">
+          <canvas id="overallTrendChart" class="chart-canvas"></canvas>
+        </div>
+      </div>
     </div>
 
     <script>
@@ -545,10 +568,103 @@
         document.querySelectorAll('.circle-progress-fill-large[data-target]').forEach(circle => {
           animateCircle(circle);
         });
+        
+        // Create chart
+        createOverallTrendChart();
       });
 
       // Store grades data
       const gradesData = {{ grades_avr | tojson }};
+
+      // Create time series chart for overall average
+      function createOverallTrendChart() {
+        const ctx = document.getElementById('overallTrendChart');
+        if (!ctx) return;
+
+        // Get theme colors
+        const root = document.documentElement;
+        const isDark = root.getAttribute('data-theme') !== 'light';
+        const textColor = isDark ? '#f1e4e4' : '#1a0a0a';
+        const gridColor = isDark ? 'rgba(241, 228, 228, 0.1)' : 'rgba(26, 10, 10, 0.1)';
+
+        // Prepare data from all periods
+        const periods = Object.keys(gradesData).filter(key => key !== 'all_avr').sort();
+        const periodLabels = periods.map(p => `Periodo ${p}`);
+        const periodAverages = periods.map(p => gradesData[p].period_avr);
+
+        new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels: periodLabels,
+            datasets: [
+              {
+                label: 'Media per Periodo',
+                data: periodAverages,
+                borderColor: '#4facfe',
+                backgroundColor: 'rgba(79, 172, 254, 0.2)',
+                tension: 0.3,
+                fill: true,
+                pointRadius: 8,
+                pointHoverRadius: 10,
+                pointBackgroundColor: '#4facfe',
+                pointBorderColor: '#fff',
+                pointBorderWidth: 2
+              }
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                display: true,
+                position: 'top',
+                labels: {
+                  color: textColor,
+                  usePointStyle: true,
+                  padding: 15
+                }
+              },
+              tooltip: {
+                mode: 'index',
+                intersect: false,
+                backgroundColor: isDark ? 'rgba(19, 9, 9, 0.9)' : 'rgba(254, 248, 248, 0.9)',
+                titleColor: textColor,
+                bodyColor: textColor,
+                borderColor: gridColor,
+                borderWidth: 1,
+                callbacks: {
+                  label: function(context) {
+                    return `Media: ${context.parsed.y.toFixed(2)}`;
+                  }
+                }
+              }
+            },
+            scales: {
+              y: {
+                beginAtZero: false,
+                min: 3,
+                max: 10,
+                ticks: {
+                  color: textColor,
+                  stepSize: 0.5
+                },
+                grid: {
+                  color: gridColor
+                }
+              },
+              x: {
+                ticks: {
+                  color: textColor
+                },
+                grid: {
+                  color: gridColor
+                }
+              }
+            }
+          }
+        });
+      }
 
       // Goal persistence functions
       function saveGoal(targetAverage, resultData) {
