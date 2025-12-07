@@ -108,7 +108,7 @@
       }
 
       .info-card {
-        background: var(--secondary);
+        background: rgba(127, 41, 41, 0.15);
         border-radius: 12px;
         padding: 24px;
         margin-bottom: 20px;
@@ -152,7 +152,7 @@
       }
 
       .section-card {
-        background: var(--secondary);
+        background: rgba(127, 41, 41, 0.15);
         border-radius: 12px;
         padding: 24px;
         margin-bottom: 20px;
@@ -432,26 +432,28 @@
     <div class="container">
       <!-- Subject Info Card -->
       <div class="info-card">
-        {% set subject_average = 0 %}
-        {% set total_grades = 0 %}
+        {% set ns = namespace(subject_average=0, total_grades=0, first_found=False) %}
         {% for period in grades_avr.keys() if period != 'all_avr' %}
           {% if subject_name in grades_avr[period] %}
             {% set subject_data = grades_avr[period][subject_name] %}
-            {% set subject_average = subject_data.avr %}
-            {% set total_grades = total_grades + subject_data.grades|length %}
+            {% if not ns.first_found %}
+              {% set ns.subject_average = subject_data.avr %}
+              {% set ns.first_found = True %}
+            {% endif %}
+            {% set ns.total_grades = ns.total_grades + subject_data.grades|length %}
           {% endif %}
         {% endfor %}
         
         <div class="info-grid">
           <div class="info-item">
             <div class="info-label">Media</div>
-            <div class="info-value {% if subject_average >= 6.5 %}excellent{% elif subject_average >= 5.5 %}pass{% else %}fail{% endif %}">
-              {{ subject_average | round(1) }}
+            <div class="info-value {% if ns.subject_average >= 6.5 %}excellent{% elif ns.subject_average >= 5.5 %}pass{% else %}fail{% endif %}">
+              {{ ns.subject_average | round(1) }}
             </div>
           </div>
           <div class="info-item">
             <div class="info-label">Voti Totali</div>
-            <div class="info-value">{{ total_grades }}</div>
+            <div class="info-value">{{ ns.total_grades }}</div>
           </div>
         </div>
       </div>
@@ -463,9 +465,8 @@
           {% if subject_name in grades_avr[period] %}
             {% set subject_data = grades_avr[period][subject_name] %}
             <div style="margin-bottom: 20px;">
-              <span class="period-badge">Periodo {{ period }}</span>
-              <div style="margin-left: 8px; margin-top: 8px; opacity: 0.8;">
-                Media: {{ subject_data.avr | round(1) }}
+              <div style="text-align: center; margin-bottom: 12px;">
+                <span class="period-badge" style="font-size: 14px;">Periodo {{ period }}</span>
               </div>
               <div class="grades-list">
                 {% for grade in subject_data.grades %}

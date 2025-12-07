@@ -110,7 +110,7 @@
       .average-display {
         text-align: center;
         padding: 32px 20px;
-        background: var(--secondary);
+        background: rgba(127, 41, 41, 0.2);
         border-radius: 12px;
         margin-bottom: 24px;
       }
@@ -172,29 +172,19 @@
         top: 10px;
         left: 10px;
         overflow: hidden;
-      }
-
-      .circle-grade-large::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        right: 0;
-        bottom: 0;
-        left: 0;
-        opacity: 0.9;
-        z-index: -1;
+        background: var(--background);
       }
 
       .circle-grade-large.grade-excellent::before {
-        background: var(--excellent);
+        display: none;
       }
 
       .circle-grade-large.grade-pass::before {
-        background: var(--pass);
+        display: none;
       }
 
       .circle-grade-large.grade-fail::before {
-        background: var(--fail);
+        display: none;
       }
 
       .average-label {
@@ -205,7 +195,7 @@
       }
 
       .section-card {
-        background: var(--secondary);
+        background: rgba(127, 41, 41, 0.15);
         border-radius: 12px;
         padding: 24px;
         margin-bottom: 20px;
@@ -412,7 +402,9 @@
               cx="70" 
               cy="70" 
               r="60"
-              stroke-dasharray="{{ (grades_avr['all_avr'] / 10 * 377) | round }}, 377"
+              stroke-dasharray="377"
+              stroke-dashoffset="377"
+              data-target="{{ (grades_avr['all_avr'] / 10 * 377) | round }}"
             ></circle>
           </svg>
           <div class="circle-grade-large {% if grades_avr['all_avr'] >= 6.5 %}grade-excellent{% elif grades_avr['all_avr'] >= 5.5 %}grade-pass{% else %}grade-fail{% endif %}">
@@ -478,6 +470,28 @@
     </div>
 
     <script>
+      // Animate circle progress bars
+      function animateCircle(circle) {
+        const target = parseFloat(circle.getAttribute('data-target'));
+        const radius = parseFloat(circle.getAttribute('r'));
+        const circumference = 2 * Math.PI * radius;
+        
+        // Start from full (no progress)
+        circle.style.strokeDashoffset = circumference;
+        
+        // Animate to target
+        setTimeout(() => {
+          circle.style.strokeDashoffset = circumference - target;
+        }, 100);
+      }
+      
+      // Animate all circles on page load
+      document.addEventListener('DOMContentLoaded', () => {
+        document.querySelectorAll('.circle-progress-fill-large[data-target]').forEach(circle => {
+          animateCircle(circle);
+        });
+      });
+
       // Store grades data
       const gradesData = {{ grades_avr | tojson }};
 
