@@ -12,6 +12,15 @@
     <link rel="icon" type="image/png" sizes="192x192" href="/static/icons/icon-192.png" />
     <link rel="apple-touch-icon" href="/static/icons/icon-192.png" />
     <title>I tuoi voti - che media ho?</title>
+    <!-- Theme detection - prevent flicker -->
+    <script>
+      (function() {
+        const theme = localStorage.getItem('theme') || 'dark';
+        if (theme === 'light') {
+          document.documentElement.setAttribute('data-theme', 'light');
+        }
+      })();
+    </script>
     <style>
       * {
         margin: 0;
@@ -25,10 +34,9 @@
         --primary: #f03333;
         --secondary: #7f2929;
         --accent: #c83737;
-        --excellent: #4caf50;
-        --good: #4facfe;
-        --pass: #ffa500;
-        --fail: #f03333;
+        --excellent: #4caf50;  /* Green for 6.5+ */
+        --pass: #ffa500;      /* Orange for 5.5-6.4 */
+        --fail: #f03333;      /* Red for <5.5 */
       }
 
       :root[data-theme="light"] {
@@ -37,10 +45,9 @@
         --primary: #f03333;
         --secondary: #f5cccc;
         --accent: #c83737;
-        --excellent: #4caf50;
-        --good: #4facfe;
-        --pass: #ffa500;
-        --fail: #f03333;
+        --excellent: #4caf50;  /* Green for 6.5+ */
+        --pass: #ffa500;      /* Orange for 5.5-6.4 */
+        --fail: #f03333;      /* Red for <5.5 */
       }
 
       body {
@@ -70,6 +77,88 @@
         flex-direction: column;
         align-items: center;
         gap: 8px;
+        position: relative;
+      }
+
+      .overall-average-link {
+        display: inline-flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+        text-decoration: none;
+        cursor: pointer;
+        transition: transform 0.2s;
+      }
+
+      .overall-average-link:hover {
+        transform: scale(1.05);
+      }
+
+      .detail-arrow {
+        position: absolute;
+        top: 50%;
+        right: -40px;
+        transform: translateY(-50%);
+        width: 32px;
+        height: 32px;
+        background: var(--primary);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: background 0.2s;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+      }
+
+      .detail-arrow:hover {
+        background: var(--accent);
+      }
+
+      .detail-arrow svg {
+        width: 20px;
+        height: 20px;
+        fill: white;
+      }
+
+      .circle-grade-wrapper {
+        position: relative;
+        width: 120px;
+        height: 120px;
+      }
+
+      .circle-progress {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 120px;
+        height: 120px;
+        transform: rotate(-90deg);
+      }
+
+      .circle-progress-bg {
+        fill: none;
+        stroke: var(--secondary);
+        stroke-width: 8;
+      }
+
+      .circle-progress-fill {
+        fill: none;
+        stroke-width: 8;
+        stroke-linecap: round;
+        transition: stroke-dashoffset 1s ease, stroke 0.3s ease;
+      }
+
+      .circle-progress-fill.excellent {
+        stroke: var(--excellent);
+      }
+
+      .circle-progress-fill.pass {
+        stroke: var(--pass);
+      }
+
+      .circle-progress-fill.fail {
+        stroke: var(--fail);
       }
 
       .circle-grade {
@@ -83,7 +172,9 @@
         font-weight: bold;
         color: var(--text);
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
-        position: relative;
+        position: absolute;
+        top: 10px;
+        left: 10px;
         overflow: hidden;
       }
 
@@ -100,10 +191,6 @@
 
       .circle-grade.grade-excellent::before {
         background: var(--excellent);
-      }
-
-      .circle-grade.grade-good::before {
-        background: var(--good);
       }
 
       .circle-grade.grade-pass::before {
@@ -181,6 +268,13 @@
         padding: 16px;
         margin-bottom: 12px;
         border-left: 4px solid;
+        cursor: pointer;
+        transition: transform 0.2s, box-shadow 0.2s;
+      }
+
+      .subject-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
       }
 
       .subject-card::before {
@@ -197,10 +291,6 @@
 
       .subject-card.excellent {
         border-left-color: var(--excellent);
-      }
-
-      .subject-card.good {
-        border-left-color: var(--good);
       }
 
       .subject-card.pass {
@@ -258,10 +348,6 @@
 
       .grade-badge.excellent {
         background: var(--excellent);
-      }
-
-      .grade-badge.good {
-        background: var(--good);
       }
 
       .grade-badge.pass {
@@ -499,10 +585,29 @@
     <div class="header-section">
       <h1 class="page-title">I tuoi voti</h1>
       <div class="overall-average">
-        <div class="circle-grade {% if grades_avr['all_avr'] >= 8 %}grade-excellent{% elif grades_avr['all_avr'] >= 7 %}grade-good{% elif grades_avr['all_avr'] >= 6 %}grade-pass{% else %}grade-fail{% endif %}">
-          {{ grades_avr["all_avr"] | round(1) }}
-        </div>
-        <div class="grade-label">Media Generale</div>
+        <a href="/overall_average_detail" class="overall-average-link">
+          <div class="circle-grade-wrapper">
+            <svg class="circle-progress">
+              <circle class="circle-progress-bg" cx="60" cy="60" r="52"></circle>
+              <circle 
+                class="circle-progress-fill {% if grades_avr['all_avr'] >= 6.5 %}excellent{% elif grades_avr['all_avr'] >= 5.5 %}pass{% else %}fail{% endif %}"
+                cx="60" 
+                cy="60" 
+                r="52"
+                stroke-dasharray="{{ (grades_avr['all_avr'] / 10 * 327) | round }}, 327"
+              ></circle>
+            </svg>
+            <div class="circle-grade {% if grades_avr['all_avr'] >= 6.5 %}grade-excellent{% elif grades_avr['all_avr'] >= 5.5 %}grade-pass{% else %}grade-fail{% endif %}">
+              {{ grades_avr["all_avr"] | round(1) }}
+            </div>
+          </div>
+          <div class="grade-label">Media Generale</div>
+        </a>
+        <a href="/overall_average_detail" class="detail-arrow" title="Vedi dettagli">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"/>
+          </svg>
+        </a>
       </div>
     </div>
 
@@ -512,7 +617,7 @@
         <div class="period-header">
           <h2 class="period-title">Periodo {{ period }}</h2>
           <div class="period-average">
-            <div class="circle-grade circle-grade-small {% if grades_avr[period]['period_avr'] >= 8 %}grade-excellent{% elif grades_avr[period]['period_avr'] >= 7 %}grade-good{% elif grades_avr[period]['period_avr'] >= 6 %}grade-pass{% else %}grade-fail{% endif %}">
+            <div class="circle-grade circle-grade-small {% if grades_avr[period]['period_avr'] >= 6.5 %}grade-excellent{% elif grades_avr[period]['period_avr'] >= 5.5 %}grade-pass{% else %}grade-fail{% endif %}">
               {{ grades_avr[period]['period_avr'] | round(1) }}
             </div>
           </div>
@@ -520,7 +625,7 @@
 
         {% for subject, data in subjects.items() %}
         {% if subject != 'period_avr' %}
-        <div class="subject-card {% if data.avr >= 8 %}excellent{% elif data.avr >= 7 %}good{% elif data.avr >= 6 %}pass{% else %}fail{% endif %}">
+        <div class="subject-card {% if data.avr >= 6.5 %}excellent{% elif data.avr >= 5.5 %}pass{% else %}fail{% endif %}" onclick="window.location.href='/subject_detail/{{ subject | urlencode }}'">
           <div class="subject-header">
             <div class="subject-name">{{ subject }}</div>
             <div class="subject-average">{{ (data.avr) | round(1) }}</div>
@@ -529,8 +634,8 @@
             {% for grade in data.grades %}
             <button
               type="button"
-              class="grade-badge {% if grade.isBlue %}blue{% elif grade.decimalValue >= 8 %}excellent{% elif grade.decimalValue >= 7 %}good{% elif grade.decimalValue >= 6 %}pass{% else %}fail{% endif %}"
-              onclick='showModal({{ grade | tojson | safe }})'
+              class="grade-badge {% if grade.isBlue %}blue{% elif grade.decimalValue >= 6.5 %}excellent{% elif grade.decimalValue >= 5.5 %}pass{% else %}fail{% endif %}"
+              onclick='event.stopPropagation(); showModal({{ grade | tojson | safe }})'
             >
               {{ grade.decimalValue }}
             </button>

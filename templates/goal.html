@@ -12,6 +12,15 @@
     <link rel="icon" type="image/png" sizes="192x192" href="/static/icons/icon-192.png" />
     <link rel="apple-touch-icon" href="/static/icons/icon-192.png" />
     <title>Calcoli & Previsioni - che media ho?</title>
+    <!-- Theme detection - prevent flicker -->
+    <script>
+      (function() {
+        const theme = localStorage.getItem('theme') || 'dark';
+        if (theme === 'light') {
+          document.documentElement.setAttribute('data-theme', 'light');
+        }
+      })();
+    </script>
     <style>
       * {
         margin: 0;
@@ -625,19 +634,19 @@
     <div class="container">
       <!-- Tabs -->
       <div class="tabs-container">
-        <button class="tab-button active" onclick="switchTab('goal')">
+        <button class="tab-button active" onclick="switchTab('overall')">
+          🌍 Media Generale
+        </button>
+        <button class="tab-button" onclick="switchTab('goal')">
           🎯 Obiettivo
         </button>
         <button class="tab-button" onclick="switchTab('predict')">
           🔮 Previsione
         </button>
-        <button class="tab-button" onclick="switchTab('overall')">
-          🌍 Media Generale
-        </button>
       </div>
 
       <!-- Goal Calculator Tab -->
-      <div class="tab-content active" id="goalTab">
+      <div class="tab-content" id="goalTab">
         <!-- Calculator Form -->
         <div class="calculator-card">
           <form id="goalForm">
@@ -882,7 +891,7 @@
       </div>
 
       <!-- Overall Average Tab -->
-      <div class="tab-content" id="overallTab">
+      <div class="tab-content active" id="overallTab">
         <!-- Section Header for Goal -->
         <h3 style="font-size: 22px; font-weight: bold; color: var(--text); margin-bottom: 16px; padding-left: 8px; border-left: 4px solid var(--accent);">
           🎯 Calcola Obiettivo per Media Generale
@@ -1191,14 +1200,14 @@
         tabButtons.forEach(btn => btn.classList.remove('active'));
         
         // Show selected tab
-        if (tabName === 'goal') {
-          document.getElementById('goalTab').classList.add('active');
+        if (tabName === 'overall') {
+          document.getElementById('overallTab').classList.add('active');
           tabButtons[0].classList.add('active');
+        } else if (tabName === 'goal') {
+          document.getElementById('goalTab').classList.add('active');
+          tabButtons[1].classList.add('active');
         } else if (tabName === 'predict') {
           document.getElementById('predictTab').classList.add('active');
-          tabButtons[1].classList.add('active');
-        } else if (tabName === 'overall') {
-          document.getElementById('overallTab').classList.add('active');
           tabButtons[2].classList.add('active');
         }
       }

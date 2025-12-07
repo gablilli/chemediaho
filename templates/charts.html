@@ -12,6 +12,15 @@
     <link rel="icon" type="image/png" sizes="192x192" href="/static/icons/icon-192.png" />
     <link rel="apple-touch-icon" href="/static/icons/icon-192.png" />
     <title>Grafici - che media ho?</title>
+    <!-- Theme detection - prevent flicker -->
+    <script>
+      (function() {
+        const theme = localStorage.getItem('theme') || 'dark';
+        if (theme === 'light') {
+          document.documentElement.setAttribute('data-theme', 'light');
+        }
+      })();
+    </script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <style>
       * {
@@ -26,10 +35,9 @@
         --primary: #f03333;
         --secondary: #7f2929;
         --accent: #c83737;
-        --excellent: #4caf50;
-        --good: #4facfe;
-        --pass: #ffa500;
-        --fail: #f03333;
+        --excellent: #4caf50;  /* Green for 6.5+ */
+        --pass: #ffa500;      /* Orange for 5.5-6.4 */
+        --fail: #f03333;      /* Red for <5.5 */
       }
 
       :root[data-theme="light"] {
@@ -38,10 +46,9 @@
         --primary: #f03333;
         --secondary: #f5cccc;
         --accent: #c83737;
-        --excellent: #4caf50;
-        --good: #4facfe;
-        --pass: #ffa500;
-        --fail: #f03333;
+        --excellent: #4caf50;  /* Green for 6.5+ */
+        --pass: #ffa500;      /* Orange for 5.5-6.4 */
+        --fail: #f03333;      /* Red for <5.5 */
       }
 
       body {
@@ -739,11 +746,37 @@
       createSubjectChart(selectedSubjects);
       createAverageChart();
 
-      // Update charts when theme changes
+      // Update charts when theme changes - without re-animation
       themeToggle.addEventListener('click', () => {
+        // Wait for theme to be applied
         setTimeout(() => {
-          location.reload();
-        }, 100);
+          const isDark = !root.getAttribute('data-theme') || root.getAttribute('data-theme') === 'dark';
+          const textColor = isDark ? '#f1e4e4' : '#1a0a0a';
+          const gridColor = isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
+          
+          // Update subject chart colors without animation
+          if (subjectChart) {
+            subjectChart.options.scales.y.ticks.color = textColor;
+            subjectChart.options.scales.x.ticks.color = textColor;
+            subjectChart.options.scales.y.grid.color = gridColor;
+            subjectChart.options.scales.x.grid.color = gridColor;
+            subjectChart.options.plugins.legend.labels.color = textColor;
+            subjectChart.options.animation = false; // Disable animation for update
+            subjectChart.update('none'); // Update without animation
+            subjectChart.options.animation = { duration: 750, easing: 'easeInOutQuart' }; // Re-enable for future updates
+          }
+          
+          // Update average chart colors without animation
+          if (averageChart) {
+            averageChart.options.scales.y.ticks.color = textColor;
+            averageChart.options.scales.x.ticks.color = textColor;
+            averageChart.options.scales.y.grid.color = gridColor;
+            averageChart.options.scales.x.grid.color = gridColor;
+            averageChart.options.animation = false;
+            averageChart.update('none');
+            averageChart.options.animation = { duration: 750, easing: 'easeInOutQuart' };
+          }
+        }, 50);
       });
 
       // Handle logout from bottom nav
