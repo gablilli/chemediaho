@@ -421,6 +421,15 @@
           Scopri quali materie ti permetteranno di raggiungere la tua media target più facilmente.
         </p>
         
+        <!-- Saved Goal Display -->
+        <div id="savedGoalDisplay" style="display: none; background: rgba(76, 175, 80, 0.1); border-left: 4px solid var(--excellent); padding: 16px; border-radius: 8px; margin-bottom: 16px;">
+          <div style="font-weight: 600; margin-bottom: 8px;">🎯 Obiettivo Salvato</div>
+          <div id="savedGoalContent" style="font-size: 14px; opacity: 0.9;"></div>
+          <button onclick="clearSavedGoal()" style="margin-top: 12px; padding: 6px 12px; background: rgba(255, 255, 255, 0.1); border: none; border-radius: 6px; color: var(--text); cursor: pointer; font-size: 13px;">
+            Cancella Obiettivo
+          </button>
+        </div>
+        
         <form id="smartSuggestionsForm">
           <div class="form-group">
             <label class="form-label" for="targetAverage">Media Generale Target</label>
@@ -541,6 +550,52 @@
       // Store grades data
       const gradesData = {{ grades_avr | tojson }};
 
+      // Goal persistence functions
+      function saveGoal(targetAverage, resultData) {
+        const goal = {
+          targetAverage: targetAverage,
+          currentAverage: resultData.current_overall_average,
+          numGrades: resultData.num_grades,
+          timestamp: new Date().toISOString(),
+          suggestions: resultData.suggestions || []
+        };
+        localStorage.setItem('overallGoal', JSON.stringify(goal));
+        displaySavedGoal();
+      }
+
+      function loadSavedGoal() {
+        return JSON.parse(localStorage.getItem('overallGoal'));
+      }
+
+      function displaySavedGoal() {
+        const goal = loadSavedGoal();
+        const savedGoalDisplay = document.getElementById('savedGoalDisplay');
+        const savedGoalContent = document.getElementById('savedGoalContent');
+        
+        if (goal) {
+          const date = new Date(goal.timestamp).toLocaleDateString('it-IT');
+          const topSuggestion = goal.suggestions && goal.suggestions[0] ? goal.suggestions[0] : null;
+          savedGoalContent.innerHTML = `
+            <div style="margin-bottom: 4px;"><strong>Obiettivo:</strong> ${goal.targetAverage.toFixed(1)}</div>
+            <div style="margin-bottom: 4px;"><strong>Media attuale:</strong> ${goal.currentAverage.toFixed(2)}</div>
+            <div style="margin-bottom: 4px;"><strong>Voti necessari:</strong> ${goal.numGrades}</div>
+            ${topSuggestion ? `<div style="margin-bottom: 4px;"><strong>Materia consigliata:</strong> ${topSuggestion.subject} (voto ${topSuggestion.required_grade})</div>` : ''}
+            <div style="font-size: 12px; opacity: 0.7; margin-top: 8px;">Salvato il ${date}</div>
+          `;
+          savedGoalDisplay.style.display = 'block';
+        } else {
+          savedGoalDisplay.style.display = 'none';
+        }
+      }
+
+      function clearSavedGoal() {
+        localStorage.removeItem('overallGoal');
+        displaySavedGoal();
+      }
+
+      // Display saved goal on page load
+      displaySavedGoal();
+
       // Smart suggestions form handler
       const smartSuggestionsForm = document.getElementById('smartSuggestionsForm');
       const calculateBtn = document.getElementById('calculateBtn');
@@ -575,6 +630,8 @@
 
           if (response.ok && data.success) {
             displaySmartSuggestions(data);
+            // Save goal to localStorage
+            saveGoal(targetAverage, data);
           } else {
             showError(data.error || 'Errore durante il calcolo');
           }

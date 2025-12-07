@@ -491,6 +491,15 @@
           Calcola quale voto ti serve per raggiungere la media desiderata in questa materia.
         </p>
         
+        <!-- Saved Goal Display -->
+        <div id="savedGoalDisplay" style="display: none; background: rgba(76, 175, 80, 0.1); border-left: 4px solid var(--excellent); padding: 16px; border-radius: 8px; margin-bottom: 16px;">
+          <div style="font-weight: 600; margin-bottom: 8px;">🎯 Obiettivo Salvato</div>
+          <div id="savedGoalContent" style="font-size: 14px; opacity: 0.9;"></div>
+          <button onclick="clearSavedGoal()" style="margin-top: 12px; padding: 6px 12px; background: rgba(255, 255, 255, 0.1); border: none; border-radius: 6px; color: var(--text); cursor: pointer; font-size: 13px;">
+            Cancella Obiettivo
+          </button>
+        </div>
+        
         <form id="goalForm">
           <div class="form-group">
             <label class="form-label" for="periodSelect">Periodo</label>
@@ -623,6 +632,56 @@
       const gradesData = {{ grades_avr | tojson }};
       const subjectName = {{ subject_name | tojson }};
 
+      // Goal persistence functions
+      function saveGoal(subject, period, targetAverage, resultData) {
+        const goals = JSON.parse(localStorage.getItem('subjectGoals') || '{}');
+        goals[subject] = {
+          period: period,
+          targetAverage: targetAverage,
+          currentAverage: resultData.current_average,
+          requiredGrade: resultData.required_grade,
+          timestamp: new Date().toISOString(),
+          achievable: resultData.achievable
+        };
+        localStorage.setItem('subjectGoals', JSON.stringify(goals));
+        displaySavedGoal();
+      }
+
+      function loadSavedGoal() {
+        const goals = JSON.parse(localStorage.getItem('subjectGoals') || '{}');
+        return goals[subjectName];
+      }
+
+      function displaySavedGoal() {
+        const goal = loadSavedGoal();
+        const savedGoalDisplay = document.getElementById('savedGoalDisplay');
+        const savedGoalContent = document.getElementById('savedGoalContent');
+        
+        if (goal) {
+          const date = new Date(goal.timestamp).toLocaleDateString('it-IT');
+          savedGoalContent.innerHTML = `
+            <div style="margin-bottom: 4px;"><strong>Periodo:</strong> ${goal.period}</div>
+            <div style="margin-bottom: 4px;"><strong>Obiettivo:</strong> ${goal.targetAverage.toFixed(1)}</div>
+            <div style="margin-bottom: 4px;"><strong>Voto necessario:</strong> ${goal.requiredGrade.toFixed(2)}</div>
+            <div style="margin-bottom: 4px;"><strong>Media attuale:</strong> ${goal.currentAverage.toFixed(2)}</div>
+            <div style="font-size: 12px; opacity: 0.7; margin-top: 8px;">Salvato il ${date}</div>
+          `;
+          savedGoalDisplay.style.display = 'block';
+        } else {
+          savedGoalDisplay.style.display = 'none';
+        }
+      }
+
+      function clearSavedGoal() {
+        const goals = JSON.parse(localStorage.getItem('subjectGoals') || '{}');
+        delete goals[subjectName];
+        localStorage.setItem('subjectGoals', JSON.stringify(goals));
+        displaySavedGoal();
+      }
+
+      // Display saved goal on page load
+      displaySavedGoal();
+
       // Goal form handler
       const goalForm = document.getElementById('goalForm');
       const calculateBtn = document.getElementById('calculateBtn');
@@ -661,6 +720,8 @@
 
           if (response.ok && data.success) {
             displayResult(data);
+            // Save goal to localStorage
+            saveGoal(subjectName, period, targetAverage, data);
           } else {
             showError(data.error || 'Errore durante il calcolo');
           }
