@@ -478,10 +478,6 @@
     </div>
 
     <script>
-      // Theme management
-      const savedTheme = localStorage.getItem('theme') || 'dark';
-      document.documentElement.setAttribute('data-theme', savedTheme);
-
       // Store grades data
       const gradesData = {{ grades_avr | tojson }};
 
