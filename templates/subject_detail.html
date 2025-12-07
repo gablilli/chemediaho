@@ -652,6 +652,16 @@
         return goals[subjectName];
       }
 
+      // Helper to escape HTML special characters
+      function escapeHTML(str) {
+        return String(str)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#39;');
+      }
+
       function displaySavedGoal() {
         const goal = loadSavedGoal();
         const savedGoalDisplay = document.getElementById('savedGoalDisplay');
@@ -660,7 +670,7 @@
         if (goal) {
           const date = new Date(goal.timestamp).toLocaleDateString('it-IT');
           savedGoalContent.innerHTML = `
-            <div style="margin-bottom: 4px;"><strong>Periodo:</strong> ${goal.period}</div>
+            <div style="margin-bottom: 4px;"><strong>Periodo:</strong> ${escapeHTML(goal.period)}</div>
             <div style="margin-bottom: 4px;"><strong>Obiettivo:</strong> ${goal.targetAverage.toFixed(1)}</div>
             <div style="margin-bottom: 4px;"><strong>Voto necessario:</strong> ${goal.requiredGrade.toFixed(2)}</div>
             <div style="margin-bottom: 4px;"><strong>Media attuale:</strong> ${goal.currentAverage.toFixed(2)}</div>
