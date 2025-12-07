@@ -106,20 +106,63 @@
         margin-bottom: 24px;
       }
 
+      .circle-grade-wrapper-large {
+        position: relative;
+        width: 140px;
+        height: 140px;
+        display: inline-block;
+        margin-bottom: 16px;
+      }
+
+      .circle-progress-large {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 140px;
+        height: 140px;
+        transform: rotate(-90deg);
+      }
+
+      .circle-progress-bg-large {
+        fill: none;
+        stroke: var(--secondary);
+        stroke-width: 10;
+      }
+
+      .circle-progress-fill-large {
+        fill: none;
+        stroke-width: 10;
+        stroke-linecap: round;
+        transition: stroke-dashoffset 1.5s ease, stroke 0.3s ease;
+      }
+
+      .circle-progress-fill-large.excellent {
+        stroke: var(--excellent);
+      }
+
+      .circle-progress-fill-large.pass {
+        stroke: var(--pass);
+      }
+
+      .circle-progress-fill-large.fail {
+        stroke: var(--fail);
+      }
+
       .circle-grade-large {
         width: 120px;
         height: 120px;
         border-radius: 50%;
-        display: inline-flex;
+        display: flex;
         align-items: center;
         justify-content: center;
         font-size: 48px;
         font-weight: bold;
         color: var(--text);
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
-        position: relative;
+        position: absolute;
+        top: 10px;
+        left: 10px;
         overflow: hidden;
-        margin-bottom: 16px;
       }
 
       .circle-grade-large::before {
@@ -352,8 +395,20 @@
     <div class="container">
       <!-- Average Display -->
       <div class="average-display">
-        <div class="circle-grade-large {% if grades_avr['all_avr'] >= 6.5 %}grade-excellent{% elif grades_avr['all_avr'] >= 5.5 %}grade-pass{% else %}grade-fail{% endif %}">
-          {{ grades_avr["all_avr"] | round(1) }}
+        <div class="circle-grade-wrapper-large">
+          <svg class="circle-progress-large">
+            <circle class="circle-progress-bg-large" cx="70" cy="70" r="60"></circle>
+            <circle 
+              class="circle-progress-fill-large {% if grades_avr['all_avr'] >= 6.5 %}excellent{% elif grades_avr['all_avr'] >= 5.5 %}pass{% else %}fail{% endif %}"
+              cx="70" 
+              cy="70" 
+              r="60"
+              stroke-dasharray="{{ (grades_avr['all_avr'] / 10 * 377) | round }}, 377"
+            ></circle>
+          </svg>
+          <div class="circle-grade-large {% if grades_avr['all_avr'] >= 6.5 %}grade-excellent{% elif grades_avr['all_avr'] >= 5.5 %}grade-pass{% else %}grade-fail{% endif %}">
+            {{ grades_avr["all_avr"] | round(1) }}
+          </div>
         </div>
         <div class="average-label">Media Generale</div>
       </div>
