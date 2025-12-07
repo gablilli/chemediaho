@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="it">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#f03333" />
+    <meta name="description" content="Dettaglio materia" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="MediaHo" />
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/static/icons/icon-192.png" />
+    <link rel="apple-touch-icon" href="/static/icons/icon-192.png" />
+    <title>{{ subject_name }} - che media ho?</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      :root {
+        --text: #f1e4e4;
+        --background: #130909;
+        --primary: #f03333;
+        --secondary: #7f2929;
+        --accent: #c83737;
+        --excellent: #4caf50;
+        --pass: #ffa500;
+        --fail: #f03333;
+        --success: #4caf50;
+      }
+
+      :root[data-theme="light"] {
+        --text: #1a0a0a;
+        --background: #fef8f8;
+        --primary: #f03333;
+        --secondary: #f5cccc;
+        --accent: #c83737;
+        --excellent: #4caf50;
+        --pass: #ffa500;
+        --fail: #f03333;
+        --success: #4caf50;
+      }
+
+      body {
+        margin: 0;
+        padding: 0;
+        padding-bottom: 24px;
+        min-height: 100vh;
+        background: var(--background);
+        color: var(--text);
+        font-family: Arial, Helvetica, sans-serif;
+      }
+
+      .header-section {
+        background: var(--primary);
+        padding: 20px;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+      }
+
+      .back-button {
+        background: rgba(255, 255, 255, 0.2);
+        border: none;
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: background 0.2s;
+      }
+
+      .back-button:hover {
+        background: rgba(255, 255, 255, 0.3);
+      }
+
+      .back-button svg {
+        width: 24px;
+        height: 24px;
+        fill: white;
+      }
+
+      .header-title {
+        flex: 1;
+        color: white;
+        font-size: 22px;
+        font-weight: bold;
+      }
+
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 20px;
+      }
+
+      .info-card {
+        background: var(--secondary);
+        border-radius: 12px;
+        padding: 24px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+      }
+
+      .info-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 16px;
+        margin-bottom: 20px;
+      }
+
+      .info-item {
+        text-align: center;
+      }
+
+      .info-label {
+        font-size: 12px;
+        opacity: 0.7;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 8px;
+      }
+
+      .info-value {
+        font-size: 28px;
+        font-weight: bold;
+      }
+
+      .info-value.excellent {
+        color: var(--excellent);
+      }
+
+      .info-value.pass {
+        color: var(--pass);
+      }
+
+      .info-value.fail {
+        color: var(--fail);
+      }
+
+      .section-card {
+        background: var(--secondary);
+        border-radius: 12px;
+        padding: 24px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+      }
+
+      .section-title {
+        font-size: 20px;
+        font-weight: bold;
+        margin-bottom: 16px;
+        color: var(--text);
+      }
+
+      .grades-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-bottom: 16px;
+      }
+
+      .grade-badge {
+        padding: 8px 16px;
+        border-radius: 8px;
+        font-size: 16px;
+        font-weight: 600;
+        color: white;
+        border: none;
+        cursor: pointer;
+        transition: transform 0.2s;
+      }
+
+      .grade-badge:hover {
+        transform: scale(1.05);
+      }
+
+      .grade-badge.excellent {
+        background: var(--excellent);
+      }
+
+      .grade-badge.pass {
+        background: var(--pass);
+      }
+
+      .grade-badge.fail {
+        background: var(--fail);
+      }
+
+      .grade-badge.blue {
+        background: #2196F3;
+        border: 2px dashed rgba(255, 255, 255, 0.5);
+      }
+
+      .period-badge {
+        display: inline-block;
+        padding: 4px 12px;
+        border-radius: 12px;
+        font-size: 12px;
+        background: var(--accent);
+        color: white;
+        margin-bottom: 8px;
+      }
+
+      .form-group {
+        margin-bottom: 20px;
+      }
+
+      .form-label {
+        display: block;
+        font-size: 14px;
+        font-weight: 600;
+        margin-bottom: 8px;
+        color: var(--text);
+        opacity: 0.9;
+      }
+
+      .form-input, .form-select {
+        width: 100%;
+        padding: 12px 16px;
+        font-size: 16px;
+        border: 2px solid rgba(255, 255, 255, 0.1);
+        border-radius: 8px;
+        background: var(--background);
+        color: var(--text);
+        transition: border-color 0.2s;
+      }
+
+      .form-input:focus, .form-select:focus {
+        outline: none;
+        border-color: var(--primary);
+      }
+
+      .calculate-btn {
+        width: 100%;
+        padding: 14px 24px;
+        font-size: 16px;
+        font-weight: 600;
+        background: var(--primary);
+        color: white;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        transition: background 0.2s;
+      }
+
+      .calculate-btn:hover {
+        background: var(--accent);
+      }
+
+      .calculate-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+
+      .result-card {
+        background: var(--background);
+        border-radius: 12px;
+        padding: 20px;
+        margin-top: 20px;
+        display: none;
+      }
+
+      .result-card.show {
+        display: block;
+        animation: slideIn 0.3s ease;
+      }
+
+      @keyframes slideIn {
+        from {
+          opacity: 0;
+          transform: translateY(20px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .result-content {
+        margin-bottom: 16px;
+      }
+
+      .result-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 12px 0;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      }
+
+      .result-row:last-child {
+        border-bottom: none;
+      }
+
+      .result-label {
+        font-size: 14px;
+        opacity: 0.8;
+      }
+
+      .result-value {
+        font-size: 16px;
+        font-weight: 600;
+      }
+
+      .result-value.highlight {
+        color: var(--primary);
+        font-size: 20px;
+      }
+
+      .result-message {
+        margin-top: 16px;
+        padding: 12px;
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 8px;
+        text-align: center;
+        font-size: 14px;
+      }
+
+      .error-notification {
+        position: fixed;
+        top: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: var(--primary);
+        color: white;
+        padding: 16px 24px;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        z-index: 1000;
+        display: none;
+      }
+
+      .error-notification.show {
+        display: block;
+        animation: slideDown 0.3s ease;
+      }
+
+      @keyframes slideDown {
+        from {
+          opacity: 0;
+          transform: translate(-50%, -20px);
+        }
+        to {
+          opacity: 1;
+          transform: translate(-50%, 0);
+        }
+      }
+
+      .modal {
+        display: none;
+        position: fixed;
+        z-index: 1000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.7);
+      }
+
+      .modal-content {
+        background-color: var(--secondary);
+        margin: 15% auto;
+        padding: 24px;
+        border-radius: 12px;
+        width: 90%;
+        max-width: 400px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+      }
+
+      .close {
+        color: var(--text);
+        float: right;
+        font-size: 28px;
+        font-weight: bold;
+        cursor: pointer;
+        opacity: 0.7;
+      }
+
+      .close:hover {
+        opacity: 1;
+      }
+
+      .modal-header {
+        font-size: 20px;
+        font-weight: bold;
+        margin-bottom: 16px;
+      }
+
+      .modal-detail {
+        display: flex;
+        justify-content: space-between;
+        padding: 8px 0;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      }
+
+      .modal-detail:last-child {
+        border-bottom: none;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Header -->
+    <div class="header-section">
+      <button class="back-button" onclick="window.location.href='/grades'">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+          <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/>
+        </svg>
+      </button>
+      <div class="header-title">{{ subject_name }}</div>
+    </div>
+
+    <!-- Error Notification -->
+    <div class="error-notification" id="errorNotification"></div>
+
+    <div class="container">
+      <!-- Subject Info Card -->
+      <div class="info-card">
+        {% set subject_average = 0 %}
+        {% set total_grades = 0 %}
+        {% for period in grades_avr.keys() if period != 'all_avr' %}
+          {% if subject_name in grades_avr[period] %}
+            {% set subject_data = grades_avr[period][subject_name] %}
+            {% set subject_average = subject_data.avr %}
+            {% set total_grades = total_grades + subject_data.grades|length %}
+          {% endif %}
+        {% endfor %}
+        
+        <div class="info-grid">
+          <div class="info-item">
+            <div class="info-label">Media</div>
+            <div class="info-value {% if subject_average >= 6.5 %}excellent{% elif subject_average >= 5.5 %}pass{% else %}fail{% endif %}">
+              {{ subject_average | round(1) }}
+            </div>
+          </div>
+          <div class="info-item">
+            <div class="info-label">Voti Totali</div>
+            <div class="info-value">{{ total_grades }}</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Grades by Period -->
+      <div class="section-card">
+        <div class="section-title">📊 Voti per Periodo</div>
+        {% for period in grades_avr.keys() | sort if period != 'all_avr' %}
+          {% if subject_name in grades_avr[period] %}
+            {% set subject_data = grades_avr[period][subject_name] %}
+            <div style="margin-bottom: 20px;">
+              <span class="period-badge">Periodo {{ period }}</span>
+              <div style="margin-left: 8px; margin-top: 8px; opacity: 0.8;">
+                Media: {{ subject_data.avr | round(1) }}
+              </div>
+              <div class="grades-list">
+                {% for grade in subject_data.grades %}
+                  <button
+                    type="button"
+                    class="grade-badge {% if grade.isBlue %}blue{% elif grade.decimalValue >= 6.5 %}excellent{% elif grade.decimalValue >= 5.5 %}pass{% else %}fail{% endif %}"
+                    onclick='showModal({{ grade | tojson | safe }})'
+                  >
+                    {{ grade.decimalValue }}
+                  </button>
+                {% endfor %}
+              </div>
+            </div>
+          {% endif %}
+        {% endfor %}
+      </div>
+
+      <!-- Smart Suggestions Section -->
+      <div class="section-card">
+        <div class="section-title">🎯 Calcola Obiettivo</div>
+        <p style="opacity: 0.8; margin-bottom: 16px;">
+          Calcola quale voto ti serve per raggiungere la media desiderata in questa materia.
+        </p>
+        
+        <form id="goalForm">
+          <div class="form-group">
+            <label class="form-label" for="periodSelect">Periodo</label>
+            <select class="form-select" id="periodSelect" required>
+              <option value="">Seleziona un periodo...</option>
+              {% for period in grades_avr.keys() | sort if period != 'all_avr' %}
+                {% if subject_name in grades_avr[period] %}
+                  <option value="{{ period }}">Periodo {{ period }}</option>
+                {% endif %}
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="targetAverage">Media Target</label>
+            <input 
+              type="number" 
+              class="form-input" 
+              id="targetAverage" 
+              min="1" 
+              max="10" 
+              step="0.1" 
+              placeholder="Es: 7.5"
+              required
+            />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="numGrades">Numero di Voti</label>
+            <input 
+              type="number" 
+              class="form-input" 
+              id="numGrades" 
+              min="1" 
+              max="10" 
+              value="1"
+              required
+            />
+          </div>
+
+          <button type="submit" class="calculate-btn" id="calculateBtn">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"/>
+              <polyline points="12 6 12 12 16 14"/>
+            </svg>
+            Calcola
+          </button>
+        </form>
+
+        <!-- Result Card -->
+        <div class="result-card" id="resultCard">
+          <div class="result-content">
+            <div class="result-row">
+              <span class="result-label">Media Attuale</span>
+              <span class="result-value" id="currentAverage">-</span>
+            </div>
+            <div class="result-row">
+              <span class="result-label">Media Target</span>
+              <span class="result-value" id="targetAverageDisplay">-</span>
+            </div>
+            <div class="result-row">
+              <span class="result-label">Voti Necessari</span>
+              <span class="result-value highlight" id="requiredGrades">-</span>
+            </div>
+          </div>
+          <div class="result-message" id="resultMessage"></div>
+        </div>
+      </div>
+
+      <!-- Predictions Section -->
+      <div class="section-card">
+        <div class="section-title">🔮 Previsioni</div>
+        <p style="opacity: 0.8;">
+          Questa sezione sarà disponibile a breve per simulare l'impatto di nuovi voti sulla media di questa materia.
+        </p>
+      </div>
+    </div>
+
+    <!-- Grade Detail Modal -->
+    <div id="gradeModal" class="modal">
+      <div class="modal-content">
+        <span class="close" onclick="closeModal()">&times;</span>
+        <div class="modal-header">Dettagli Voto</div>
+        <div id="modalBody"></div>
+      </div>
+    </div>
+
+    <script>
+      // Theme management
+      const savedTheme = localStorage.getItem('theme') || 'dark';
+      document.documentElement.setAttribute('data-theme', savedTheme);
+
+      // Store grades data
+      const gradesData = {{ grades_avr | tojson }};
+      const subjectName = {{ subject_name | tojson }};
+
+      // Goal form handler
+      const goalForm = document.getElementById('goalForm');
+      const calculateBtn = document.getElementById('calculateBtn');
+      const resultCard = document.getElementById('resultCard');
+
+      goalForm.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const period = document.getElementById('periodSelect').value;
+        const targetAverage = parseFloat(document.getElementById('targetAverage').value);
+        const numGrades = parseInt(document.getElementById('numGrades').value);
+        
+        if (!period || !targetAverage || !numGrades) {
+          showError('Compila tutti i campi!');
+          return;
+        }
+
+        calculateBtn.disabled = true;
+        calculateBtn.textContent = 'Calcolo in corso...';
+
+        try {
+          const response = await fetch('/calculate_goal', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              period: period,
+              subject: subjectName,
+              target_average: targetAverage,
+              num_grades: numGrades
+            })
+          });
+
+          const data = await response.json();
+
+          if (response.ok && data.success) {
+            displayResult(data);
+          } else {
+            showError(data.error || 'Errore durante il calcolo');
+          }
+        } catch (error) {
+          showError('Errore di connessione');
+        } finally {
+          calculateBtn.disabled = false;
+          calculateBtn.innerHTML = `
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"/>
+              <polyline points="12 6 12 12 16 14"/>
+            </svg>
+            Calcola
+          `;
+        }
+      });
+
+      function displayResult(data) {
+        document.getElementById('currentAverage').textContent = data.current_average.toFixed(2);
+        document.getElementById('targetAverageDisplay').textContent = data.target_average.toFixed(2);
+        
+        if (data.required_grades && Array.isArray(data.required_grades)) {
+          document.getElementById('requiredGrades').textContent = data.required_grades.map(g => g.toFixed(2)).join(', ');
+        } else {
+          document.getElementById('requiredGrades').textContent = data.required_grade.toFixed(2);
+        }
+        
+        document.getElementById('resultMessage').textContent = data.message || '';
+        resultCard.classList.add('show');
+        resultCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+
+      function showModal(gradeData) {
+        const modal = document.getElementById('gradeModal');
+        const modalBody = document.getElementById('modalBody');
+        
+        let html = `
+          <div class="modal-detail">
+            <span>Voto</span>
+            <span style="font-weight: bold; font-size: 18px;">${gradeData.decimalValue}</span>
+          </div>
+          <div class="modal-detail">
+            <span>Descrizione</span>
+            <span>${gradeData.componentDesc || 'N/D'}</span>
+          </div>
+          <div class="modal-detail">
+            <span>Data</span>
+            <span>${gradeData.evtDate || 'N/D'}</span>
+          </div>
+        `;
+        
+        if (gradeData.notesForFamily) {
+          html += `
+            <div class="modal-detail">
+              <span>Note</span>
+              <span>${gradeData.notesForFamily}</span>
+            </div>
+          `;
+        }
+        
+        if (gradeData.isBlue) {
+          html += `
+            <div class="modal-detail">
+              <span>Tipo</span>
+              <span style="color: #2196F3;">Voto Blu</span>
+            </div>
+          `;
+        }
+        
+        modalBody.innerHTML = html;
+        modal.style.display = 'block';
+      }
+
+      function closeModal() {
+        document.getElementById('gradeModal').style.display = 'none';
+      }
+
+      window.onclick = function(event) {
+        const modal = document.getElementById('gradeModal');
+        if (event.target == modal) {
+          modal.style.display = 'none';
+        }
+      }
+
+      function showError(message) {
+        const notification = document.getElementById('errorNotification');
+        notification.textContent = message;
+        notification.classList.add('show');
+        
+        setTimeout(() => {
+          notification.classList.remove('show');
+        }, 3000);
+      }
+    </script>
+  </body>
+</html>
