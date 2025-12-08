@@ -267,8 +267,9 @@
 
       .result-card {
         background: var(--background);
+        border: 2px solid rgba(255, 255, 255, 0.1);
         border-radius: 12px;
-        padding: 20px;
+        padding: 24px;
         margin-top: 20px;
         display: none;
       }
@@ -314,10 +315,17 @@
       }
 
       .suggestion-item {
-        background: var(--secondary);
+        background: rgba(255, 255, 255, 0.05);
+        border-left: 3px solid var(--accent);
         padding: 16px;
         border-radius: 8px;
         margin-bottom: 12px;
+        transition: transform 0.2s, background 0.2s;
+      }
+
+      .suggestion-item:hover {
+        transform: translateX(4px);
+        background: rgba(255, 255, 255, 0.08);
       }
 
       .subject-name {
@@ -339,12 +347,13 @@
       }
 
       .result-message {
-        margin-top: 16px;
-        padding: 12px;
-        background: rgba(255, 255, 255, 0.05);
+        margin-top: 20px;
+        padding: 16px;
+        background: rgba(240, 51, 51, 0.1);
+        border-left: 4px solid var(--primary);
         border-radius: 8px;
-        text-align: center;
         font-size: 14px;
+        line-height: 1.6;
       }
 
       .error-notification {
@@ -375,6 +384,44 @@
           opacity: 1;
           transform: translate(-50%, 0);
         }
+      }
+
+      .result-content {
+        margin-bottom: 16px;
+      }
+
+      .result-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 16px;
+        margin-bottom: 8px;
+        background: rgba(255, 255, 255, 0.03);
+        border-radius: 8px;
+        border-left: 3px solid rgba(255, 255, 255, 0.2);
+      }
+
+      .result-row:last-child {
+        margin-bottom: 0;
+      }
+
+      .result-label {
+        font-size: 14px;
+        font-weight: 500;
+        opacity: 0.9;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        font-size: 12px;
+      }
+
+      .result-value {
+        font-size: 18px;
+        font-weight: 700;
+      }
+
+      .result-value.highlight {
+        color: var(--primary);
+        font-size: 24px;
       }
 
       /* Chart styles */
