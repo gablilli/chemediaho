@@ -1,6 +1,9 @@
 .header-section {
+  background: transparent;
+  display: block;
   text-align: center;
   padding: 32px 20px 24px;
+  box-shadow: none;
 }
 
 .page-title {
@@ -136,7 +139,7 @@
 
 /* Action Buttons */
 .action-btn {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
@@ -151,6 +154,7 @@
   transition: all 0.3s ease;
   font-family: inherit;
   min-width: 120px;
+  flex-shrink: 0;
 }
 
 .action-btn:hover {
