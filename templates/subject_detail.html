@@ -836,6 +836,7 @@
         const goal = loadSavedGoal();
         const savedGoalDisplay = document.getElementById('savedGoalDisplay');
         const savedGoalContent = document.getElementById('savedGoalContent');
+        const goalForm = document.getElementById('goalForm');
         
         if (goal) {
           const date = new Date(goal.timestamp).toLocaleDateString('it-IT');
@@ -847,8 +848,10 @@
             <div style="font-size: 12px; opacity: 0.7; margin-top: 8px;">Salvato il ${date}</div>
           `;
           savedGoalDisplay.style.display = 'block';
+          goalForm.style.display = 'none';
         } else {
           savedGoalDisplay.style.display = 'none';
+          goalForm.style.display = 'block';
         }
       }
 
