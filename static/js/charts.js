@@ -29,8 +29,8 @@ themeToggle.addEventListener('click', () => {
   localStorage.setItem('theme', newTheme);
 });
 
-// Get grades data from backend
-const gradesData = {{ grades_avr | tojson | safe }};
+// Get grades data from backend (injected by template)
+const gradesData = window.gradesData;
 
 // Chart.js configuration
 const isDark = root.getAttribute('data-theme') !== 'light';

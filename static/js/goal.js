@@ -1,5 +1,5 @@
-// Store grades data from server
-const gradesData = {{ grades_avr | tojson | safe }};
+// Store grades data from server (injected by template)
+const gradesData = window.gradesData;
 
 // Track number of grades for goal calculator
 let numGradesGoal = 1;

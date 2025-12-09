@@ -1,6 +1,6 @@
-// Store grades data
-const gradesData = {{ grades_avr | tojson }};
-const subjectName = {{ subject_name | tojson }};
+// Store grades data (injected by template)
+const gradesData = window.gradesData;
+const subjectName = window.subjectName;
 
 // Create time series chart for subject grades
 function createGradesTrendChart() {

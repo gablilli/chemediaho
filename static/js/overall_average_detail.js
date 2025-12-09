@@ -23,8 +23,8 @@ document.addEventListener('DOMContentLoaded', () => {
   createOverallTrendChart();
 });
 
-// Store grades data
-const gradesData = {{ grades_avr | tojson }};
+// Store grades data (injected by template)
+const gradesData = window.gradesData;
 
 // Create time series chart for overall average
 function createOverallTrendChart() {
