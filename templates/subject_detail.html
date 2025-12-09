@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#f03333" />
+    <meta name="theme-color" content="#c84444" />
     <meta name="description" content="Dettaglio materia" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -32,24 +32,24 @@
       :root {
         --text: #f1e4e4;
         --background: #130909;
-        --primary: #f03333;
+        --primary: #c84444;
         --secondary: #7f2929;
-        --accent: #c83737;
+        --accent: #d45555;
         --excellent: #4caf50;
         --pass: #ffa500;
-        --fail: #f03333;
+        --fail: #e74c3c;
         --success: #4caf50;
       }
 
       :root[data-theme="light"] {
         --text: #1a0a0a;
         --background: #fef8f8;
-        --primary: #f03333;
+        --primary: #c84444;
         --secondary: #f5cccc;
-        --accent: #c83737;
+        --accent: #d45555;
         --excellent: #4caf50;
         --pass: #ffa500;
-        --fail: #f03333;
+        --fail: #e74c3c;
         --success: #4caf50;
       }
 
@@ -836,6 +836,7 @@
         const goal = loadSavedGoal();
         const savedGoalDisplay = document.getElementById('savedGoalDisplay');
         const savedGoalContent = document.getElementById('savedGoalContent');
+        const goalForm = document.getElementById('goalForm');
         
         if (goal) {
           const date = new Date(goal.timestamp).toLocaleDateString('it-IT');
@@ -847,8 +848,10 @@
             <div style="font-size: 12px; opacity: 0.7; margin-top: 8px;">Salvato il ${date}</div>
           `;
           savedGoalDisplay.style.display = 'block';
+          goalForm.style.display = 'none';
         } else {
           savedGoalDisplay.style.display = 'none';
+          goalForm.style.display = 'block';
         }
       }
 

@@ -87,7 +87,7 @@ def manifest():
         "start_url": "/",
         "display": "standalone",
         "background_color": "#130909",
-        "theme_color": "#f03333",
+        "theme_color": "#c84444",
         "orientation": "portrait",
         "icons": [
             {
