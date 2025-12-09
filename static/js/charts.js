@@ -30,7 +30,7 @@ themeToggle.addEventListener('click', () => {
 });
 
 // Get grades data from backend (injected by template)
-const gradesData = window.gradesData;
+const gradesData = window.gradesData || [];
 
 // Chart.js configuration
 const isDark = root.getAttribute('data-theme') !== 'light';

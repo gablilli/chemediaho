@@ -1,5 +1,5 @@
 // Store grades data from server (injected by template)
-const gradesData = window.gradesData;
+const gradesData = window.gradesData || [];
 
 // Track number of grades for goal calculator
 let numGradesGoal = 1;

@@ -24,7 +24,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // Store grades data (injected by template)
-const gradesData = window.gradesData;
+const gradesData = window.gradesData || [];
 
 // Create time series chart for overall average
 function createOverallTrendChart() {

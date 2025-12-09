@@ -1,6 +1,6 @@
 // Store grades data (injected by template)
-const gradesData = window.gradesData;
-const subjectName = window.subjectName;
+const gradesData = window.gradesData || [];
+const subjectName = window.subjectName || '';
 
 // Create time series chart for subject grades
 function createGradesTrendChart() {
