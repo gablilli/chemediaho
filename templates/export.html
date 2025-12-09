@@ -12,6 +12,15 @@
     <link rel="icon" type="image/png" sizes="192x192" href="/static/icons/icon-192.png" />
     <link rel="apple-touch-icon" href="/static/icons/icon-192.png" />
     <title>Esporta - che media ho?</title>
+    <!-- Theme detection - prevent flicker -->
+    <script>
+      (function() {
+        const theme = localStorage.getItem('theme') || 'dark';
+        if (theme === 'light') {
+          document.documentElement.setAttribute('data-theme', 'light');
+        }
+      })();
+    </script>
     <link rel="stylesheet" href="/static/common.css" />
     <link rel="stylesheet" href="/static/css/export.css" />
   </head>
