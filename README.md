@@ -16,7 +16,7 @@ sysregister ui-based.
 
 ## 🏗️ architettura
 
-l'app utilizza un'architettura client-side per le chiamate API a classeviva:
+l'app utilizza un'architettura client-side per le chiamate API a classeviva, nel modo più trasparente possibile:
 
 * **browser utente** → chiama direttamente le API di classeviva
   - ✅ evita blocchi IP (usa l'IP residenziale dell'utente)
