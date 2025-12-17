@@ -868,9 +868,6 @@ function displayOverallPredictResult(data) {
 const logoutNavBtn = document.getElementById('logoutNavBtn');
 if (logoutNavBtn) {
   logoutNavBtn.addEventListener('click', () => {
-    // Clear client-side credentials
-    ClasseVivaAPI.clearCredentials();
-    
     // Submit logout form to backend
     const form = document.createElement('form');
     form.method = 'POST';

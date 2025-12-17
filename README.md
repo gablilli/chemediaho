@@ -16,20 +16,20 @@ sysregister ui-based.
 
 ## 🏗️ architettura
 
-l'app utilizza un'architettura client-side per le chiamate API a classeviva, nel modo più trasparente possibile:
+l'app utilizza un'architettura proxy per le chiamate API a classeviva:
 
-* **browser utente** → chiama direttamente le API di classeviva
-  - ✅ evita blocchi IP (usa l'IP residenziale dell'utente)
-  - ✅ deployabile ovunque (vercel, cloudflare, ecc.)
-  - ✅ nessun tunnel o proxy necessario
+* **browser utente** → comunica con il backend flask
+  - invia credenziali per il login
+  - richiede aggiornamento dei voti
+  - riceve dati elaborati
 
-* **backend flask** → gestisce solo:
+* **backend flask** → gestisce:
+  - proxy per le chiamate API a classeviva
   - autenticazione e sessioni
   - calcolo delle medie
   - storage e logica applicativa
-  - **NON** comunica mai con classeviva
 
-le credenziali sono memorizzate temporaneamente in `sessionStorage` (solo nel browser) e vengono eliminate al logout o alla chiusura del browser.
+le credenziali sono memorizzate solo nella sessione del server (cookie sicuro) e non vengono mai esposte al client.
 
 ## installazione
 
