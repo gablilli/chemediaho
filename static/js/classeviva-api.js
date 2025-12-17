@@ -1,6 +1,14 @@
 /**
  * ClasseViva API Client
  * Handles all direct communication with ClasseViva API from the browser
+ * 
+ * Architecture Notes:
+ * - All API calls are made directly from the user's browser to ClasseViva servers
+ * - This avoids IP blocking issues since requests come from residential IPs
+ * - Credentials are temporarily stored in sessionStorage (cleared on logout/close)
+ * - The backend never communicates with ClasseViva, only handles session management
+ * 
+ * CORS: ClasseViva API allows cross-origin requests (designed for mobile apps)
  */
 
 const ClasseVivaAPI = {
