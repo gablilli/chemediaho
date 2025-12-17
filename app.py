@@ -79,6 +79,10 @@ app.config.update(
 )
 
 # ClasseViva API helper functions
+def extract_student_id(user_id):
+    """Extract numeric student ID from user ID (e.g., 'G123456789P' -> '123456789')"""
+    return "".join(filter(str.isdigit, user_id))
+
 def classeviva_login(user_id, user_pass):
     """Login to ClasseViva API via backend proxy"""
     url = "https://web.spaggiari.eu/rest/v1/auth/login"
@@ -178,7 +182,7 @@ def login_route():
         flask.session['user_id'] = user_id
         
         # Extract student ID and fetch grades
-        student_id = "".join(filter(str.isdigit, user_id))
+        student_id = extract_student_id(user_id)
         grades = classeviva_get_grades(student_id, token)
         grades_avr = calculate_avr(grades)
         
@@ -227,7 +231,7 @@ def refresh_grades():
             return flask.jsonify({'error': 'User ID not found in session'}), 400
         
         user_id = flask.session['user_id']
-        student_id = "".join(filter(str.isdigit, user_id))
+        student_id = extract_student_id(user_id)
         
         # Fetch fresh grades from API via backend proxy
         grades = classeviva_get_grades(student_id, token)
