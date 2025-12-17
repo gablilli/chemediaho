@@ -14,6 +14,23 @@ sysregister ui-based.
 * 💾 **esportazione dati** - esporta i tuoi voti in formato CSV
 * 🆓 **codice 100% free and opensource con controllo codeql** - così puoi stare tranquillo.
 
+## 🏗️ architettura
+
+l'app utilizza un'architettura client-side per le chiamate API a classeviva:
+
+* **browser utente** → chiama direttamente le API di classeviva
+  - ✅ evita blocchi IP (usa l'IP residenziale dell'utente)
+  - ✅ deployabile ovunque (vercel, cloudflare, ecc.)
+  - ✅ nessun tunnel o proxy necessario
+
+* **backend flask** → gestisce solo:
+  - autenticazione e sessioni
+  - calcolo delle medie
+  - storage e logica applicativa
+  - **NON** comunica mai con classeviva
+
+le credenziali sono memorizzate temporaneamente in `sessionStorage` (solo nel browser) e vengono eliminate al logout o alla chiusura del browser.
+
 ## installazione
 
 ### prerequisiti
