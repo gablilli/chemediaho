@@ -1,3 +1,4 @@
+import requests
 import json
 import flask
 import os
@@ -77,6 +78,43 @@ app.config.update(
     SESSION_COOKIE_SAMESITE='Lax'  # CSRF protection
 )
 
+# ClasseViva API helper functions
+def classeviva_login(user_id, user_pass):
+    """Login to ClasseViva API via backend proxy"""
+    url = "https://web.spaggiari.eu/rest/v1/auth/login"
+    headers = {
+        "Content-Type": "application/json",
+        "Z-Dev-ApiKey": "Tg1NWEwNGIgIC0K",
+        "User-Agent": "CVVS/std/4.1.7 Android/10"
+    }
+    body = {
+        "ident": None,
+        "pass": user_pass,
+        "uid": user_id
+    }
+    
+    response = requests.post(url, headers=headers, data=json.dumps(body))
+    
+    if response.status_code == 200:
+        return response.json()
+    else:
+        response.raise_for_status()
+
+def classeviva_get_grades(student_id, token):
+    """Get grades from ClasseViva API via backend proxy"""
+    url = f"https://web.spaggiari.eu/rest/v1/students/{student_id}/grades"
+    headers = {
+        "Content-Type": "application/json",
+        "Z-Dev-ApiKey": "Tg1NWEwNGIgIC0K",
+        "User-Agent": "CVVS/std/4.1.7 Android/10",
+        "Z-Auth-Token": token
+    }
+    response = requests.get(url, headers=headers)
+    if response.status_code == 200:
+        return response.json()
+    else:
+        response.raise_for_status()
+
 @app.route('/manifest.json')
 def manifest():
     manifest_data = {
@@ -114,71 +152,99 @@ def service_worker():
 def home():
     return flask.render_template('login.html')
 
-@app.route('/login', methods=['GET'])
+@app.route('/login', methods=['GET', 'POST'])
 def login_route():
     """
-    Login route - redirects to home page.
-    Actual login is handled client-side via JavaScript calling ClasseViva API directly.
+    Login route - handles both GET and POST requests
+    GET: Redirects to home page
+    POST: Processes login via backend proxy to ClasseViva API
     """
-    return flask.redirect('/')
+    # Redirect GET requests to home page
+    if flask.request.method == 'GET':
+        return flask.redirect('/')
+    
+    user_id = flask.request.form['user_id']
+    user_pass = flask.request.form['user_pass']
+    
+    try:
+        login_response = classeviva_login(user_id, user_pass)
+        token = login_response.get("token")
+        
+        if not token:
+            return flask.render_template('login.html', error="Token non valido. Riprova.")
+        
+        # Store token and user_id in session
+        flask.session['token'] = token
+        flask.session['user_id'] = user_id
+        
+        # Extract student ID and fetch grades
+        student_id = "".join(filter(str.isdigit, user_id))
+        grades = classeviva_get_grades(student_id, token)
+        grades_avr = calculate_avr(grades)
+        
+        # Store grades in session for other pages
+        flask.session['grades_avr'] = grades_avr
+        
+        # Redirect to grades page
+        return flask.redirect('/grades')
+        
+    except requests.exceptions.HTTPError as e:
+        # Handle 422 and other HTTP errors with user-friendly message
+        if e.response.status_code == 422:
+            return flask.render_template('login.html', error="Credenziali non valide. Verifica User ID e Password.")
+        else:
+            return flask.render_template('login.html', error=f"Errore di autenticazione ({e.response.status_code}). Riprova.")
+    except requests.exceptions.RequestException as e:
+        return flask.render_template('login.html', error="Errore di connessione. Verifica la tua connessione internet.")
+    except Exception as e:
+        logger.error(f"Login error: {e}", exc_info=True)
+        return flask.render_template('login.html', error="Errore imprevisto. Riprova più tardi.")
 
 @app.route('/api/save_session', methods=['POST'])
 def save_session():
-    """Save grades data to session - receives data from client after client-side ClasseViva API call"""
-    try:
-        data = flask.request.get_json()
-        
-        if not data:
-            return flask.jsonify({'error': 'No data provided'}), 400
-        
-        user_id = data.get('user_id')
-        token = data.get('token')
-        grades = data.get('grades')
-        
-        if not user_id or not token or not grades:
-            return flask.jsonify({'error': 'Missing required data'}), 400
-        
-        # Calculate averages from grades data
-        grades_avr = calculate_avr(grades)
-        
-        # Store in session
-        flask.session['token'] = token
-        flask.session['user_id'] = user_id
-        flask.session['grades_avr'] = grades_avr
-        
-        return flask.jsonify({'success': True}), 200
-        
-    except Exception as e:
-        logger.error(f"Error saving session: {e}", exc_info=True)
-        return flask.jsonify({'error': 'Error saving session'}), 500
+    """
+    DEPRECATED: This endpoint is no longer used with backend proxy approach.
+    Kept for backward compatibility but returns error.
+    """
+    return flask.jsonify({'error': 'This endpoint is deprecated. Login is handled server-side.'}), 400
 
 @app.route('/logout', methods=['POST'])
 def logout():
     flask.session.clear()
-    # Note: Client-side JavaScript should also clear sessionStorage
     return flask.redirect('/')
 
 @app.route('/refresh_grades', methods=['POST'])
 def refresh_grades():
-    """Refresh grades - now expects grades data from client after client-side API call"""
+    """Refresh grades from ClasseViva API via backend proxy"""
     if 'token' not in flask.session:
         return flask.jsonify({'error': 'No active session'}), 401
     
     try:
-        data = flask.request.get_json()
+        token = flask.session['token']
         
-        if not data or 'grades' not in data:
-            return flask.jsonify({'error': 'No grades data provided'}), 400
+        # Extract student_id from session
+        if 'user_id' not in flask.session:
+            return flask.jsonify({'error': 'User ID not found in session'}), 400
         
-        grades = data['grades']
+        user_id = flask.session['user_id']
+        student_id = "".join(filter(str.isdigit, user_id))
         
-        # Calculate averages from fresh grades data
+        # Fetch fresh grades from API via backend proxy
+        grades = classeviva_get_grades(student_id, token)
         grades_avr = calculate_avr(grades)
         
         # Update session with fresh data
         flask.session['grades_avr'] = grades_avr
         
         return flask.jsonify({'success': True, 'message': 'Voti aggiornati'}), 200
+        
+    except requests.exceptions.HTTPError as e:
+        if e.response.status_code == 401:
+            # Token expired, redirect to login
+            flask.session.clear()
+            return flask.jsonify({'error': 'Sessione scaduta', 'redirect': '/'}), 401
+        logger.error(f"HTTP error refreshing grades: {e}", exc_info=True)
+        return flask.jsonify({'error': f'Errore durante l\'aggiornamento: {e.response.status_code}'}), 500
     except Exception as e:
         logger.error(f"Error refreshing grades: {e}", exc_info=True)
         return flask.jsonify({'error': 'Errore durante l\'aggiornamento dei voti'}), 500
@@ -960,9 +1026,8 @@ def export_csv():
 
 def calculate_avr(grades):
     """
-    Calculate averages from grades data.
-    This function is kept in the backend to maintain consistent calculation logic.
-    Data is now received from the client after client-side ClasseViva API calls.
+    Calculate averages from grades data received from ClasseViva API.
+    This function processes data fetched by the backend proxy.
     """
     grades_avr = {}
     for grade in grades["grades"]:

@@ -46,30 +46,14 @@ updateBtn.addEventListener('click', async () => {
   updateBtn.disabled = true;
   
   try {
-    // Step 1: Get credentials from sessionStorage
-    const credentials = ClasseVivaAPI.getStoredCredentials();
-    if (!credentials) {
-      showNotification('Sessione scaduta. Effettua nuovamente il login.', 'error');
-      setTimeout(() => {
-        window.location.href = '/';
-      }, 2000);
-      return;
-    }
-    
-    // Step 2: Fetch fresh grades from ClasseViva API
+    // Step 1: Call backend to refresh grades
     showNotification('Sincronizzazione voti in corso...', 'info');
-    const studentId = ClasseVivaAPI.extractStudentId(credentials.userId);
-    const gradesData = await ClasseVivaAPI.getGrades(studentId, credentials.token);
     
-    // Step 3: Send grades to backend
     const syncResponse = await fetch('/refresh_grades', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        grades: gradesData
-      })
+      }
     });
     
     const syncData = await syncResponse.json();
@@ -84,7 +68,7 @@ updateBtn.addEventListener('click', async () => {
     
     showNotification('Voti sincronizzati! Aggiornamento app...', 'success');
     
-    // Step 4: Clear cache
+    // Step 2: Clear cache
     await new Promise(resolve => setTimeout(resolve, 500));
     
     if ('caches' in window) {
@@ -92,7 +76,7 @@ updateBtn.addEventListener('click', async () => {
       await Promise.all(cacheNames.map(name => caches.delete(name)));
     }
     
-    // Step 5: Unregister Service Worker
+    // Step 3: Unregister Service Worker
     if ('serviceWorker' in navigator) {
       const registrations = await navigator.serviceWorker.getRegistrations();
       await Promise.all(registrations.map(reg => reg.unregister()));
@@ -107,12 +91,12 @@ updateBtn.addEventListener('click', async () => {
   } catch (error) {
     let errorMessage = 'Errore durante l\'aggiornamento';
     
-    if (error.message === 'TOKEN_EXPIRED') {
+    if (error.message.includes('Sessione scaduta') || error.message.includes('scaduta')) {
       errorMessage = 'Sessione scaduta. Effettua nuovamente il login.';
       setTimeout(() => {
         window.location.href = '/';
       }, 2000);
-    } else if (error.message === 'NETWORK_ERROR') {
+    } else if (error.message.includes('connessione')) {
       errorMessage = 'Errore di connessione. Verifica la tua rete.';
     }
     
@@ -126,9 +110,6 @@ updateBtn.addEventListener('click', async () => {
 const logoutNavBtn = document.getElementById('logoutNavBtn');
 if (logoutNavBtn) {
   logoutNavBtn.addEventListener('click', () => {
-    // Clear client-side credentials
-    ClasseVivaAPI.clearCredentials();
-    
     // Submit logout form to backend
     const form = document.createElement('form');
     form.method = 'POST';
