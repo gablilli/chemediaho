@@ -1017,8 +1017,14 @@ def get_grades(student_id, token):
 def calculate_avr(grades):
     grades_avr = {}
     for grade in grades["grades"]:
-        # Convert period to string to ensure consistent type for dictionary keys
-        period = str(grade["periodPos"])
+        # ClasseViva API returns periodPos values that are offset by 1 from user-facing period numbers
+        # For example, what users call "Periodo 2" has periodPos=3 in the API
+        # We decrement by 1 to match user expectations
+        period_pos = grade["periodPos"] - 1
+        # Safeguard: ensure period is at least 1
+        if period_pos < 1:
+            period_pos = 1
+        period = str(period_pos)
         # Always skip grades without a decimal value
         if grade["decimalValue"] is None:
             continue
