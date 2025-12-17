@@ -114,10 +114,12 @@ def service_worker():
 def home():
     return flask.render_template('login.html')
 
-@app.route('/login', methods=['GET', 'POST'])
+@app.route('/login', methods=['GET'])
 def login_route():
-    # All requests redirect to home page now
-    # Login is handled entirely on the client-side
+    """
+    Login route - redirects to home page.
+    Actual login is handled client-side via JavaScript calling ClasseViva API directly.
+    """
     return flask.redirect('/')
 
 @app.route('/api/save_session', methods=['POST'])

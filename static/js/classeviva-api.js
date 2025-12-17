@@ -13,6 +13,8 @@
 
 const ClasseVivaAPI = {
   BASE_URL: 'https://web.spaggiari.eu/rest/v1',
+  // API Key is intentionally visible - ClasseViva API is designed for mobile apps
+  // where this key would be embedded in the app and visible through reverse engineering
   API_KEY: 'Tg1NWEwNGIgIC0K',
   USER_AGENT: 'CVVS/std/4.1.7 Android/10',
 
