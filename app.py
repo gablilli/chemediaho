@@ -1,4 +1,3 @@
-import requests
 import json
 import flask
 import os
@@ -117,77 +116,69 @@ def home():
 
 @app.route('/login', methods=['GET', 'POST'])
 def login_route():
-    # Redirect GET requests to home page
-    if flask.request.method == 'GET':
-        return flask.redirect('/')
-    
-    user_id = flask.request.form['user_id']
-    user_pass = flask.request.form['user_pass']
-    
+    # All requests redirect to home page now
+    # Login is handled entirely on the client-side
+    return flask.redirect('/')
+
+@app.route('/api/save_session', methods=['POST'])
+def save_session():
+    """Save grades data to session - receives data from client after client-side ClasseViva API call"""
     try:
-        login_response = login(user_id, user_pass)
-        token = login_response["token"]
-        if token is None or token == "":
-            return flask.render_template('login.html', error="Token non valido. Riprova.")
+        data = flask.request.get_json()
         
-        # Store token and user_id in session
+        if not data:
+            return flask.jsonify({'error': 'No data provided'}), 400
+        
+        user_id = data.get('user_id')
+        token = data.get('token')
+        grades = data.get('grades')
+        
+        if not user_id or not token or not grades:
+            return flask.jsonify({'error': 'Missing required data'}), 400
+        
+        # Calculate averages from grades data
+        grades_avr = calculate_avr(grades)
+        
+        # Store in session
         flask.session['token'] = token
         flask.session['user_id'] = user_id
-        
-        student_id = "".join(filter(str.isdigit, user_id))
-        grades_avr = calculate_avr(get_grades(student_id, token))
-        
-        # Store grades in session for other pages
         flask.session['grades_avr'] = grades_avr
         
-        # Redirect to grades page instead of rendering template
-        return flask.redirect('/grades')
-    except requests.exceptions.HTTPError as e:
-        # Handle 422 and other HTTP errors with user-friendly message
-        if e.response.status_code == 422:
-            return flask.render_template('login.html', error="Credenziali non valide. Verifica User ID e Password.")
-        else:
-            return flask.render_template('login.html', error=f"Errore di autenticazione ({e.response.status_code}). Riprova.")
-    except requests.exceptions.RequestException as e:
-        return flask.render_template('login.html', error="Errore di connessione. Verifica la tua connessione internet.")
+        return flask.jsonify({'success': True}), 200
+        
     except Exception as e:
-        return flask.render_template('login.html', error="Errore imprevisto. Riprova più tardi.")
+        logger.error(f"Error saving session: {e}", exc_info=True)
+        return flask.jsonify({'error': 'Error saving session'}), 500
 
 @app.route('/logout', methods=['POST'])
 def logout():
     flask.session.clear()
+    # Note: Client-side JavaScript should also clear sessionStorage
     return flask.redirect('/')
 
 @app.route('/refresh_grades', methods=['POST'])
 def refresh_grades():
-    """Refresh grades from ClasseViva API"""
+    """Refresh grades - now expects grades data from client after client-side API call"""
     if 'token' not in flask.session:
         return flask.jsonify({'error': 'No active session'}), 401
     
     try:
-        token = flask.session['token']
-        # Extract student_id from session or regenerate from stored user_id
-        # We need to store user_id during login to use it here
-        if 'user_id' not in flask.session:
-            return flask.jsonify({'error': 'User ID not found in session'}), 400
+        data = flask.request.get_json()
         
-        user_id = flask.session['user_id']
-        student_id = "".join(filter(str.isdigit, user_id))
+        if not data or 'grades' not in data:
+            return flask.jsonify({'error': 'No grades data provided'}), 400
         
-        # Fetch fresh grades from API - take all grades as-is without filtering
-        grades_avr = calculate_avr(get_grades(student_id, token))
+        grades = data['grades']
+        
+        # Calculate averages from fresh grades data
+        grades_avr = calculate_avr(grades)
         
         # Update session with fresh data
         flask.session['grades_avr'] = grades_avr
         
         return flask.jsonify({'success': True, 'message': 'Voti aggiornati'}), 200
-    except requests.exceptions.HTTPError as e:
-        if e.response.status_code == 401:
-            # Token expired, redirect to login
-            flask.session.clear()
-            return flask.jsonify({'error': 'Sessione scaduta', 'redirect': '/'}), 401
-        return flask.jsonify({'error': f'Errore durante l\'aggiornamento: {e.response.status_code}'}), 500
     except Exception as e:
+        logger.error(f"Error refreshing grades: {e}", exc_info=True)
         return flask.jsonify({'error': 'Errore durante l\'aggiornamento dei voti'}), 500
 
 @app.route('/grades')
@@ -965,56 +956,12 @@ def export_csv():
     
     return response
 
-def login(user_id, user_pass):
-    url = "https://web.spaggiari.eu/rest/v1/auth/login"
-    headers = {
-        "Content-Type": "application/json",
-        "Z-Dev-ApiKey": "Tg1NWEwNGIgIC0K",
-        "User-Agent": "CVVS/std/4.1.7 Android/10"
-    }
-    body = {
-        "ident": None,
-        "pass": user_pass,
-        "uid": user_id
-    }
-    
-    response = requests.post(url, headers=headers, data=json.dumps(body))
-    
-    if response.status_code == 200:
-        return response.json()
-    else:
-        response.raise_for_status()
-
-def get_periods(student_id, token):
-    url = f"https://web.spaggiari.eu/rest/v1/students/{student_id}/periods"
-    headers = {
-        "Content-Type": "application/json",
-        "Z-Dev-ApiKey": "Tg1NWEwNGIgIC0K",
-        "User-Agent": "CVVS/std/4.1.7 Android/10",
-        "Z-Auth-Token": token
-    }
-    response = requests.get(url, headers=headers)
-    
-    if response.status_code == 200:
-        return response.json()
-    else:
-        response.raise_for_status()
-
-def get_grades(student_id, token):
-    url = f"https://web.spaggiari.eu/rest/v1/students/{student_id}/grades"
-    headers = {
-        "Content-Type": "application/json",
-        "Z-Dev-ApiKey": "Tg1NWEwNGIgIC0K",
-        "User-Agent": "CVVS/std/4.1.7 Android/10",
-        "Z-Auth-Token": token
-    }
-    response = requests.get(url, headers=headers)
-    if response.status_code == 200:
-        # print(json.dumps(response.json(), indent=4))
-        return response.json()
-    else:
-        response.raise_for_status()
 def calculate_avr(grades):
+    """
+    Calculate averages from grades data.
+    This function is kept in the backend to maintain consistent calculation logic.
+    Data is now received from the client after client-side ClasseViva API calls.
+    """
     grades_avr = {}
     for grade in grades["grades"]:
         # ClasseViva API returns periodPos values that are offset by 1 from user-facing period numbers

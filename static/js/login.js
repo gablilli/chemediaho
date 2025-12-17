@@ -146,10 +146,72 @@ const form = document.getElementById('loginForm');
 const errorMessage = document.getElementById('errorMessage');
 const submitBtn = document.getElementById('submitBtn');
 
-form.addEventListener('submit', function(e) {
+form.addEventListener('submit', async function(e) {
+  e.preventDefault(); // Prevent default form submission
+  
   errorMessage.textContent = '';
   submitBtn.disabled = true;
   submitBtn.textContent = 'Accesso...';
+  
+  const userId = document.getElementById('user_id').value;
+  const password = document.getElementById('user_pass').value;
+  
+  try {
+    // Step 1: Login to ClasseViva API from browser
+    const loginResponse = await ClasseVivaAPI.login(userId, password);
+    const token = loginResponse.token;
+    
+    if (!token) {
+      throw new Error('INVALID_TOKEN');
+    }
+    
+    // Step 2: Store credentials in sessionStorage
+    ClasseVivaAPI.storeCredentials(token, userId);
+    
+    // Step 3: Get grades from ClasseViva API
+    const studentId = ClasseVivaAPI.extractStudentId(userId);
+    const gradesData = await ClasseVivaAPI.getGrades(studentId, token);
+    
+    // Step 4: Send grades to backend for session storage
+    const backendResponse = await fetch('/api/save_session', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        user_id: userId,
+        token: token,
+        grades: gradesData
+      })
+    });
+    
+    if (!backendResponse.ok) {
+      throw new Error('BACKEND_ERROR');
+    }
+    
+    // Step 5: Redirect to grades page
+    window.location.href = '/grades';
+    
+  } catch (error) {
+    // Re-enable button
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Accedi';
+    
+    // Show appropriate error message
+    if (error.message === 'INVALID_CREDENTIALS') {
+      errorMessage.textContent = 'Credenziali non valide. Verifica User ID e Password.';
+    } else if (error.message.startsWith('HTTP_ERROR_422')) {
+      errorMessage.textContent = 'Credenziali non valide. Verifica User ID e Password.';
+    } else if (error.message === 'NETWORK_ERROR') {
+      errorMessage.textContent = 'Errore di connessione. Verifica la tua connessione internet.';
+    } else if (error.message === 'TOKEN_EXPIRED') {
+      errorMessage.textContent = 'Sessione scaduta. Riprova.';
+    } else if (error.message === 'BACKEND_ERROR') {
+      errorMessage.textContent = 'Errore del server. Riprova più tardi.';
+    } else {
+      errorMessage.textContent = 'Errore imprevisto. Riprova più tardi.';
+    }
+  }
 });
 
 // Register Service Worker for PWA
