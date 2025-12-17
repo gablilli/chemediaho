@@ -131,6 +131,10 @@ def get_grades(student_id, token):
     else:
         response.raise_for_status()
 
+def extract_student_id(user_id):
+    """Extract numeric student ID from user ID (e.g., G123456789P -> 123456789)"""
+    return "".join(filter(str.isdigit, user_id))
+
 
 @app.route('/manifest.json')
 def manifest():
