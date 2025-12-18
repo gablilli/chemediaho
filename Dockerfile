@@ -11,8 +11,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy the Flask app into the container
 COPY . .
 
-# Expose port 5000
-EXPOSE 5000
+# Expose port 8001
+EXPOSE 8001
 
 # Command to run Gunicorn for production
 CMD ["gunicorn", "-w", "4", "-b", "0.0.0.0:8001", "app:app"]
