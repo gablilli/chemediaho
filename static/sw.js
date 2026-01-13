@@ -1,4 +1,4 @@
-const CACHE_NAME = 'chemediaho-v2.0.2';
+const CACHE_NAME = 'chemediaho-v2.3.0';
 const urlsToCache = [
   '/',
   '/static/manifest.json',
