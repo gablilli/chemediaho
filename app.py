@@ -6,7 +6,9 @@ import secrets
 import csv
 import io
 import logging
+import re
 from datetime import datetime
+from bs4 import BeautifulSoup
 
 app = flask.Flask(__name__)
 
@@ -33,6 +35,10 @@ MAX_SUGGESTIONS = 5
 
 # Allowed grade values for smart calculator
 ALLOWED_GRADES = [4, 4.25, 4.5, 4.75, 5, 5.25, 5.5, 5.75, 6, 6.25, 6.5, 6.75, 7, 7.25, 7.5, 7.75, 8, 8.25, 8.5, 8.75, 9, 9.25, 9.5, 9.75, 10]
+
+# Placeholder webidentity for email login when actual identity cannot be extracted
+# This is used when the session is valid but webidentity is not found in the page
+EMAIL_LOGIN_WEBIDENTITY = "_EMAIL_SESSION_"
 
 # Load or generate a persistent SECRET_KEY
 SECRET_KEY_FILE = 'secret_key.txt'
@@ -121,37 +127,67 @@ def login_route():
     if flask.request.method == 'GET':
         return flask.redirect('/')
     
-    user_id = flask.request.form['user_id']
-    user_pass = flask.request.form['user_pass']
+    user_id = flask.request.form.get('user_id', '')
+    user_pass = flask.request.form.get('user_pass', '')
+    login_type = flask.request.form.get('login_type', 'userid')  # 'userid' or 'email'
     
     try:
-        login_response = login(user_id, user_pass)
-        token = login_response["token"]
-        if token is None or token == "":
-            return flask.render_template('login.html', error="Token non valido. Riprova.")
-        
-        # Store token and user_id in session
-        flask.session['token'] = token
-        flask.session['user_id'] = user_id
-        
-        student_id = "".join(filter(str.isdigit, user_id))
-        grades_avr = calculate_avr(get_grades(student_id, token))
-        
-        # Store grades in session for other pages
-        flask.session['grades_avr'] = grades_avr
-        
-        # Redirect to grades page instead of rendering template
-        return flask.redirect('/grades')
+        if login_type == 'email':
+            # Email-based login
+            login_response = login_email(user_id, user_pass)
+            token = login_response.get("token")
+            webidentity = login_response.get("webidentity", "")
+            
+            if token is None or token == "":
+                return flask.render_template('login.html', error="Token non valido. Riprova.", login_type=login_type)
+            
+            # Store token, webidentity and login type in session
+            flask.session['token'] = token
+            flask.session['user_id'] = user_id
+            flask.session['webidentity'] = webidentity
+            flask.session['login_type'] = 'email'
+            
+            # Get grades using email login method (HTML scraping)
+            grades_data = get_grades_email(token, webidentity)
+            grades_avr = calculate_avr(grades_data)
+            
+            # Store grades in session for other pages
+            flask.session['grades_avr'] = grades_avr
+            
+            # Redirect to grades page
+            return flask.redirect('/grades')
+        else:
+            # Standard User ID login
+            login_response = login(user_id, user_pass)
+            token = login_response["token"]
+            if token is None or token == "":
+                return flask.render_template('login.html', error="Token non valido. Riprova.", login_type=login_type)
+            
+            # Store token and user_id in session
+            flask.session['token'] = token
+            flask.session['user_id'] = user_id
+            flask.session['login_type'] = 'userid'
+            
+            student_id = "".join(filter(str.isdigit, user_id))
+            grades_avr = calculate_avr(get_grades(student_id, token))
+            
+            # Store grades in session for other pages
+            flask.session['grades_avr'] = grades_avr
+            
+            # Redirect to grades page instead of rendering template
+            return flask.redirect('/grades')
     except requests.exceptions.HTTPError as e:
         # Handle 422 and other HTTP errors with user-friendly message
-        if e.response.status_code == 422:
-            return flask.render_template('login.html', error="Credenziali non valide. Verifica User ID e Password.")
+        error_code = getattr(e.response, 'status_code', None) if hasattr(e, 'response') else None
+        if error_code == 422:
+            return flask.render_template('login.html', error="Credenziali non valide. Verifica le tue credenziali.", login_type=login_type)
         else:
-            return flask.render_template('login.html', error=f"Errore di autenticazione ({e.response.status_code}). Riprova.")
+            return flask.render_template('login.html', error=f"Errore di autenticazione. Riprova.", login_type=login_type)
     except requests.exceptions.RequestException as e:
-        return flask.render_template('login.html', error="Errore di connessione. Verifica la tua connessione internet.")
+        return flask.render_template('login.html', error="Errore di connessione. Verifica la tua connessione internet.", login_type=login_type)
     except Exception as e:
-        return flask.render_template('login.html', error="Errore imprevisto. Riprova più tardi.")
+        logger.error(f"Login error: {e}", exc_info=True)
+        return flask.render_template('login.html', error="Errore imprevisto. Riprova più tardi.", login_type=login_type)
 
 @app.route('/logout', methods=['POST'])
 def logout():
@@ -166,28 +202,37 @@ def refresh_grades():
     
     try:
         token = flask.session['token']
-        # Extract student_id from session or regenerate from stored user_id
-        # We need to store user_id during login to use it here
-        if 'user_id' not in flask.session:
-            return flask.jsonify({'error': 'User ID not found in session'}), 400
+        login_type = flask.session.get('login_type', 'userid')
         
-        user_id = flask.session['user_id']
-        student_id = "".join(filter(str.isdigit, user_id))
-        
-        # Fetch fresh grades from API - take all grades as-is without filtering
-        grades_avr = calculate_avr(get_grades(student_id, token))
+        if login_type == 'email':
+            # Email login - use HTML scraping
+            webidentity = flask.session.get('webidentity', '')
+            grades_data = get_grades_email(token, webidentity)
+            grades_avr = calculate_avr(grades_data)
+        else:
+            # Standard User ID login - use REST API
+            if 'user_id' not in flask.session:
+                return flask.jsonify({'error': 'User ID not found in session'}), 400
+            
+            user_id = flask.session['user_id']
+            student_id = "".join(filter(str.isdigit, user_id))
+            
+            # Fetch fresh grades from API - take all grades as-is without filtering
+            grades_avr = calculate_avr(get_grades(student_id, token))
         
         # Update session with fresh data
         flask.session['grades_avr'] = grades_avr
         
         return flask.jsonify({'success': True, 'message': 'Voti aggiornati'}), 200
     except requests.exceptions.HTTPError as e:
-        if e.response.status_code == 401:
+        error_code = getattr(e.response, 'status_code', None) if hasattr(e, 'response') else None
+        if error_code == 401:
             # Token expired, redirect to login
             flask.session.clear()
             return flask.jsonify({'error': 'Sessione scaduta', 'redirect': '/'}), 401
-        return flask.jsonify({'error': f'Errore durante l\'aggiornamento: {e.response.status_code}'}), 500
+        return flask.jsonify({'error': 'Errore durante l\'aggiornamento'}), 500
     except Exception as e:
+        logger.error(f"Error refreshing grades: {e}", exc_info=True)
         return flask.jsonify({'error': 'Errore durante l\'aggiornamento dei voti'}), 500
 
 @app.route('/grades')
@@ -984,6 +1029,225 @@ def login(user_id, user_pass):
         return response.json()
     else:
         response.raise_for_status()
+
+def login_email(email, password):
+    """
+    Login using email credentials via the web authentication endpoint.
+    Returns a dictionary with the PHPSESSID token and user identity.
+    """
+    url = "https://web.spaggiari.eu/auth-p7/app/default/AuthApi4.php?a=aLoginPwd"
+    headers = {
+        "Content-Type": "application/x-www-form-urlencoded; charset=utf-8",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+    }
+    
+    data = {
+        "cid": "",
+        "uid": email,
+        "pwd": password,
+        "pin": "",
+        "target": ""
+    }
+    
+    response = requests.post(url, headers=headers, data=data, allow_redirects=False)
+    
+    # Extract PHPSESSID from Set-Cookie header
+    set_cookie = response.headers.get("Set-Cookie", "")
+    phpsessid_match = re.search(r'PHPSESSID=([^;]+)', set_cookie)
+    
+    if phpsessid_match:
+        phpsessid = phpsessid_match.group(1)
+        # Try to extract the webidentity (user id) from the response or additional request
+        webidentity = extract_webidentity(phpsessid)
+        if webidentity:
+            return {
+                "token": phpsessid,
+                "webidentity": webidentity,
+                "login_type": "email"
+            }
+    
+    # If no valid session, create a proper error response
+    error_response = requests.models.Response()
+    error_response.status_code = 401
+    error_response._content = b'{"error": "Invalid credentials"}'
+    raise requests.exceptions.HTTPError("Login failed: Invalid credentials", response=error_response)
+
+def extract_webidentity(phpsessid):
+    """
+    Extract the webidentity (student ID) from the session by fetching a page.
+    """
+    url = "https://web.spaggiari.eu/home/app/default/menu_webinfoschool_genitori.php"
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+        "Cookie": f"PHPSESSID={phpsessid}"
+    }
+    
+    response = requests.get(url, headers=headers)
+    
+    if response.status_code == 200:
+        # Parse the HTML to extract webidentity
+        soup = BeautifulSoup(response.text, 'html.parser')
+        
+        # Try to find user identity from various elements in the page
+        # The webidentity is typically in the format like "S1234567" or similar
+        
+        # Check for identity in scripts or data attributes
+        scripts = soup.find_all('script')
+        for script in scripts:
+            if script.string:
+                # Look for patterns like webidentity or student id
+                match = re.search(r'webidentity["\']?\s*[=:]\s*["\']?([A-Z]\d+)', script.string, re.IGNORECASE)
+                if match:
+                    return match.group(1)
+        
+        # Try to find it in any element's data attribute
+        for elem in soup.find_all(attrs={"data-id": True}):
+            data_id = elem.get("data-id", "")
+            if re.match(r'^[A-Z]\d+$', data_id):
+                return data_id
+        
+        # Check the page content for the school name (indicates successful login)
+        school_span = soup.find('span', class_='scuola')
+        if school_span:
+            # User is logged in, try to get identity from the grades page
+            return extract_webidentity_from_grades(phpsessid)
+    
+    return None
+
+def extract_webidentity_from_grades(phpsessid):
+    """
+    Extract webidentity from the grades page where it's more likely to be present.
+    """
+    url = "https://web.spaggiari.eu/cvv/app/default/genitori_voti.php"
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+        "Cookie": f"PHPSESSID={phpsessid}"
+    }
+    
+    response = requests.get(url, headers=headers)
+    
+    if response.status_code == 200:
+        soup = BeautifulSoup(response.text, 'html.parser')
+        
+        # Look for student identity in various places
+        scripts = soup.find_all('script')
+        for script in scripts:
+            if script.string:
+                # Look for student ID patterns
+                match = re.search(r'(?:studente|student|alunno|uid|webidentity)["\']?\s*[=:]\s*["\']?([A-Z]?\d+)', script.string, re.IGNORECASE)
+                if match:
+                    return match.group(1)
+        
+        # Check for materia_id which indicates grades are accessible
+        grade_elements = soup.find_all(attrs={"materia_id": True})
+        if grade_elements:
+            # If grades are accessible, the session is valid
+            # Return a placeholder that indicates email login mode
+            return EMAIL_LOGIN_WEBIDENTITY
+    
+    return None
+
+def get_grades_email(phpsessid, webidentity):
+    """
+    Get grades using the email login session by scraping the grades HTML page.
+    Returns grades in the same format as the API for compatibility.
+    """
+    url = "https://web.spaggiari.eu/cvv/app/default/genitori_voti.php"
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+        "Cookie": f"PHPSESSID={phpsessid}; webidentity={webidentity}"
+    }
+    
+    response = requests.get(url, headers=headers)
+    
+    if response.status_code != 200:
+        response.raise_for_status()
+    
+    soup = BeautifulSoup(response.text, 'html.parser')
+    
+    # Grade value mapping (same as in the problem statement)
+    mark_table = {
+        "1": 1, "1+": 1.25, "1½": 1.5, "2-": 1.75, "2": 2, "2+": 2.25, "2½": 2.5,
+        "3-": 2.75, "3": 3, "3+": 3.25, "3½": 3.5, "4-": 3.75, "4": 4, "4+": 4.25,
+        "4½": 4.5, "5-": 4.75, "5": 5, "5+": 5.25, "5½": 5.5, "6-": 5.75, "6": 6,
+        "6+": 6.25, "6½": 6.5, "7-": 6.75, "7": 7, "7+": 7.25, "7½": 7.5, "8-": 7.75,
+        "8": 8, "8+": 8.25, "8½": 8.5, "9-": 8.75, "9": 9, "9+": 9.25, "9½": 9.5,
+        "10-": 9.75, "10": 10
+    }
+    
+    grades = []
+    
+    # Find all period tables
+    period_tables = soup.find_all('table', attrs={'sessione': True})
+    
+    for table in period_tables:
+        period_code = table.get('sessione', '')
+        # Extract period number from the period code
+        period_match = re.search(r'(\d+)', period_code)
+        period_pos = int(period_match.group(1)) if period_match else 1
+        
+        tbody = table.find('tbody')
+        if not tbody:
+            continue
+        
+        rows = tbody.find_all('tr')
+        current_subject_id = None
+        current_subject_name = None
+        
+        for row in rows:
+            # Check if this is a subject header row
+            if 'riga_competenza_default' in row.get('class', []):
+                current_subject_id = row.get('materia_id')
+                continue
+            
+            # Check if this is a grade row
+            if 'riga_materia_componente' in row.get('class', []):
+                cells = row.find_all('td')
+                if cells:
+                    # First cell is subject name
+                    subject_cell = cells[0]
+                    current_subject_name = subject_cell.get_text(strip=True).upper()
+                    
+                    # Find grade cells
+                    grade_cells = row.find_all('td', class_='cella_voto')
+                    for grade_cell in grade_cells:
+                        # Get grade value
+                        children = list(grade_cell.children)
+                        date_text = ""
+                        grade_text = ""
+                        is_blue = False
+                        
+                        if len(children) >= 2:
+                            date_elem = children[0]
+                            grade_elem = children[1]
+                            
+                            date_text = date_elem.get_text(strip=True) if hasattr(date_elem, 'get_text') else str(date_elem).strip()
+                            grade_text = grade_elem.get_text(strip=True) if hasattr(grade_elem, 'get_text') else str(grade_elem).strip()
+                            
+                            # Check if it's a blue grade (oral exam indicator)
+                            if hasattr(grade_elem, 'get'):
+                                is_blue = 'f_reg_voto_dettaglio' in grade_elem.get('class', [])
+                        
+                        evt_id = grade_cell.get('evento_id', 0)
+                        decimal_value = mark_table.get(grade_text, None)
+                        
+                        if decimal_value is not None:
+                            grades.append({
+                                "subjectId": int(current_subject_id) if current_subject_id else 0,
+                                "subjectDesc": current_subject_name or "",
+                                "evtId": int(evt_id) if evt_id else 0,
+                                "evtDate": date_text,
+                                "decimalValue": decimal_value,
+                                "displayValue": grade_text,
+                                "color": "blue" if is_blue else "green",
+                                "periodPos": period_pos,
+                                "periodDesc": f"Periodo {period_pos}",
+                                "componentDesc": "",
+                                "notesForFamily": "",
+                                "teacherName": ""
+                            })
+    
+    return {"grades": grades}
 
 def get_periods(student_id, token):
     url = f"https://web.spaggiari.eu/rest/v1/students/{student_id}/periods"

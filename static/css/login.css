@@ -209,6 +209,38 @@ form {
   min-height: 20px;
 }
 
+/* Login Type Tabs */
+.login-tabs {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+  margin-bottom: 20px;
+}
+
+.login-tab {
+  flex: 1;
+  padding: 10px 16px;
+  background: transparent;
+  border: 1px solid var(--secondary);
+  border-radius: 8px;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.login-tab.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: white;
+}
+
+.login-tab:hover:not(.active) {
+  background: var(--secondary);
+  opacity: 0.8;
+}
+
 /* PWA Install Banner */
 .pwa-banner {
   width: 100%;
