@@ -1,32 +1,66 @@
-# che media ho?
+<p align="center">
+  <img src="https://raw.githubusercontent.com/gablilli/chemediaho/main/static/icons/icon-192.png" width="120" alt="che media ho? logo">
+</p>
 
-una semplice web app flask self-hostabile via docker per visualizzare la media dei voti di classeviva anche se l'istituto ha disattivato la funzione ufficiale. 
-sysregister ui-based.
+<h1 align="center">📊 che media ho?</h1>
+
+<p align="center">
+  <b>la web app self-hostabile per calcolare la media dei voti su classeviva</b><br>
+  anche quando l’istituto ha disattivato la funzione ufficiale.
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/github/stars/gablilli/chemediaho?style=flat-square">
+  <img src="https://img.shields.io/github/license/gablilli/chemediaho?style=flat-square">
+  <img src="https://img.shields.io/github/actions/workflow/status/gablilli/chemediaho/release.yml?style=flat-square">
+  <img src="https://img.shields.io/docker/pulls/gablilli/chemediaho?style=flat-square">
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/pwa-ready-blue?style=flat-square">
+  <img src="https://img.shields.io/badge/offline-supported-success?style=flat-square">
+  <img src="https://img.shields.io/badge/100%25-open--source-green?style=flat-square">
+</p>
+
+---
+
+## 🧠 cos’è *che media ho?*
+
+**che media ho?** è una semplice **web app flask**, self-hostabile via **docker**, che ti permette di:
+
+- visualizzare la **media dei voti su classeviva**
+- fare **simulazioni e previsioni**
+- usare l’app anche **offline**
+- installarla come **pwa** su smartphone
+
+il tutto tramite una **ui chiara**, pulita e mobile-friendly.
+
+---
 
 ## ✨ funzionalità
 
-* 📱 **PWA (progressive web app)** - installabile su dispositivi mobili
-* 🔄 **supporto offline** - funziona anche senza connessione (con i dati scaricati precedentemente)
-* 🎨 **design responsive** - ottimizzato per mobile e desktop
-* 📊 **calcolo media** - visualizza automaticamente la media dei voti
-* 🎯 **calcoli & previsioni** - calcola quali voti ti servono per raggiungere un obiettivo e prevedi l'impatto di voti futuri sulla tua media
-* 📈 **grafici interattivi** - visualizza i tuoi progressi nel tempo
-* 💾 **esportazione dati** - esporta i tuoi voti in formato CSV
-* 🆓 **codice 100% free and opensource con controllo codeql** - così puoi stare tranquillo.
+- 📱 **pwa (progressive web app)** — installabile su android e ios  
+- 🔄 **supporto offline** — funziona anche senza connessione (con dati già scaricati)  
+- 🎨 **design responsive** — perfetto su mobile e desktop  
+- 📊 **calcolo automatico della media**  
+- 🎯 **calcoli & previsioni** — scopri che voti ti servono per raggiungere un obiettivo  
+- 📈 **grafici interattivi** — visualizza l’andamento nel tempo  
+- 💾 **esportazione csv** — porta i tuoi voti dove vuoi  
+- 🆓 **100% free & open source** — con controlli codeql  
 
-## installazione
+---
+
+## 🚀 installazione (python)
 
 ### prerequisiti
-
-* python 3.6 o superiore
-* un account classeviva attivo
+- python **3.6+**
+- un account **classeviva** attivo
 
 ### 1️⃣ clona il repository
-
 ```bash
 git clone https://github.com/gablilli/chemediaho.git
 cd chemediaho
-```
+````
 
 ### 2️⃣ installa le dipendenze
 
@@ -36,99 +70,98 @@ pip install -r requirements.txt
 
 ### 3️⃣ avvia l’app
 
-esegui lo script principale dentro la cartella:
-
 ```bash
 python app.py
 ```
 
-poi apri il browser su **[http://localhost:5000](http://localhost:5000)**, inserisci le tue credenziali di classeviva e… buona media! 🧮
+apri il browser su 👉 **[http://localhost:8001](http://localhost:8001)**
+inserisci le credenziali e… **buona media! 🧮**
 
-## installazione con docker
+---
+
+## 🐳 installazione con docker (consigliata)
 
 ### prerequisiti
 
-* docker e docker compose installati
-  👉 guida ufficiale: [https://docs.docker.com/engine/install/](https://docs.docker.com/engine/install/)
+* docker & docker compose
+  👉 [https://docs.docker.com/engine/install/](https://docs.docker.com/engine/install/)
 
-### clona la repo
+### scarica il `docker-compose.yml`
+
 ```bash
-git clone https://github.com/gablilli/chemediaho
+curl -fsSL https://raw.githubusercontent.com/gablilli/chemediaho/refs/heads/main/docker-compose.yml -o docker-compose.yml
 ```
 
-### crea e avvia il container
-
-dalla cartella del progetto:
+### avvia il container
 
 ```bash
 docker compose up -d
 ```
 
-> nota: i log non sono ancora implementati.
+l’app sarà disponibile su **porta 8001**.
 
-una volta avviato, l’interfaccia web sarà disponibile sulla porta **5000** di tutte le interfacce del computer.
-
-se usi ubuntu o hai **ufw** attivo, abilita la porta:
+se usi **ufw**:
 
 ```bash
-sudo ufw allow 5000
+sudo ufw allow 8001
 ```
 
-## configurazione avanzata
+> ℹ️ nota: logging avanzato in arrivo.
 
-### https e sicurezza dei cookie
+---
 
-di default, l'app funziona su http (adatto per uso locale/domestico). se esegui l'app dietro un proxy https o un load balancer, imposta la variabile d'ambiente `HTTPS_ENABLED=true`:
+## 🔐 configurazione avanzata
 
-```bash
-# in compose.yml, aggiungi:
-environment:
-  - FLASK_ENV=production
-  - HTTPS_ENABLED=true
-```
+### https & sicurezza cookie
 
-questo abiliterà il flag `Secure` sui cookie di sessione, garantendo che vengano inviati solo su connessioni https.
+di default l’app gira in **http** (uso locale/domestico).
+se sei dietro un **proxy https**, abilita:
 
-## 📱 installazione come PWA
-
-l'app può essere installata sul tuo dispositivo mobile per un'esperienza nativa:
-
-### su android (chrome)
-1. apri l'app nel browser
-2. tocca il menu (⋮) e seleziona "installa app" o "aggiungi a schermata home"
-3. conferma l'installazione
-
-### su ios (safari)
-1. apri l'app in safari
-2. tocca il pulsante condividi (□↑)
-3. scorri e seleziona "aggiungi a home"
-4. conferma l'installazione
-
-una volta installata, l'app funzionerà come un'applicazione nativa!
-
-### chiave segreta e sessioni
-
-l'app genera automaticamente una chiave segreta (`secret_key.txt`) al primo avvio per gestire le sessioni in modo sicuro. questa chiave:
-- è salvata in `secret_key.txt` nella directory dell'app con permessi restrittivi (600 - solo proprietario può leggere/scrivere)
-- non deve essere committata su git (già esclusa da .gitignore)
-- in docker, è persistita tramite volume mount per funzionare anche dopo i restart dei container
-
-#### note di sicurezza
-
-⚠️ **importante per la sicurezza:**
-- la chiave è salvata in chiaro sul file system - proteggi l'accesso al file
-- le credenziali nel cookie di sessione sono criptate con questa chiave
-- per ambienti di produzione, considera l'uso di gestori di segreti esterni (es. Docker secrets, Kubernetes secrets, HashiCorp Vault)
-- usa sempre la variabile d'ambiente `SECRET_KEY` in produzione invece del file
-- assicurati che il file `secret_key.txt` sia leggibile solo dall'utente che esegue l'app (permessi 600)
-
-esempio per produzione con docker secrets:
 ```yaml
-# compose.yml per produzione
-services:
-  flask:
+environment:
+  - flask_env=production
+  - https_enabled=true
+```
+
+questo abilita il flag `secure` sui cookie di sessione.
+
+---
+
+## 📱 installazione come pwa
+
+### android (chrome)
+
+1. apri l’app
+2. menu ⋮ → *installa app*
+3. conferma
+
+### ios (safari)
+
+1. apri l’app
+2. condividi (□↑)
+3. *aggiungi a home*
+4. conferma
+
+---
+
+## 🔑 chiave segreta e sessioni
+
+* generata automaticamente al primo avvio (`secret_key.txt`)
+* permessi **600**
+* persistita via volume docker
+* esclusa da git
+
+⚠️ **sicurezza**
+
+* proteggi l’accesso al file
+* in produzione usa `secret_key` o secret manager
+* supporto a **docker secrets** incluso
+
+esempio:
+
+```yaml
     environment:
-      - SECRET_KEY_FILE=/run/secrets/flask_secret
+      - secret_key_file=/run/secrets/flask_secret
     secrets:
       - flask_secret
 
@@ -137,17 +170,28 @@ secrets:
     external: true
 ```
 
-## risoluzione problemi
+---
 
-se qualcosa non funziona, controlla eventuali errori nel terminale e assicurati che l’installazione non abbia restituito messaggi di errore.
+## 🛠️ risoluzione problemi
+
+* controlla i log del container
+* verifica credenziali classeviva
+* assicurati che la porta 8001 sia aperta
 
 ---
 
-## grazie a
+## ❤️ ringraziamenti
 
-* [classeviva-official-endpoints](https://github.com/Lioydiano/Classeviva-Official-Endpoints)
-* sysregister del buon [syswhite.dev](https://github.com/syswhitedev)
-* [CVVSimpleAvgrage](https://github.com/LucaCraft89/CVVSimpleAvgrage)
+grazie a:
 
+* [classeviva official endpoints](https://github.com/lioydiano/classeviva-official-endpoints)
+* sysregister di [syswhite.dev](https://github.com/syswhitedev)
+* [cvvsimpleavgrage](https://github.com/lucacraft89/cvvsimpleavgrage)
 
-per aver reso possibile tutto questo ❤️
+per aver reso possibile tutto questo.
+
+---
+
+<p align="center">
+  <b>📚 studia meno i calcoli, pensa più ai voti.</b>
+</p>
