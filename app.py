@@ -40,6 +40,9 @@ ALLOWED_GRADES = [4, 4.25, 4.5, 4.75, 5, 5.25, 5.5, 5.75, 6, 6.25, 6.5, 6.75, 7,
 # This is used when the session is valid but webidentity is not found in the page
 EMAIL_LOGIN_WEBIDENTITY = "_EMAIL_SESSION_"
 
+# User-Agent string for web requests (used for email login)
+DEFAULT_USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+
 # Load or generate a persistent SECRET_KEY
 SECRET_KEY_FILE = 'secret_key.txt'
 
@@ -1045,7 +1048,7 @@ def login_email(email, password):
     
     headers = {
         "Content-Type": "application/x-www-form-urlencoded; charset=utf-8",
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        "User-Agent": DEFAULT_USER_AGENT
     }
     
     # Send as URL-encoded form data (matching the cURL example)
@@ -1089,19 +1092,20 @@ def login_email(email, password):
     # If we got a redirect (302), follow it to get the session cookie
     if response.status_code in (302, 301) and not phpsessid:
         logger.info("Following redirect to get session cookie...")
-        # Follow redirect to get the cookie
         redirect_url = response.headers.get("Location", "")
         if redirect_url:
-            follow_response = session.get(redirect_url, headers={"User-Agent": headers["User-Agent"]})
-            phpsessid = session.cookies.get("PHPSESSID")
+            # Follow redirect and check for successful response
+            redirect_response = session.get(redirect_url, headers={"User-Agent": DEFAULT_USER_AGENT})
+            if redirect_response.status_code == 200:
+                phpsessid = session.cookies.get("PHPSESSID")
     
-    logger.info(f"Extracted PHPSESSID: {phpsessid[:10] if phpsessid else 'None'}...")
+    logger.info(f"Session cookie extracted: {bool(phpsessid)}")
     
     if phpsessid:
         # Based on the example code, webidentity is the same uid used for login
         # "Cookie": `PHPSESSID=${token}; webidentity=${userData.uid};`
         webidentity = email
-        logger.info(f"Using login uid as webidentity: {webidentity}")
+        logger.info(f"Login successful for: {email}")
         return {
             "token": phpsessid,
             "webidentity": webidentity,
