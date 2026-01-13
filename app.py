@@ -40,6 +40,9 @@ ALLOWED_GRADES = [4, 4.25, 4.5, 4.75, 5, 5.25, 5.5, 5.75, 6, 6.25, 6.5, 6.75, 7,
 # This is used when the session is valid but webidentity is not found in the page
 EMAIL_LOGIN_WEBIDENTITY = "_EMAIL_SESSION_"
 
+# User-Agent string for web requests (used for email login)
+DEFAULT_USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+
 # Load or generate a persistent SECRET_KEY
 SECRET_KEY_FILE = 'secret_key.txt'
 
@@ -1034,13 +1037,21 @@ def login_email(email, password):
     """
     Login using email credentials via the web authentication endpoint.
     Returns a dictionary with the PHPSESSID token and user identity.
+    
+    Based on the example:
+    - POST to https://web.spaggiari.eu/auth-p7/app/default/AuthApi4.php?a=aLoginPwd
+    - Send form data with uid and pwd fields
+    - Extract PHPSESSID from Set-Cookie header
+    - Use the login uid as webidentity (as shown in the example)
     """
     url = "https://web.spaggiari.eu/auth-p7/app/default/AuthApi4.php?a=aLoginPwd"
+    
     headers = {
         "Content-Type": "application/x-www-form-urlencoded; charset=utf-8",
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+        "User-Agent": DEFAULT_USER_AGENT
     }
     
+    # Send as URL-encoded form data (matching the cURL example)
     data = {
         "cid": "",
         "uid": email,
@@ -1049,31 +1060,57 @@ def login_email(email, password):
         "target": ""
     }
     
-    response = requests.post(url, headers=headers, data=data, allow_redirects=False)
+    # Create a session to properly handle cookies
+    session = requests.Session()
+    
+    # Send request - don't follow redirects to capture session cookie on redirect
+    response = session.post(url, headers=headers, data=data, allow_redirects=False)
+    
+    logger.info(f"Email login response status: {response.status_code}")
     
     # Check for HTTP errors - 403/401 indicate invalid credentials
-    # Successful authentication typically returns 200 or 302 with a PHPSESSID cookie
-    # We don't follow redirects (allow_redirects=False) to capture the session cookie
     if response.status_code in (401, 403):
         raise requests.exceptions.HTTPError(
             "Login failed: Invalid credentials", 
             response=response
         )
     
-    # Extract PHPSESSID from Set-Cookie header (present on both 200 and 302 responses)
-    set_cookie = response.headers.get("Set-Cookie", "")
-    phpsessid_match = re.search(r'PHPSESSID=([^;]+)', set_cookie)
+    # Extract PHPSESSID from session cookies (session handles cookies across redirects)
+    phpsessid = session.cookies.get("PHPSESSID")
     
-    if phpsessid_match:
-        phpsessid = phpsessid_match.group(1)
-        # Try to extract the webidentity (user id) from the response or additional request
-        webidentity = extract_webidentity(phpsessid)
-        if webidentity:
-            return {
-                "token": phpsessid,
-                "webidentity": webidentity,
-                "login_type": "email"
-            }
+    # If not in session cookies, try to extract from Set-Cookie header manually
+    if not phpsessid:
+        phpsessid = response.cookies.get("PHPSESSID")
+    
+    # If still not found, try to extract from Set-Cookie header directly
+    if not phpsessid:
+        set_cookie = response.headers.get("Set-Cookie", "")
+        phpsessid_match = re.search(r'PHPSESSID=([^;]+)', set_cookie)
+        if phpsessid_match:
+            phpsessid = phpsessid_match.group(1)
+    
+    # If we got a redirect (302), follow it to get the session cookie
+    if response.status_code in (302, 301) and not phpsessid:
+        logger.info("Following redirect to get session cookie...")
+        redirect_url = response.headers.get("Location", "")
+        if redirect_url:
+            # Follow redirect and check for successful response
+            redirect_response = session.get(redirect_url, headers={"User-Agent": DEFAULT_USER_AGENT})
+            if redirect_response.status_code == 200:
+                phpsessid = session.cookies.get("PHPSESSID")
+    
+    logger.info(f"Session cookie extracted: {bool(phpsessid)}")
+    
+    if phpsessid:
+        # Based on the example code, webidentity is the same uid used for login
+        # "Cookie": `PHPSESSID=${token}; webidentity=${userData.uid};`
+        webidentity = email
+        logger.info(f"Login successful for: {email}")
+        return {
+            "token": phpsessid,
+            "webidentity": webidentity,
+            "login_type": "email"
+        }
     
     # If no valid session cookie was found, raise an authentication error
     raise requests.exceptions.HTTPError(
@@ -1256,7 +1293,8 @@ def get_grades_email(phpsessid, webidentity):
                                 "decimalValue": decimal_value,
                                 "displayValue": grade_text,
                                 "color": "blue" if is_blue else "green",
-                                "periodPos": period_pos,
+                                # Add 1 to periodPos to match API format (calculate_avr will subtract 1)
+                                "periodPos": period_pos + 1,
                                 "periodDesc": f"Periodo {period_pos}",
                                 "componentDesc": "",
                                 "notesForFamily": "",
