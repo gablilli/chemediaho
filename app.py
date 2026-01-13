@@ -1256,7 +1256,8 @@ def get_grades_email(phpsessid, webidentity):
                                 "decimalValue": decimal_value,
                                 "displayValue": grade_text,
                                 "color": "blue" if is_blue else "green",
-                                "periodPos": period_pos,
+                                # Add 1 to periodPos to match API format (calculate_avr will subtract 1)
+                                "periodPos": period_pos + 1,
                                 "periodDesc": f"Periodo {period_pos}",
                                 "componentDesc": "",
                                 "notesForFamily": "",
