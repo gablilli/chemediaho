@@ -1294,22 +1294,22 @@ def get_grades_email(phpsessid, webidentity):
                     # Find grade cells
                     grade_cells = row.find_all('td', class_='cella_voto')
                     for grade_cell in grade_cells:
-                        # Get grade value
-                        children = list(grade_cell.children)
+                        # Get grade value - use find_all to get only element children (not text nodes)
+                        # This matches JavaScript's element.children behavior
+                        elem_children = grade_cell.find_all(recursive=False)
                         date_text = ""
                         grade_text = ""
                         is_blue = False
                         
-                        if len(children) >= 2:
-                            date_elem = children[0]
-                            grade_elem = children[1]
+                        if len(elem_children) >= 2:
+                            date_elem = elem_children[0]
+                            grade_elem = elem_children[1]
                             
-                            date_text = date_elem.get_text(strip=True) if hasattr(date_elem, 'get_text') else str(date_elem).strip()
-                            grade_text = grade_elem.get_text(strip=True) if hasattr(grade_elem, 'get_text') else str(grade_elem).strip()
+                            date_text = date_elem.get_text(strip=True)
+                            grade_text = grade_elem.get_text(strip=True)
                             
                             # Check if it's a blue grade (oral exam indicator)
-                            if hasattr(grade_elem, 'get'):
-                                is_blue = 'f_reg_voto_dettaglio' in grade_elem.get('class', [])
+                            is_blue = 'f_reg_voto_dettaglio' in grade_elem.get('class', [])
                         
                         evt_id = grade_cell.get('evento_id', 0)
                         decimal_value = mark_table.get(grade_text, None)
