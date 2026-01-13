@@ -1051,7 +1051,16 @@ def login_email(email, password):
     
     response = requests.post(url, headers=headers, data=data, allow_redirects=False)
     
-    # Extract PHPSESSID from Set-Cookie header
+    # Check for HTTP errors - 403/401 indicate invalid credentials
+    # Successful authentication typically returns 200 or 302 with a PHPSESSID cookie
+    # We don't follow redirects (allow_redirects=False) to capture the session cookie
+    if response.status_code in (401, 403):
+        raise requests.exceptions.HTTPError(
+            "Login failed: Invalid credentials", 
+            response=response
+        )
+    
+    # Extract PHPSESSID from Set-Cookie header (present on both 200 and 302 responses)
     set_cookie = response.headers.get("Set-Cookie", "")
     phpsessid_match = re.search(r'PHPSESSID=([^;]+)', set_cookie)
     
@@ -1066,11 +1075,11 @@ def login_email(email, password):
                 "login_type": "email"
             }
     
-    # If no valid session, create a proper error response
-    error_response = requests.models.Response()
-    error_response.status_code = 401
-    error_response._content = b'{"error": "Invalid credentials"}'
-    raise requests.exceptions.HTTPError("Login failed: Invalid credentials", response=error_response)
+    # If no valid session cookie was found, raise an authentication error
+    raise requests.exceptions.HTTPError(
+        "Login failed: Invalid credentials or no session cookie", 
+        response=response
+    )
 
 def extract_webidentity(phpsessid):
     """
@@ -1109,8 +1118,15 @@ def extract_webidentity(phpsessid):
         # Check the page content for the school name (indicates successful login)
         school_span = soup.find('span', class_='scuola')
         if school_span:
-            # User is logged in, try to get identity from the grades page
-            return extract_webidentity_from_grades(phpsessid)
+            # User is logged in - first try to get identity from the grades page
+            grades_identity = extract_webidentity_from_grades(phpsessid)
+            if grades_identity:
+                return grades_identity
+            # If grades page doesn't have materia_id elements (e.g., new student with no grades,
+            # or page structure changed), still return the placeholder since the session is valid.
+            # The school name presence confirms the session is authenticated.
+            logger.info("Session valid (school name found) but no webidentity extracted from grades page")
+            return EMAIL_LOGIN_WEBIDENTITY
     
     return None
 
