@@ -2,7 +2,7 @@
 <html lang="it">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#c84444" />
     <meta name="description" content="Visualizza la media dei voti di ClasseViva" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -10,7 +10,10 @@
     <meta name="apple-mobile-web-app-title" content="chemediaho?" />
     <link rel="manifest" href="/manifest.json" />
     <link rel="icon" type="image/png" sizes="192x192" href="/static/icons/icon-192.png" />
+    <!-- iOS touch icons for various device sizes -->
     <link rel="apple-touch-icon" href="/static/icons/icon-192.png" />
+    <link rel="apple-touch-icon" sizes="192x192" href="/static/icons/icon-192.png" />
+    <link rel="apple-touch-icon" sizes="512x512" href="/static/icons/icon-512.png" />
     <title>Autenticazione - che media ho?</title>
     <script src="/static/js/theme.js"></script>
     <link rel="stylesheet" href="/static/common.css" />
@@ -133,6 +136,16 @@
         <!-- iOS Content -->
         <div id="iosContent" class="platform-content active">
           <div class="ios-drawer-content">
+            <!-- iOS 26+ new method notice -->
+            <div class="ios-version-notice">
+              <div class="ios-notice-icon">💡</div>
+              <div class="ios-notice-text">
+                <strong>iOS 26 o successivo:</strong> Per accedere al menu di condivisione, devi prima cliccare il tasto dei tre puntini (...) in basso a destra. Poi continua come sotto.
+              </div>
+            </div>
+            
+            <div class="ios-method-title">Metodo classico (tutte le versioni iOS):</div>
+            
             <div class="ios-step">
               <div class="ios-step-header">
                 <div class="ios-step-number">1</div>

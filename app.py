@@ -103,13 +103,25 @@ def manifest():
                 "src": "/static/icons/icon-192.png",
                 "sizes": "192x192",
                 "type": "image/png",
-                "purpose": "any maskable"
+                "purpose": "any"
+            },
+            {
+                "src": "/static/icons/icon-192.png",
+                "sizes": "192x192",
+                "type": "image/png",
+                "purpose": "maskable"
             },
             {
                 "src": "/static/icons/icon-512.png",
                 "sizes": "512x512",
                 "type": "image/png",
-                "purpose": "any maskable"
+                "purpose": "any"
+            },
+            {
+                "src": "/static/icons/icon-512.png",
+                "sizes": "512x512",
+                "type": "image/png",
+                "purpose": "maskable"
             }
         ]
     }
@@ -1207,7 +1219,7 @@ def get_grades_email(phpsessid, webidentity):
     """
     url = "https://web.spaggiari.eu/cvv/app/default/genitori_voti.php"
     headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+        "User-Agent": DEFAULT_USER_AGENT,
         "Cookie": f"PHPSESSID={phpsessid}; webidentity={webidentity}"
     }
     
@@ -1217,6 +1229,24 @@ def get_grades_email(phpsessid, webidentity):
         response.raise_for_status()
     
     soup = BeautifulSoup(response.text, 'html.parser')
+    
+    # Check if we were redirected to login page (session expired)
+    # ClasseViva redirects to login page when session is invalid
+    login_form = soup.find('form', {'id': 'login_form'}) or soup.find('form', {'action': re.compile(r'login|auth', re.IGNORECASE)})
+    if login_form:
+        logger.warning("Session expired: login form detected in grades page")
+        # Create a mock response to raise an appropriate HTTP error
+        error_response = requests.models.Response()
+        error_response.status_code = 401
+        raise requests.exceptions.HTTPError("Session expired", response=error_response)
+    
+    # Also check for common indicators of logged-out state
+    body_text = soup.get_text().lower()
+    if 'accedi' in body_text and 'password' in body_text and 'autenticazione' in body_text:
+        logger.warning("Session expired: authentication page detected")
+        error_response = requests.models.Response()
+        error_response.status_code = 401
+        raise requests.exceptions.HTTPError("Session expired", response=error_response)
     
     # Grade value mapping (same as in the problem statement)
     mark_table = {
