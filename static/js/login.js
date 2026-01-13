@@ -160,14 +160,14 @@ function switchLoginTab(tabType) {
   // Update hidden input
   loginTypeInput.value = tabType;
   
-  // Update label and placeholder
+  // Update label and placeholder using data attributes
   if (tabType === 'email') {
-    userIdLabel.textContent = 'Email';
-    userIdInput.placeholder = 'nome@esempio.com';
+    userIdLabel.textContent = userIdLabel.getAttribute('data-email-label') || 'Email';
+    userIdInput.placeholder = userIdInput.getAttribute('data-email-placeholder') || 'nome@esempio.com';
     userIdInput.type = 'email';
   } else {
-    userIdLabel.textContent = 'User ID';
-    userIdInput.placeholder = 'G123456789P';
+    userIdLabel.textContent = userIdLabel.getAttribute('data-userid-label') || 'User ID';
+    userIdInput.placeholder = userIdInput.getAttribute('data-userid-placeholder') || 'G123456789P';
     userIdInput.type = 'text';
   }
   

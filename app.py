@@ -36,6 +36,10 @@ MAX_SUGGESTIONS = 5
 # Allowed grade values for smart calculator
 ALLOWED_GRADES = [4, 4.25, 4.5, 4.75, 5, 5.25, 5.5, 5.75, 6, 6.25, 6.5, 6.75, 7, 7.25, 7.5, 7.75, 8, 8.25, 8.5, 8.75, 9, 9.25, 9.5, 9.75, 10]
 
+# Placeholder webidentity for email login when actual identity cannot be extracted
+# This is used when the session is valid but webidentity is not found in the page
+EMAIL_LOGIN_WEBIDENTITY = "_EMAIL_SESSION_"
+
 # Load or generate a persistent SECRET_KEY
 SECRET_KEY_FILE = 'secret_key.txt'
 
@@ -1062,8 +1066,11 @@ def login_email(email, password):
                 "login_type": "email"
             }
     
-    # If no valid session, raise an error
-    raise requests.exceptions.HTTPError(response=response)
+    # If no valid session, create a proper error response
+    error_response = requests.models.Response()
+    error_response.status_code = 401
+    error_response._content = b'{"error": "Invalid credentials"}'
+    raise requests.exceptions.HTTPError("Login failed: Invalid credentials", response=error_response)
 
 def extract_webidentity(phpsessid):
     """
@@ -1136,7 +1143,7 @@ def extract_webidentity_from_grades(phpsessid):
         if grade_elements:
             # If grades are accessible, the session is valid
             # Return a placeholder that indicates email login mode
-            return "EMAIL_LOGIN"
+            return EMAIL_LOGIN_WEBIDENTITY
     
     return None
 
