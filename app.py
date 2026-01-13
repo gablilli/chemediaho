@@ -1051,12 +1051,13 @@ def login_email(email, password):
     
     response = requests.post(url, headers=headers, data=data, allow_redirects=False)
     
-    # Check response status - 4xx/5xx status codes indicate failure
-    if response.status_code >= 400:
-        error_response = requests.models.Response()
-        error_response.status_code = 401
-        error_response._content = b'{"error": "Invalid credentials"}'
-        raise requests.exceptions.HTTPError("Login failed: Invalid credentials", response=error_response)
+    # Check for HTTP errors - 403/401 indicate invalid credentials
+    # Note: 302 redirects are expected for successful authentication
+    if response.status_code in (401, 403):
+        raise requests.exceptions.HTTPError(
+            "Login failed: Invalid credentials", 
+            response=response
+        )
     
     # Extract PHPSESSID from Set-Cookie header
     set_cookie = response.headers.get("Set-Cookie", "")
@@ -1073,11 +1074,11 @@ def login_email(email, password):
                 "login_type": "email"
             }
     
-    # If no valid session, create a proper error response
-    error_response = requests.models.Response()
-    error_response.status_code = 401
-    error_response._content = b'{"error": "Invalid credentials"}'
-    raise requests.exceptions.HTTPError("Login failed: Invalid credentials", response=error_response)
+    # If no valid session cookie was found, raise an authentication error
+    raise requests.exceptions.HTTPError(
+        "Login failed: Invalid credentials or no session cookie", 
+        response=response
+    )
 
 def extract_webidentity(phpsessid):
     """
