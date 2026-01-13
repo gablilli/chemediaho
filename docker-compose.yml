@@ -1,15 +1,13 @@
 services:
-  flask:
-    build:
-      context: .
-      dockerfile: Dockerfile
+  chemediaho:
+    image: gablilli/chemediaho:latest
+    container_name: chemediaho
     ports:
-      - "5000:5000"
+      - "8001:8001"
     environment:
-      - FLASK_ENV=production
-      # Set HTTPS_ENABLED=true if running behind HTTPS proxy/load balancer
-      # - HTTPS_ENABLED=true
+      FLASK_ENV: production
+      # HTTPS_ENABLED: "true"
     volumes:
-      # Persist secret key across container restarts
+      # persiste la secret key fuori dal container
       - ./secret_key.txt:/app/secret_key.txt
     restart: always
