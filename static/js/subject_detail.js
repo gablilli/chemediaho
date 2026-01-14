@@ -245,10 +245,29 @@ function displayResult(data) {
   document.getElementById('currentAverage').textContent = data.current_average.toFixed(2);
   document.getElementById('targetAverageDisplay').textContent = data.target_average.toFixed(2);
   
-  if (data.required_grades && Array.isArray(data.required_grades)) {
-    document.getElementById('requiredGrades').textContent = data.required_grades.map(g => g.toFixed(2)).join(', ');
-  } else {
+  // Check if goal is already achieved
+  if (data.already_achieved) {
+    document.getElementById('requiredGrades').textContent = 'Nessuno - obiettivo già raggiunto!';
+    document.getElementById('resultMessage').textContent = data.message || '';
+    resultCard.classList.add('show');
+    resultCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    return;
+  }
+  
+  // Display required grades with clearer format
+  if (data.required_grades && Array.isArray(data.required_grades) && data.required_grades.length > 0) {
+    const allSame = data.required_grades.every(g => g === data.required_grades[0]);
+    if (allSame && data.required_grades.length > 1) {
+      document.getElementById('requiredGrades').textContent = `${data.required_grades.length} voti da ${data.required_grades[0].toFixed(2)}`;
+    } else if (data.required_grades.length === 1) {
+      document.getElementById('requiredGrades').textContent = data.required_grades[0].toFixed(2);
+    } else {
+      document.getElementById('requiredGrades').textContent = data.required_grades.map(g => g.toFixed(2)).join(', ');
+    }
+  } else if (data.required_grade !== null && data.required_grade !== undefined) {
     document.getElementById('requiredGrades').textContent = data.required_grade.toFixed(2);
+  } else {
+    document.getElementById('requiredGrades').textContent = 'N/D';
   }
   
   document.getElementById('resultMessage').textContent = data.message || '';

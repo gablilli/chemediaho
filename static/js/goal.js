@@ -310,11 +310,21 @@ function displaySmartSuggestionsGoal(data) {
       const suggestionItem = document.createElement('div');
       suggestionItem.className = 'suggestion-item';
       
+      // First suggestion is highlighted as the optimal choice
+      if (index === 0) {
+        suggestionItem.style.border = '2px solid var(--accent)';
+        suggestionItem.style.background = 'rgba(200, 68, 68, 0.1)';
+      } else {
+        // Secondary suggestions are slightly faded
+        suggestionItem.style.opacity = '0.85';
+      }
+      
       const rank = index + 1;
       const emoji = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : '📌';
+      const achievableIndicator = suggestion.is_achievable === false ? ' ⚠️' : '';
       
       suggestionItem.innerHTML = `
-        <div class="subject-name">${emoji} ${suggestion.subject}</div>
+        <div class="subject-name">${emoji} ${suggestion.subject}${achievableIndicator}</div>
         <div class="suggestion-details">
           <span>Media attuale: ${suggestion.current_average}</span>
           <span class="required-grade">Voto necessario: ${suggestion.required_grade}</span>
@@ -327,7 +337,7 @@ function displaySmartSuggestionsGoal(data) {
       suggestionsContainer.appendChild(suggestionItem);
     });
   } else {
-    suggestionsContainer.innerHTML = '<p style="opacity: 0.7;">Nessun suggerimento disponibile.</p>';
+    suggestionsContainer.innerHTML = '<p style="opacity: 0.7;">Nessun suggerimento disponibile. L\'obiettivo potrebbe essere già raggiunto!</p>';
   }
   
   document.getElementById('resultMessageSmartGoal').textContent = data.message;
@@ -395,43 +405,64 @@ function displayGoalResult(data) {
   document.getElementById('currentAverageGoal').textContent = data.current_average.toFixed(2);
   document.getElementById('targetAverageDisplay').textContent = data.target_average.toFixed(2);
   
+  // Check if goal is already achieved
+  if (data.already_achieved) {
+    document.getElementById('requiredGradesGoal').textContent = 'Nessuno';
+    document.getElementById('resultMessageGoal').textContent = data.message;
+    resultCardGoal.classList.remove('success', 'warning', 'error');
+    resultCardGoal.classList.add('success');
+    document.getElementById('resultEmojiGoal').textContent = '🎉';
+    document.getElementById('resultTitleGoal').textContent = 'Obiettivo Raggiunto!';
+    resultCardGoal.classList.add('show');
+    resultCardGoal.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    return;
+  }
+  
   // Display required grades (use 2 decimal places for consistency)
   const requiredGradesEl = document.getElementById('requiredGradesGoal');
-  if (data.required_grades && Array.isArray(data.required_grades)) {
-    requiredGradesEl.textContent = data.required_grades.map(g => g.toFixed(2)).join(', ');
-  } else {
+  if (data.required_grades && Array.isArray(data.required_grades) && data.required_grades.length > 0) {
+    // For clarity: if all grades are the same, show "N voti da X" format
+    const allSame = data.required_grades.every(g => g === data.required_grades[0]);
+    if (allSame && data.required_grades.length > 1) {
+      requiredGradesEl.textContent = `${data.required_grades.length} voti da ${data.required_grades[0].toFixed(2)}`;
+    } else if (data.required_grades.length === 1) {
+      requiredGradesEl.textContent = data.required_grades[0].toFixed(2);
+    } else {
+      requiredGradesEl.textContent = data.required_grades.map(g => g.toFixed(2)).join(', ');
+    }
+  } else if (data.required_grade !== null && data.required_grade !== undefined) {
     requiredGradesEl.textContent = data.required_grade.toFixed(2);
+  } else {
+    requiredGradesEl.textContent = 'N/D';
   }
   
   document.getElementById('resultMessageGoal').textContent = data.message;
 
-  // Set result card style
+  // Set result card style based on achievability
   resultCardGoal.classList.remove('success', 'warning', 'error');
   
-  const avgGrade = data.required_grades ? 
-    data.required_grades.reduce((a, b) => a + b, 0) / data.required_grades.length : 
-    data.required_grade;
-  
-  if (avgGrade < 1) {
-    resultCardGoal.classList.add('success');
-    document.getElementById('resultEmojiGoal').textContent = '🎉';
-    document.getElementById('resultTitleGoal').textContent = 'Fantastico!';
-  } else if (avgGrade > 10) {
+  if (!data.achievable) {
     resultCardGoal.classList.add('error');
     document.getElementById('resultEmojiGoal').textContent = '😅';
     document.getElementById('resultTitleGoal').textContent = 'Difficile...';
-  } else if (avgGrade >= 9) {
-    resultCardGoal.classList.add('warning');
-    document.getElementById('resultEmojiGoal').textContent = '💪';
-    document.getElementById('resultTitleGoal').textContent = 'Impegnati!';
-  } else if (avgGrade >= 7) {
-    resultCardGoal.classList.add('success');
-    document.getElementById('resultEmojiGoal').textContent = '👍';
-    document.getElementById('resultTitleGoal').textContent = 'Fattibile!';
   } else {
-    resultCardGoal.classList.add('success');
-    document.getElementById('resultEmojiGoal').textContent = '✅';
-    document.getElementById('resultTitleGoal').textContent = 'Ottimo!';
+    const avgGrade = data.required_grades && data.required_grades.length > 0 ? 
+      data.required_grades.reduce((a, b) => a + b, 0) / data.required_grades.length : 
+      (data.required_grade || 10);
+    
+    if (avgGrade >= 9) {
+      resultCardGoal.classList.add('warning');
+      document.getElementById('resultEmojiGoal').textContent = '💪';
+      document.getElementById('resultTitleGoal').textContent = 'Impegnati!';
+    } else if (avgGrade >= 7) {
+      resultCardGoal.classList.add('success');
+      document.getElementById('resultEmojiGoal').textContent = '👍';
+      document.getElementById('resultTitleGoal').textContent = 'Fattibile!';
+    } else {
+      resultCardGoal.classList.add('success');
+      document.getElementById('resultEmojiGoal').textContent = '✅';
+      document.getElementById('resultTitleGoal').textContent = 'Ottimo!';
+    }
   }
 
   resultCardGoal.classList.add('show');
@@ -705,6 +736,21 @@ async function getSmartSuggestion() {
 function displaySmartSuggestions(data) {
   const resultCard = document.getElementById('resultCardSmartSuggestions');
   
+  // Handle already achieved case
+  if (data.already_achieved) {
+    document.getElementById('currentOverallAverageSmart').textContent = data.current_overall_average.toFixed(2);
+    document.getElementById('targetOverallAverageSmart').textContent = data.target_average.toFixed(2);
+    
+    const suggestionsContainer = document.getElementById('suggestionsContainer');
+    suggestionsContainer.innerHTML = '<p style="font-size: 16px; text-align: center; padding: 20px;">🎉 Obiettivo già raggiunto!</p>';
+    
+    document.getElementById('resultMessageSmart').textContent = data.message;
+    resultCard.classList.add('show');
+    resultCard.style.display = 'block';
+    resultCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    return;
+  }
+  
   document.getElementById('currentOverallAverageSmart').textContent = data.current_overall_average.toFixed(2);
   document.getElementById('targetOverallAverageSmart').textContent = data.target_average.toFixed(2);
   
@@ -724,11 +770,21 @@ function displaySmartSuggestions(data) {
       const suggestionItem = document.createElement('div');
       suggestionItem.className = 'suggestion-item';
       
+      // First suggestion is highlighted as the optimal choice
+      if (index === 0) {
+        suggestionItem.style.border = '2px solid var(--accent)';
+        suggestionItem.style.background = 'rgba(200, 68, 68, 0.1)';
+      } else {
+        // Secondary suggestions are slightly faded
+        suggestionItem.style.opacity = '0.85';
+      }
+      
       const rank = index + 1;
       const emoji = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : '📌';
+      const achievableIndicator = suggestion.is_achievable === false ? ' ⚠️' : '';
       
       suggestionItem.innerHTML = `
-        <div class="subject-name">${emoji} ${suggestion.subject}</div>
+        <div class="subject-name">${emoji} ${suggestion.subject}${achievableIndicator}</div>
         <div class="suggestion-details">
           <span>Media attuale: ${suggestion.current_average}</span>
           <span class="required-grade">Voto necessario: ${suggestion.required_grade}</span>
