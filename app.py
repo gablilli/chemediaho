@@ -785,7 +785,9 @@ def calculate_subject_suggestions(grades_avr, target_overall_average, num_grades
             if subject in grades_avr[period]:
                 subject_data = grades_avr[period][subject]
                 if 'grades' in subject_data:
-                    subject_grades.extend([g['decimalValue'] for g in subject_data['grades'] if not g.get('isBlue', False)])
+                    exclude_blue = should_exclude_blue_grades()
+                    subject_grades.extend([g['decimalValue'] for g in subject_data['grades'] 
+                                           if not (exclude_blue and g.get('isBlue', False))])
         
         if not subject_grades:
             continue
@@ -844,13 +846,16 @@ def calculate_period_subject_suggestions(grades_avr, period, target_average, num
     period_subjects = [s for s in grades_avr[period].keys() if s != 'period_avr']
     
     # Gather all period grades
+    # Gather all period grades respecting user preference
+    exclude_blue = should_exclude_blue_grades()
     all_period_grades = []
     for subject in period_subjects:
         subject_data = grades_avr[period][subject]
         if 'grades' in subject_data:
             for g in subject_data['grades']:
-                if not g.get('isBlue', False):
-                    all_period_grades.append(g['decimalValue'])
+                if exclude_blue and g.get('isBlue', False):
+                    continue
+                all_period_grades.append(g['decimalValue'])
     
     if not all_period_grades:
         return []
@@ -872,10 +877,11 @@ def calculate_period_subject_suggestions(grades_avr, period, target_average, num
     for subject in period_subjects:
         subject_data = grades_avr[period][subject]
         
-        # Get grades for this subject (excluding blue grades)
+        # Get grades for this subject respecting user preference
         subject_grades = []
         if 'grades' in subject_data:
-            subject_grades = [g['decimalValue'] for g in subject_data['grades'] if not g.get('isBlue', False)]
+            subject_grades = [g['decimalValue'] for g in subject_data['grades'] 
+                              if not (exclude_blue and g.get('isBlue', False))]
         
         if not subject_grades:
             continue

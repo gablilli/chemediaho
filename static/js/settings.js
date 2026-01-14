@@ -63,7 +63,7 @@ if (includeBlueGradesToggle) {
       });
       
       if (response.ok) {
-        showNotification(include ? 'I voti blu saranno inclusi nel calcolo' : 'I voti blu saranno esclusi dal calcolo', 'success');
+        showNotification(include ? 'Preferenza salvata: voti blu inclusi' : 'Preferenza salvata: voti blu esclusi', 'success');
       } else {
         throw new Error('Errore nel salvataggio della preferenza');
       }
