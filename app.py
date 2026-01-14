@@ -320,6 +320,28 @@ def goal_page():
     grades_avr = flask.session['grades_avr']
     return flask.render_template('goal.html', grades_avr=grades_avr)
 
+@app.route('/set_blue_grade_preference', methods=['POST'])
+def set_blue_grade_preference():
+    """Set the user's preference for including/excluding blue grades in calculations"""
+    try:
+        data = flask.request.get_json()
+        include_blue_grades = data.get('include_blue_grades', True)
+        
+        # Store preference in session
+        flask.session['include_blue_grades'] = include_blue_grades
+        
+        # If we have grades, recalculate averages with the new preference
+        if 'grades_avr' in flask.session:
+            # Note: This is a lightweight approach - just store the preference
+            # The actual calculation functions will use this preference when called
+            pass
+        
+        return flask.jsonify({'success': True, 'include_blue_grades': include_blue_grades}), 200
+        
+    except Exception as e:
+        logger.error(f"Error setting blue grade preference: {e}", exc_info=True)
+        return flask.jsonify({'error': 'Errore nel salvataggio della preferenza'}), 500
+
 @app.route('/calculate_goal', methods=['POST'])
 def calculate_goal():
     """Calculate what grade is needed to reach a target average in a specific period.
@@ -544,17 +566,27 @@ def get_predict_message(change, predicted_average, num_grades):
     else:
         return f"Attenzione! Con {grade_text} la tua media scenderebbe significativamente a {round(predicted_average, 2)} ({change:.2f}). 📉"
 
-def get_all_grades(grades_avr, exclude_blue=False):
+def should_exclude_blue_grades():
+    """Check if blue grades should be excluded based on user preference in session.
+    Default is False (include blue grades)."""
+    include_blue = flask.session.get('include_blue_grades', True)
+    return not include_blue
+
+def get_all_grades(grades_avr, exclude_blue=None):
     """
     Collect all grades from all subjects in all periods
     
     Args:
         grades_avr: Dictionary containing grades organized by period and subject
-        exclude_blue: If True, excludes blue grades (oral exam indicators)
+        exclude_blue: If True, excludes blue grades. If None, uses session preference.
     
     Returns:
         List of decimal grade values
     """
+    # Use session preference if exclude_blue not explicitly provided
+    if exclude_blue is None:
+        exclude_blue = should_exclude_blue_grades()
+    
     all_grades_list = []
     for period in grades_avr:
         if period == 'all_avr':
