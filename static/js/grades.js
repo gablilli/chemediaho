@@ -54,12 +54,32 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function showModal(gradeData) {
-  document.getElementById('modalGrade').textContent = gradeData.decimalValue;
-  document.getElementById('modalDate').textContent = gradeData.evtDate;
-  document.getElementById('modalComponent').textContent = gradeData.componentDesc;
-  document.getElementById('modalTeacher').textContent = gradeData.teacherName;
-  document.getElementById('modalNotes').textContent = gradeData.notesForFamily || 'Nessuna nota';
-  document.getElementById('gradeModal').classList.add('show');
+  const modal = document.getElementById('gradeModal');
+  const modalBody = document.getElementById('modalBody');
+  
+  // Build modal content dynamically for consistency with subject_detail.js
+  let html = `
+    <p><strong>Voto:</strong> <span style="font-weight: bold; font-size: 18px;">${gradeData.decimalValue}</span></p>
+    <p><strong>Data:</strong> ${gradeData.evtDate || 'N/D'}</p>
+    <p><strong>Componente:</strong> ${gradeData.componentDesc || 'N/D'}</p>
+  `;
+  
+  if (gradeData.teacherName) {
+    html += `<p><strong>Docente:</strong> ${gradeData.teacherName}</p>`;
+  }
+  
+  if (gradeData.notesForFamily) {
+    html += `<p><strong>Note:</strong> ${gradeData.notesForFamily}</p>`;
+  } else {
+    html += `<p><strong>Note:</strong> Nessuna nota</p>`;
+  }
+  
+  if (gradeData.isBlue) {
+    html += `<p><strong>Tipo:</strong> <span style="color: #2196F3;">Voto Blu</span></p>`;
+  }
+  
+  modalBody.innerHTML = html;
+  modal.classList.add('show');
 }
 
 function closeModal() {

@@ -544,15 +544,16 @@ def get_predict_message(change, predicted_average, num_grades):
     else:
         return f"Attenzione! Con {grade_text} la tua media scenderebbe significativamente a {round(predicted_average, 2)} ({change:.2f}). 📉"
 
-def get_all_grades(grades_avr):
+def get_all_grades(grades_avr, exclude_blue=False):
     """
-    Collect all grades from all subjects in all periods (excluding blue grades)
+    Collect all grades from all subjects in all periods
     
     Args:
         grades_avr: Dictionary containing grades organized by period and subject
+        exclude_blue: If True, excludes blue grades (oral exam indicators)
     
     Returns:
-        List of decimal grade values (blue grades excluded)
+        List of decimal grade values
     """
     all_grades_list = []
     for period in grades_avr:
@@ -562,9 +563,9 @@ def get_all_grades(grades_avr):
             if subject == 'period_avr':
                 continue
             for grade in grades_avr[period][subject].get('grades', []):
-                # Always exclude blue grades as requested
-                if not grade.get('isBlue', False):
-                    all_grades_list.append(grade['decimalValue'])
+                if exclude_blue and grade.get('isBlue', False):
+                    continue
+                all_grades_list.append(grade['decimalValue'])
     return all_grades_list
 
 @app.route('/calculate_goal_overall', methods=['POST'])
@@ -1440,8 +1441,14 @@ def calculate_avr(grades):
             period_grades.extend([g['decimalValue'] for g in grades_avr[period][subject]['grades']])
         grades_avr[period]["period_avr"] = sum(period_grades) / len(period_grades) if period_grades else 0
     
-    # Calculate overall average
-    grades_avr["all_avr"] = sum([grades_avr[period]["period_avr"] for period in grades_avr]) / len(grades_avr) if grades_avr else 0
+    # Calculate overall average - use weighted average of all grades, not average of period averages
+    # Include all grades (including blue) for consistency with displayed averages
+    all_grades = []
+    for period in grades_avr:
+        for subject in grades_avr[period]:
+            if subject != 'period_avr':
+                all_grades.extend([g['decimalValue'] for g in grades_avr[period][subject]['grades']])
+    grades_avr["all_avr"] = sum(all_grades) / len(all_grades) if all_grades else 0
     
     # print(json.dumps(grades_avr, indent=4))
     return grades_avr
