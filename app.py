@@ -30,8 +30,9 @@ DEFAULT_INCLUDE_BLUE_GRADES = False  # Default: don't include blue grades
 #   - 0.1 provides a good balance between both factors
 SUGGESTION_IMPACT_WEIGHT = 0.1
 # MAX_SUGGESTIONS: Number of subject suggestions to return
-#   - 5 provides enough variety without overwhelming the user
-MAX_SUGGESTIONS = 5
+#   - 4 provides enough variety without overwhelming the user
+#   - First suggestion is the "optimal" one, others are alternatives
+MAX_SUGGESTIONS = 4
 
 # Allowed grade values for smart calculator
 ALLOWED_GRADES = [4, 4.25, 4.5, 4.75, 5, 5.25, 5.5, 5.75, 6, 6.25, 6.5, 6.75, 7, 7.25, 7.5, 7.75, 8, 8.25, 8.5, 8.75, 9, 9.25, 9.5, 9.75, 10]
@@ -319,6 +320,28 @@ def goal_page():
     grades_avr = flask.session['grades_avr']
     return flask.render_template('goal.html', grades_avr=grades_avr)
 
+@app.route('/set_blue_grade_preference', methods=['POST'])
+def set_blue_grade_preference():
+    """Set the user's preference for including/excluding blue grades in calculations"""
+    try:
+        data = flask.request.get_json()
+        include_blue_grades = data.get('include_blue_grades', True)
+        
+        # Store preference in session
+        flask.session['include_blue_grades'] = include_blue_grades
+        
+        # If we have grades, recalculate averages with the new preference
+        if 'grades_avr' in flask.session:
+            # Note: This is a lightweight approach - just store the preference
+            # The actual calculation functions will use this preference when called
+            pass
+        
+        return flask.jsonify({'success': True, 'include_blue_grades': include_blue_grades}), 200
+        
+    except Exception as e:
+        logger.error(f"Error setting blue grade preference: {e}", exc_info=True)
+        return flask.jsonify({'error': 'Errore nel salvataggio della preferenza'}), 500
+
 @app.route('/calculate_goal', methods=['POST'])
 def calculate_goal():
     """Calculate what grade is needed to reach a target average in a specific period.
@@ -380,9 +403,20 @@ def calculate_goal():
         current_sum = sum(current_grades)
         current_average = subject_data.get('avr', current_sum / current_count if current_count > 0 else 0)
         
-        # Validate that target average is not below current average
-        if target_average < current_average:
-            return flask.jsonify({'error': f'La media target ({target_average}) non può essere inferiore alla media attuale ({round(current_average, 2)}).'}), 400
+        # Check if current average already meets or exceeds target
+        if current_average >= target_average:
+            return flask.jsonify({
+                'success': True,
+                'current_average': round(current_average, 2),
+                'target_average': target_average,
+                'required_grade': None,
+                'required_grades': [],
+                'current_grades_count': current_count,
+                'achievable': True,
+                'already_achieved': True,
+                'subject': subject,
+                'message': f"🎉 Obiettivo già raggiunto! La tua media attuale ({round(current_average, 2)}) è già pari o superiore all'obiettivo di {target_average}."
+            }), 200
         
         # Calculate required grades
         # For multiple grades, we calculate the average grade needed
@@ -399,7 +433,8 @@ def calculate_goal():
         required_grades = [display_grade] * num_grades
         
         # Determine if it's achievable (use original value for comparison)
-        achievable = min(ALLOWED_GRADES) <= required_average_grade <= max(ALLOWED_GRADES)
+        # The goal is achievable if the required grade is within the allowed range
+        achievable = required_average_grade <= max(ALLOWED_GRADES)
         
         return flask.jsonify({
             'success': True,
@@ -409,6 +444,7 @@ def calculate_goal():
             'required_grades': required_grades,
             'current_grades_count': current_count,
             'achievable': achievable,
+            'already_achieved': False,
             'subject': subject,
             'message': get_goal_message_multiple(required_average_grade, display_grade, target_average, current_average, num_grades)
         }), 200
@@ -530,16 +566,27 @@ def get_predict_message(change, predicted_average, num_grades):
     else:
         return f"Attenzione! Con {grade_text} la tua media scenderebbe significativamente a {round(predicted_average, 2)} ({change:.2f}). 📉"
 
-def get_all_grades(grades_avr):
+def should_exclude_blue_grades():
+    """Check if blue grades should be excluded based on user preference in session.
+    Default is False (include blue grades)."""
+    include_blue = flask.session.get('include_blue_grades', True)
+    return not include_blue
+
+def get_all_grades(grades_avr, exclude_blue=None):
     """
-    Collect all grades from all subjects in all periods (excluding blue grades)
+    Collect all grades from all subjects in all periods
     
     Args:
         grades_avr: Dictionary containing grades organized by period and subject
+        exclude_blue: If True, excludes blue grades. If None, uses session preference.
     
     Returns:
-        List of decimal grade values (blue grades excluded)
+        List of decimal grade values
     """
+    # Use session preference if exclude_blue not explicitly provided
+    if exclude_blue is None:
+        exclude_blue = should_exclude_blue_grades()
+    
     all_grades_list = []
     for period in grades_avr:
         if period == 'all_avr':
@@ -548,9 +595,9 @@ def get_all_grades(grades_avr):
             if subject == 'period_avr':
                 continue
             for grade in grades_avr[period][subject].get('grades', []):
-                # Always exclude blue grades as requested
-                if not grade.get('isBlue', False):
-                    all_grades_list.append(grade['decimalValue'])
+                if exclude_blue and grade.get('isBlue', False):
+                    continue
+                all_grades_list.append(grade['decimalValue'])
     return all_grades_list
 
 @app.route('/calculate_goal_overall', methods=['POST'])
@@ -575,9 +622,18 @@ def calculate_goal_overall():
         # Get current overall average
         current_overall_average = grades_avr.get('all_avr', 0)
         
-        # Validate that target is achievable
-        if target_overall_average < current_overall_average:
-            return flask.jsonify({'error': f'La media target ({target_overall_average}) non può essere inferiore alla media generale attuale ({round(current_overall_average, 2)}).'}), 400
+        # Check if current average already meets or exceeds target
+        if current_overall_average >= target_overall_average:
+            return flask.jsonify({
+                'success': True,
+                'current_overall_average': round(current_overall_average, 2),
+                'target_average': target_overall_average,
+                'suggestions': [],
+                'num_grades': 0,
+                'auto_calculated': True,
+                'already_achieved': True,
+                'message': f"🎉 Obiettivo già raggiunto! La tua media generale attuale ({round(current_overall_average, 2)}) è già pari o superiore all'obiettivo di {target_overall_average}."
+            }), 200
         
         # Collect all current grades from all subjects in all periods (excluding blue grades)
         all_grades_list = get_all_grades(grades_avr)
@@ -696,11 +752,19 @@ def calculate_subject_suggestions(grades_avr, target_overall_average, num_grades
     Returns suggestions sorted by difficulty (easiest first).
     
     The algorithm uses a combined scoring approach:
-    - Difficulty: Lower current averages = easier targets (more room for improvement)
+    - Required grade: Lower required grades = easier to achieve
     - Impact: Fewer existing grades = higher impact per new grade
     - Combined score balances both factors to find optimal subjects
     """
     suggestions = []
+    
+    # Get all grades to calculate current overall average
+    all_grades_list = get_all_grades(grades_avr)
+    if not all_grades_list:
+        return []
+    
+    current_total = sum(all_grades_list)
+    current_count = len(all_grades_list)
     
     # Get all unique subjects across all periods
     all_subjects = set()
@@ -721,36 +785,47 @@ def calculate_subject_suggestions(grades_avr, target_overall_average, num_grades
             if subject in grades_avr[period]:
                 subject_data = grades_avr[period][subject]
                 if 'grades' in subject_data:
-                    subject_grades.extend([g['decimalValue'] for g in subject_data['grades'] if not g.get('isBlue', False)])
+                    exclude_blue = should_exclude_blue_grades()
+                    subject_grades.extend([g['decimalValue'] for g in subject_data['grades'] 
+                                           if not (exclude_blue and g.get('isBlue', False))])
         
         if not subject_grades:
             continue
         
         current_subject_avg = sum(subject_grades) / len(subject_grades)
         
-        # Difficulty calculation: measures how much "easier" a subject is to improve
-        # Formula: baseline_grade - (target - current_avg)
-        # - If current_avg is low, (target - current_avg) is high, making the result lower (easier)
-        # - Lower scores = easier targets
-        difficulty_score = baseline_required_grade - (target_overall_average - current_subject_avg)
+        # Calculate what grade is needed in THIS subject to reach the target overall average
+        # Formula: (current_total + required_sum) / (current_count + num_grades) = target_overall_average
+        # required_sum = target_overall_average * (current_count + num_grades) - current_total
+        required_sum = target_overall_average * (current_count + num_grades) - current_total
+        required_average_grade = required_sum / num_grades if num_grades > 0 else 10
         
-        # Impact factor: subjects with fewer grades have more impact per new grade
+        # The required grade for this subject - clip to allowed range for display
+        display_required_grade = round_to_allowed_grade(required_average_grade)
+        
+        # Achievability check - is this goal achievable in this subject?
+        is_achievable = required_average_grade <= max(ALLOWED_GRADES)
+        
+        # Combined score for sorting: prioritize subjects with lower required grades
+        # and higher impact (fewer existing grades)
+        # Lower score = better suggestion
         impact_factor = 1.0 / (len(subject_grades) + num_grades) * 100
-        
-        # Combined score: prioritize subjects that are both easier AND have higher impact
-        combined_score = difficulty_score - (impact_factor * SUGGESTION_IMPACT_WEIGHT)
+        combined_score = required_average_grade - (impact_factor * SUGGESTION_IMPACT_WEIGHT)
         
         suggestions.append({
             'subject': subject,
             'current_average': round(current_subject_avg, 2),
-            'required_grade': round_to_allowed_grade(min(baseline_required_grade, 10)),
+            'required_grade': display_required_grade,
+            'raw_required_grade': round(required_average_grade, 2),
             'num_current_grades': len(subject_grades),
             'difficulty': round(combined_score, 2),
-            'impact': round(impact_factor, 2)
+            'impact': round(impact_factor, 2),
+            'is_achievable': is_achievable
         })
     
     # Sort by combined difficulty score (ascending) - lower = better target
-    suggestions.sort(key=lambda x: x['difficulty'])
+    # Prioritize achievable suggestions
+    suggestions.sort(key=lambda x: (not x['is_achievable'], x['difficulty']))
     
     # Return top suggestions
     return suggestions[:MAX_SUGGESTIONS]
@@ -759,10 +834,8 @@ def calculate_period_subject_suggestions(grades_avr, period, target_average, num
     """Calculate which subjects within a period would be easiest to focus on to reach the target average.
     Returns suggestions sorted by difficulty (easiest first).
     
-    The algorithm uses a combined scoring approach:
-    - Difficulty: Lower current averages = easier targets (more room for improvement)
-    - Impact: Fewer existing grades = higher impact per new grade
-    - Combined score balances both factors to find optimal subjects
+    The algorithm calculates the required grade for each subject individually
+    to reach the period target, then ranks them by achievability and difficulty.
     """
     suggestions = []
     
@@ -772,81 +845,79 @@ def calculate_period_subject_suggestions(grades_avr, period, target_average, num
     
     period_subjects = [s for s in grades_avr[period].keys() if s != 'period_avr']
     
-    # Calculate baseline required grade (what would be needed on average)
-    # This is used as a reference point for difficulty calculation
+    # Gather all period grades
+    # Gather all period grades respecting user preference
+    exclude_blue = should_exclude_blue_grades()
     all_period_grades = []
     for subject in period_subjects:
         subject_data = grades_avr[period][subject]
         if 'grades' in subject_data:
             for g in subject_data['grades']:
-                if not g.get('isBlue', False):
-                    all_period_grades.append(g['decimalValue'])
+                if exclude_blue and g.get('isBlue', False):
+                    continue
+                all_period_grades.append(g['decimalValue'])
     
     if not all_period_grades:
         return []
     
     current_period_total = sum(all_period_grades)
     current_period_count = len(all_period_grades)
+    current_period_avg = current_period_total / current_period_count
     
-    # Calculate baseline grade needed (assuming distributed evenly across all subjects)
+    # Check if period average already meets target
+    if current_period_avg >= target_average:
+        return []  # Already achieved - no suggestions needed
+    
+    # Calculate the required grade if grades are added to the overall period
+    # (not to a specific subject but to the period total)
     required_sum = target_average * (current_period_count + num_grades) - current_period_total
-    baseline_required_grade = required_sum / num_grades
+    baseline_required_grade = required_sum / num_grades if num_grades > 0 else 10
     
     # For each subject in the period, calculate what grade is needed and score difficulty
     for subject in period_subjects:
         subject_data = grades_avr[period][subject]
         
-        # Get grades for this subject
+        # Get grades for this subject respecting user preference
         subject_grades = []
         if 'grades' in subject_data:
-            subject_grades = [g['decimalValue'] for g in subject_data['grades'] if not g.get('isBlue', False)]
+            subject_grades = [g['decimalValue'] for g in subject_data['grades'] 
+                              if not (exclude_blue and g.get('isBlue', False))]
         
         if not subject_grades:
             continue
         
         current_subject_avg = sum(subject_grades) / len(subject_grades)
         num_subject_grades = len(subject_grades)
-        sum_subject_grades = sum(subject_grades)
         
-        # Calculate what grade is needed in this subject to reach the period target
-        # Formula derivation:
-        # Let X = required grade in this subject
-        # Target equation: (period_total_without_subject + X*num_grades) / (period_count_without_subject + num_grades) = target_average
-        # Solving for X:
-        # X = (target_average * (period_count_without_subject + num_grades) - period_total_without_subject) / num_grades
+        # The required grade is the same for all subjects since we're adding to the period total
+        # (adding a grade anywhere affects the period average the same way)
+        required_grade = baseline_required_grade
         
-        # Remove this subject's current grades from the period total
-        period_total_without_subject = current_period_total - sum_subject_grades
-        period_count_without_subject = current_period_count - num_subject_grades
+        # Achievability check
+        is_achievable = required_grade <= max(ALLOWED_GRADES)
         
-        # Calculate required grade in this subject
-        required_grade_subject = (target_average * (period_count_without_subject + num_grades) - period_total_without_subject) / num_grades
-        
-        # Difficulty calculation: Lower scores = easier targets
-        # The formula considers two factors:
-        # 1. Gap to target (target - current_avg): Larger gaps make it harder
-        # 2. Baseline difficulty (baseline_required_grade): Overall difficulty level
-        # Combined: baseline_grade - gap_to_target
-        # Result: Subjects with low current averages get lower (easier) scores
-        difficulty_score = baseline_required_grade - (target_average - current_subject_avg)
+        # Display grade (rounded to allowed values)
+        display_required_grade = round_to_allowed_grade(required_grade)
         
         # Impact factor: subjects with fewer grades have more impact per new grade
         impact_factor = 1.0 / (num_subject_grades + num_grades) * 100
         
-        # Combined score: prioritize subjects that are both easier AND have higher impact
-        combined_score = difficulty_score - (impact_factor * SUGGESTION_IMPACT_WEIGHT)
+        # Combined score for sorting: prioritize by required grade and impact
+        combined_score = required_grade - (impact_factor * SUGGESTION_IMPACT_WEIGHT)
         
         suggestions.append({
             'subject': subject,
             'current_average': round(current_subject_avg, 2),
-            'required_grade': round_to_allowed_grade(min(required_grade_subject, 10)),
+            'required_grade': display_required_grade,
+            'raw_required_grade': round(required_grade, 2),
             'num_current_grades': num_subject_grades,
             'difficulty': round(combined_score, 2),
-            'impact': round(impact_factor, 2)
+            'impact': round(impact_factor, 2),
+            'is_achievable': is_achievable
         })
     
-    # Sort by combined difficulty score (ascending) - lower = better target
-    suggestions.sort(key=lambda x: x['difficulty'])
+    # Sort by achievability first, then by difficulty score (ascending)
+    suggestions.sort(key=lambda x: (not x.get('is_achievable', True), x['difficulty']))
     
     # Return top suggestions
     return suggestions[:MAX_SUGGESTIONS]
@@ -1323,9 +1394,10 @@ def get_grades_email(phpsessid, webidentity):
                                 "decimalValue": decimal_value,
                                 "displayValue": grade_text,
                                 "color": "blue" if is_blue else "green",
-                                # Add 1 to periodPos to match API format (calculate_avr will subtract 1)
-                                "periodPos": period_pos + 1,
-                                "periodDesc": f"Periodo {period_pos}",
+                                # Use period_pos directly - the HTML sessione attribute already 
+                                # contains the same offset as the API (calculate_avr will subtract 1)
+                                "periodPos": period_pos,
+                                "periodDesc": f"Periodo {period_pos - 1 if period_pos > 1 else 1}",
                                 "componentDesc": "",
                                 "notesForFamily": "",
                                 "teacherName": ""
@@ -1407,8 +1479,14 @@ def calculate_avr(grades):
             period_grades.extend([g['decimalValue'] for g in grades_avr[period][subject]['grades']])
         grades_avr[period]["period_avr"] = sum(period_grades) / len(period_grades) if period_grades else 0
     
-    # Calculate overall average
-    grades_avr["all_avr"] = sum([grades_avr[period]["period_avr"] for period in grades_avr]) / len(grades_avr) if grades_avr else 0
+    # Calculate overall average - use weighted average of all grades, not average of period averages
+    # Include all grades (including blue) for consistency with displayed averages
+    all_grades = []
+    for period in grades_avr:
+        for subject in grades_avr[period]:
+            if subject != 'period_avr':
+                all_grades.extend([g['decimalValue'] for g in grades_avr[period][subject]['grades']])
+    grades_avr["all_avr"] = sum(all_grades) / len(all_grades) if all_grades else 0
     
     # print(json.dumps(grades_avr, indent=4))
     return grades_avr

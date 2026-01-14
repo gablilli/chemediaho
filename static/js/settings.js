@@ -39,6 +39,43 @@ function showNotification(message, type = 'success') {
   }, 3000);
 }
 
+// Blue grades preference toggle
+const includeBlueGradesToggle = document.getElementById('includeBlueGradesToggle');
+if (includeBlueGradesToggle) {
+  // Load saved preference from localStorage (defaults to true - include blue grades)
+  const savedPreference = localStorage.getItem('includeBlueGrades');
+  const includeBlueGrades = savedPreference === null ? true : savedPreference === 'true';
+  includeBlueGradesToggle.checked = includeBlueGrades;
+  
+  // Handle toggle change
+  includeBlueGradesToggle.addEventListener('change', async () => {
+    const include = includeBlueGradesToggle.checked;
+    localStorage.setItem('includeBlueGrades', include);
+    
+    try {
+      // Notify backend about the preference change
+      const response = await fetch('/set_blue_grade_preference', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ include_blue_grades: include })
+      });
+      
+      if (response.ok) {
+        showNotification(include ? 'Preferenza salvata: voti blu inclusi' : 'Preferenza salvata: voti blu esclusi', 'success');
+      } else {
+        throw new Error('Errore nel salvataggio della preferenza');
+      }
+    } catch (error) {
+      showNotification(error.message || 'Errore nel salvataggio della preferenza', 'error');
+      // Revert toggle on error
+      includeBlueGradesToggle.checked = !include;
+      localStorage.setItem('includeBlueGrades', !include);
+    }
+  });
+}
+
 // Update app button (combines sync and clear cache)
 const updateBtn = document.getElementById('updateBtn');
 updateBtn.addEventListener('click', async () => {
