@@ -72,6 +72,7 @@
       <div class="period-section">
         <div class="period-header">
           <h2 class="period-title">Periodo {{ period }}</h2>
+          <span class="period-average {% if subjects.period_avr >= 6.5 %}excellent{% elif subjects.period_avr >= 5.5 %}pass{% else %}fail{% endif %}">{{ subjects.period_avr | round(2) }}</span>
         </div>
 
         {% for subject, data in subjects.items() %}

@@ -260,15 +260,6 @@ def grades_page():
     grades_avr = flask.session['grades_avr']
     return flask.render_template('grades.html', grades_avr=grades_avr)
 
-@app.route('/charts')
-def charts_page():
-    """Display charts page - requires active session with grades data"""
-    if 'grades_avr' not in flask.session:
-        return flask.redirect('/')
-    
-    grades_avr = flask.session['grades_avr']
-    return flask.render_template('charts.html', grades_avr=grades_avr)
-
 @app.route('/export')
 def export_page():
     """Display export page - requires active session"""
@@ -299,7 +290,6 @@ def subject_detail_page(subject_name):
     
     grades_avr = flask.session['grades_avr']
     
-    # Verify subject exists
     subject_found = False
     for period in grades_avr:
         if period != 'all_avr' and subject_name in grades_avr[period]:
@@ -310,15 +300,6 @@ def subject_detail_page(subject_name):
         return flask.redirect('/grades')
     
     return flask.render_template('subject_detail.html', grades_avr=grades_avr, subject_name=subject_name)
-
-@app.route('/goal')
-def goal_page():
-    """Display goal calculator page - requires active session"""
-    if 'grades_avr' not in flask.session:
-        return flask.redirect('/')
-    
-    grades_avr = flask.session['grades_avr']
-    return flask.render_template('goal.html', grades_avr=grades_avr)
 
 @app.route('/set_blue_grade_preference', methods=['POST'])
 def set_blue_grade_preference():
@@ -332,15 +313,53 @@ def set_blue_grade_preference():
         
         # If we have grades, recalculate averages with the new preference
         if 'grades_avr' in flask.session:
-            # Note: This is a lightweight approach - just store the preference
-            # The actual calculation functions will use this preference when called
-            pass
+            grades_avr = flask.session['grades_avr']
+            recalculate_averages(grades_avr, not include_blue_grades)
+            flask.session['grades_avr'] = grades_avr
+            flask.session.modified = True
         
         return flask.jsonify({'success': True, 'include_blue_grades': include_blue_grades}), 200
         
     except Exception as e:
         logger.error(f"Error setting blue grade preference: {e}", exc_info=True)
         return flask.jsonify({'error': 'Errore nel salvataggio della preferenza'}), 500
+
+def recalculate_averages(grades_avr, exclude_blue=False):
+    """Recalculate subject, period, and overall averages based on blue grade preference"""
+    # Recalculate subject averages
+    for period in grades_avr:
+        if period == 'all_avr':
+            continue
+        for subject in grades_avr[period]:
+            if subject == 'period_avr':
+                continue
+            subject_grades = [g['decimalValue'] for g in grades_avr[period][subject]['grades'] 
+                           if not (exclude_blue and g.get('isBlue', False))]
+            grades_avr[period][subject]["avr"] = sum(subject_grades) / len(subject_grades) if subject_grades else 0
+    
+    # Recalculate period averages
+    for period in grades_avr:
+        if period == 'all_avr':
+            continue
+        period_grades = []
+        for subject in grades_avr[period]:
+            if subject == 'period_avr':
+                continue
+            period_grades.extend([g['decimalValue'] for g in grades_avr[period][subject]['grades']
+                                if not (exclude_blue and g.get('isBlue', False))])
+        grades_avr[period]["period_avr"] = sum(period_grades) / len(period_grades) if period_grades else 0
+    
+    # Recalculate overall average
+    all_grades = []
+    for period in grades_avr:
+        if period == 'all_avr':
+            continue
+        for subject in grades_avr[period]:
+            if subject == 'period_avr':
+                continue
+            all_grades.extend([g['decimalValue'] for g in grades_avr[period][subject]['grades']
+                             if not (exclude_blue and g.get('isBlue', False))])
+    grades_avr["all_avr"] = sum(all_grades) / len(all_grades) if all_grades else 0
 
 @app.route('/calculate_goal', methods=['POST'])
 def calculate_goal():
@@ -1338,7 +1357,10 @@ def get_grades_email(phpsessid, webidentity):
         period_code = table.get('sessione', '')
         # Extract period number from the period code
         period_match = re.search(r'(\d+)', period_code)
-        period_pos = int(period_match.group(1)) if period_match else 1
+        # The HTML sessione attribute contains the direct period number (1, 2, 3...)
+        # but calculate_avr expects the API format which is offset by 1 (e.g., period 1 = 2)
+        # So we add 1 here to match the API format
+        period_pos = (int(period_match.group(1)) + 1) if period_match else 2
         
         tbody = table.find('tbody')
         if not tbody:
@@ -1394,10 +1416,8 @@ def get_grades_email(phpsessid, webidentity):
                                 "decimalValue": decimal_value,
                                 "displayValue": grade_text,
                                 "color": "blue" if is_blue else "green",
-                                # Use period_pos directly - the HTML sessione attribute already 
-                                # contains the same offset as the API (calculate_avr will subtract 1)
                                 "periodPos": period_pos,
-                                "periodDesc": f"Periodo {period_pos - 1 if period_pos > 1 else 1}",
+                                "periodDesc": f"Periodo {period_pos - 1}",
                                 "componentDesc": "",
                                 "notesForFamily": "",
                                 "teacherName": ""
@@ -1430,10 +1450,10 @@ def get_grades(student_id, token):
     }
     response = requests.get(url, headers=headers)
     if response.status_code == 200:
-        # print(json.dumps(response.json(), indent=4))
         return response.json()
     else:
         response.raise_for_status()
+
 def calculate_avr(grades):
     grades_avr = {}
     for grade in grades["grades"]:
@@ -1488,10 +1508,8 @@ def calculate_avr(grades):
                 all_grades.extend([g['decimalValue'] for g in grades_avr[period][subject]['grades']])
     grades_avr["all_avr"] = sum(all_grades) / len(all_grades) if all_grades else 0
     
-    # print(json.dumps(grades_avr, indent=4))
     return grades_avr
     
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=8001)
-    # app.run(debug=True)
 

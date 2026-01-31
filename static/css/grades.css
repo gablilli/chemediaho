@@ -181,9 +181,26 @@
 }
 
 .period-average {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+  font-size: 18px;
+  font-weight: bold;
+  padding: 6px 12px;
+  border-radius: 8px;
+  background: rgba(200, 68, 68, 0.2);
+}
+
+.period-average.excellent {
+  color: var(--success);
+  background: rgba(76, 175, 80, 0.2);
+}
+
+.period-average.pass {
+  color: var(--warning);
+  background: rgba(255, 193, 7, 0.2);
+}
+
+.period-average.fail {
+  color: var(--primary);
+  background: rgba(200, 68, 68, 0.2);
 }
 
 .circle-grade-small {

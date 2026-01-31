@@ -63,7 +63,7 @@ if (includeBlueGradesToggle) {
       });
       
       if (response.ok) {
-        showNotification(include ? 'Preferenza salvata: voti blu inclusi' : 'Preferenza salvata: voti blu esclusi', 'success');
+        showNotification(include ? 'Medie aggiornate: voti blu inclusi' : 'Medie aggiornate: voti blu esclusi', 'success');
       } else {
         throw new Error('Errore nel salvataggio della preferenza');
       }
