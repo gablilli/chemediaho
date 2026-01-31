@@ -1,3 +1,27 @@
+"""
+=============================================================================
+LOCAL-ONLY BACKEND - DO NOT DEPLOY TO CLOUD SERVICES
+=============================================================================
+This backend MUST run locally on a residential IP address.
+
+It is designed to bypass Akamai WAF blocking when calling web.spaggiari.eu,
+which requires outbound requests to originate from a residential IP.
+
+DO NOT DEPLOY THIS BACKEND TO:
+- Vercel, Netlify, or any other serverless platform
+- Fly.io, Railway, Render, or any other cloud hosting provider
+- AWS Lambda, Google Cloud Functions, Azure Functions, etc.
+
+The frontend should be deployed to Vercel and connect to this local backend
+via an HTTPS tunnel (ngrok, Cloudflare Tunnel, etc.).
+
+This setup ensures:
+- Outbound requests to web.spaggiari.eu come from your residential IP
+- The frontend can safely call the backend over HTTPS
+- Akamai WAF is bypassed for scraping operations
+=============================================================================
+"""
+
 import requests
 import json
 import flask
@@ -9,8 +33,77 @@ import logging
 import re
 from datetime import datetime
 from bs4 import BeautifulSoup
+from flask_cors import CORS
 
 app = flask.Flask(__name__)
+
+# -----------------------------------------------------------------------------
+# CORS Configuration for Vercel Frontend
+# -----------------------------------------------------------------------------
+# Allow requests from Vercel preview/production domains and localhost for dev.
+# Credentials (cookies/session) are enabled for cross-origin session handling.
+# The regex pattern allows any *.vercel.app subdomain.
+# -----------------------------------------------------------------------------
+CORS(app,
+     origins=[
+         r"https://.*\.vercel\.app",  # Vercel preview and production domains
+         "http://localhost:3000"       # Local frontend development
+     ],
+     supports_credentials=True,        # Allow cookies/session across origins
+     allow_headers=["Content-Type", "X-API-Key"],  # Allow custom headers
+     expose_headers=["Content-Type"])
+
+# -----------------------------------------------------------------------------
+# API Key Protection
+# -----------------------------------------------------------------------------
+# All routes require a valid X-API-Key header, except for:
+# - / (home page)
+# - /manifest.json (PWA manifest)
+# - /sw.js (service worker)
+# - /static/* (static files)
+#
+# The API key is read from the API_KEY environment variable.
+# -----------------------------------------------------------------------------
+API_KEY = os.environ.get('API_KEY')
+
+# Routes that do NOT require API key authentication
+PUBLIC_ROUTES = frozenset(['/', '/manifest.json', '/sw.js'])
+
+
+@app.before_request
+def check_api_key():
+    """
+    Middleware to validate API key for protected routes.
+    
+    Returns 401 Unauthorized if:
+    - API_KEY environment variable is set AND
+    - The route is not in PUBLIC_ROUTES AND
+    - The route does not start with /static/ AND
+    - The X-API-Key header is missing or does not match
+    """
+    # Skip API key check if no API_KEY is configured (development mode)
+    if not API_KEY:
+        return None
+    
+    # Allow CORS preflight requests (OPTIONS) without API key
+    # This is required for browsers to complete the CORS handshake
+    if flask.request.method == 'OPTIONS':
+        return None
+    
+    # Allow public routes without API key
+    if flask.request.path in PUBLIC_ROUTES:
+        return None
+    
+    # Allow static files without API key
+    if flask.request.path.startswith('/static/'):
+        return None
+    
+    # Validate API key for all other routes
+    provided_key = flask.request.headers.get('X-API-Key')
+    if not provided_key or not secrets.compare_digest(provided_key, API_KEY):
+        return flask.jsonify({'error': 'Unauthorized: Invalid or missing API key'}), 401
+    
+    return None
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -81,11 +174,27 @@ def get_secret_key():
 
 app.secret_key = get_secret_key()
 
-# Additional security configurations for sessions
+# -----------------------------------------------------------------------------
+# Session Cookie Configuration for HTTPS Tunnel Usage
+# -----------------------------------------------------------------------------
+# When running behind an HTTPS tunnel (ngrok, Cloudflare Tunnel), session
+# cookies must be configured for cross-origin usage:
+#
+# - SESSION_COOKIE_SECURE: Set to True when HTTPS_ENABLED=true (required for
+#   secure cookies over HTTPS tunnels)
+# - SESSION_COOKIE_HTTPONLY: Always True to prevent XSS attacks
+# - SESSION_COOKIE_SAMESITE: Set to 'None' for cross-origin requests from
+#   Vercel frontend, or 'Lax' for same-origin development
+#
+# IMPORTANT: SameSite=None requires Secure=True, so both are enabled when
+# HTTPS_ENABLED=true. This is the recommended configuration for HTTPS tunnels.
+# -----------------------------------------------------------------------------
+_https_enabled = os.environ.get('HTTPS_ENABLED', 'false').lower() == 'true'
+
 app.config.update(
-    SESSION_COOKIE_SECURE=os.environ.get('HTTPS_ENABLED', 'false').lower() == 'true',
-    SESSION_COOKIE_HTTPONLY=True,  # Prevent JavaScript access to session cookie
-    SESSION_COOKIE_SAMESITE='Lax'  # CSRF protection
+    SESSION_COOKIE_SECURE=_https_enabled,        # Secure cookies over HTTPS tunnel
+    SESSION_COOKIE_HTTPONLY=True,                # Prevent JavaScript access (XSS protection)
+    SESSION_COOKIE_SAMESITE='None' if _https_enabled else 'Lax'  # Cross-origin for HTTPS tunnel
 )
 
 @app.route('/manifest.json')
