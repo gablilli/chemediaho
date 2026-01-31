@@ -42,7 +42,12 @@ app = flask.Flask(__name__)
 # -----------------------------------------------------------------------------
 # Allow requests from Vercel preview/production domains and localhost for dev.
 # Credentials (cookies/session) are enabled for cross-origin session handling.
-# The regex pattern allows any *.vercel.app subdomain.
+#
+# NOTE: The regex pattern allows any *.vercel.app subdomain. This is intentional
+# because Vercel preview deployments get random subdomains. The API key provides
+# the actual security layer - CORS only restricts browser requests, not direct
+# API calls. For additional security, you can narrow this to your specific
+# project pattern, e.g.: r"https://your-project-.*\.vercel\.app"
 # -----------------------------------------------------------------------------
 CORS(app,
      origins=[
@@ -64,7 +69,7 @@ CORS(app,
 #
 # The API key is read from the API_KEY environment variable.
 # -----------------------------------------------------------------------------
-API_KEY = os.environ.get('API_KEY')
+API_KEY = os.environ.get('API_KEY', '').strip() or None  # Treat empty string as None
 
 # Routes that do NOT require API key authentication
 PUBLIC_ROUTES = frozenset(['/', '/manifest.json', '/sw.js'])
