@@ -316,6 +316,7 @@ def set_blue_grade_preference():
             grades_avr = flask.session['grades_avr']
             recalculate_averages(grades_avr, not include_blue_grades)
             flask.session['grades_avr'] = grades_avr
+            flask.session.modified = True
         
         return flask.jsonify({'success': True, 'include_blue_grades': include_blue_grades}), 200
         
