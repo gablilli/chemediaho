@@ -183,16 +183,60 @@ const form = document.getElementById('loginForm');
 const errorMessage = document.getElementById('errorMessage');
 const submitBtn = document.getElementById('submitBtn');
 
-form.addEventListener('submit', function(e) {
+// Handle form submission via JavaScript using apiFetch
+form.addEventListener('submit', async function(e) {
+  e.preventDefault();
+  
   errorMessage.textContent = '';
   submitBtn.disabled = true;
   submitBtn.textContent = 'Accesso...';
+  
+  try {
+    const formData = new FormData(form);
+    const response = await apiFetch('/login', {
+      method: 'POST',
+      body: formData
+    });
+    
+    // Check if login was successful (redirect to /grades)
+    if (response.redirected) {
+      // Follow the redirect
+      apiNavigate('/grades');
+      return;
+    }
+    
+    // If not redirected, the response is the login page with an error
+    const html = await response.text();
+    
+    // Parse the error message from the response if present
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, 'text/html');
+    const errorEl = doc.getElementById('errorMessage');
+    
+    if (errorEl && errorEl.textContent.trim()) {
+      errorMessage.textContent = errorEl.textContent.trim();
+    } else {
+      errorMessage.textContent = 'Errore durante il login. Riprova.';
+    }
+    
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Accedi';
+  } catch (error) {
+    console.error('Login error:', error);
+    errorMessage.textContent = 'Errore di connessione. Verifica la tua connessione internet.';
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Accedi';
+  }
 });
 
 // Register Service Worker for PWA
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js')
+    // Use API_BASE for service worker registration if configured
+    const swUrl = window.APP_CONFIG && window.APP_CONFIG.API_BASE 
+      ? `${window.APP_CONFIG.API_BASE}/sw.js` 
+      : '/sw.js';
+    navigator.serviceWorker.register(swUrl)
       .then(registration => {
         console.log('Service Worker registered successfully:', registration.scope);
       })

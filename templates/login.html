@@ -15,6 +15,9 @@
     <link rel="apple-touch-icon" sizes="192x192" href="/static/icons/icon-192.png" />
     <link rel="apple-touch-icon" sizes="512x512" href="/static/icons/icon-512.png" />
     <title>Autenticazione - che media ho?</title>
+    <!-- Runtime config must load first -->
+    <script src="/static/js/config.runtime.js"></script>
+    <script src="/static/js/api.js"></script>
     <script src="/static/js/theme.js"></script>
     <link rel="stylesheet" href="/static/common.css" />
     <link rel="stylesheet" href="/static/css/login.css" />
@@ -68,7 +71,7 @@
           <button type="button" class="login-tab {% if login_type == 'email' %}active{% endif %}" data-tab="email" onclick="switchLoginTab('email')">Email</button>
         </div>
 
-        <form action="/login" method="post" id="loginForm">
+        <form id="loginForm">
           <input type="hidden" name="login_type" id="login_type" value="{% if login_type %}{{ login_type }}{% else %}userid{% endif %}">
           
           <div class="form-group">

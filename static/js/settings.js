@@ -53,8 +53,8 @@ if (includeBlueGradesToggle) {
     localStorage.setItem('includeBlueGrades', include);
     
     try {
-      // Notify backend about the preference change
-      const response = await fetch('/set_blue_grade_preference', {
+      // Notify backend about the preference change using apiFetch
+      const response = await apiFetch('/set_blue_grade_preference', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -83,9 +83,9 @@ updateBtn.addEventListener('click', async () => {
   updateBtn.disabled = true;
   
   try {
-    // Step 1: Sync grades
+    // Step 1: Sync grades using apiFetch
     showNotification('Sincronizzazione voti in corso...', 'info');
-    const syncResponse = await fetch('/refresh_grades', {
+    const syncResponse = await apiFetch('/refresh_grades', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -96,7 +96,7 @@ updateBtn.addEventListener('click', async () => {
     
     if (!syncResponse.ok) {
       if (syncData.redirect) {
-        window.location.href = syncData.redirect;
+        apiNavigate(syncData.redirect);
         return;
       }
       throw new Error(syncData.error || 'Errore durante la sincronizzazione');
@@ -120,9 +120,9 @@ updateBtn.addEventListener('click', async () => {
     
     showNotification('✨ App aggiornata! Ricaricamento...', 'success');
     
-    // Reload to apply updates
+    // Reload to apply updates - use apiNavigate for consistent URL handling
     setTimeout(() => {
-      window.location.href = '/grades';
+      apiNavigate('/grades');
     }, 1500);
   } catch (error) {
     showNotification(error.message || 'Errore durante l\'aggiornamento', 'error');
@@ -131,22 +131,31 @@ updateBtn.addEventListener('click', async () => {
   }
 });
 
+// Helper function for logout via apiFetch
+async function performLogout() {
+  try {
+    await apiFetch('/logout', { method: 'POST' });
+    apiNavigate('/');
+  } catch (error) {
+    console.error('Logout error:', error);
+    apiNavigate('/');
+  }
+}
+
 // Handle logout from bottom nav
 const logoutNavBtn = document.getElementById('logoutNavBtn');
 if (logoutNavBtn) {
-  logoutNavBtn.addEventListener('click', () => {
-    const form = document.createElement('form');
-    form.method = 'POST';
-    form.action = '/logout';
-    document.body.appendChild(form);
-    form.submit();
-  });
+  logoutNavBtn.addEventListener('click', performLogout);
 }
 
 // Register Service Worker for PWA
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js')
+    // Use API_BASE for service worker registration if configured
+    const swUrl = window.APP_CONFIG && window.APP_CONFIG.API_BASE 
+      ? `${window.APP_CONFIG.API_BASE}/sw.js` 
+      : '/sw.js';
+    navigator.serviceWorker.register(swUrl)
       .then(registration => {
         console.log('Service Worker registered successfully:', registration.scope);
       })

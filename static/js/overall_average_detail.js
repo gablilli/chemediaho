@@ -181,7 +181,7 @@ smartSuggestionsForm.addEventListener('submit', async function(e) {
   calculateBtn.textContent = 'Calcolo in corso...';
 
   try {
-    const response = await fetch('/calculate_goal_overall', {
+    const response = await apiFetch('/calculate_goal_overall', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -303,7 +303,7 @@ predictionsForm.addEventListener('submit', async function(e) {
   predictBtn.textContent = 'Calcolo in corso...';
 
   try {
-    const response = await fetch('/predict_average_overall', {
+    const response = await apiFetch('/predict_average_overall', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

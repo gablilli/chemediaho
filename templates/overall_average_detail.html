@@ -16,6 +16,9 @@
     <link rel="apple-touch-icon" sizes="512x512" href="/static/icons/icon-512.png" />
     <title>Media Generale - che media ho?</title>
     <!-- Theme detection - prevent flicker -->
+    <!-- Runtime config must load first -->
+    <script src="/static/js/config.runtime.js"></script>
+    <script src="/static/js/api.js"></script>
     <script src="/static/js/theme.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <link rel="stylesheet" href="/static/common.css" />
@@ -24,7 +27,7 @@
   <body>
     <!-- Header -->
     <div class="header-section">
-      <button class="back-button" onclick="window.location.href='/grades'">
+      <button class="back-button" onclick="apiNavigate('/grades')">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
           <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/>
         </svg>

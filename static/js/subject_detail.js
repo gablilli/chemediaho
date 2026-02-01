@@ -205,7 +205,7 @@ goalForm.addEventListener('submit', async function(e) {
   calculateBtn.textContent = 'Calcolo in corso...';
 
   try {
-    const response = await fetch('/calculate_goal', {
+    const response = await apiFetch('/calculate_goal', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -361,7 +361,7 @@ if (predictionsForm) {
     predictBtn.textContent = 'Calcolo in corso...';
 
     try {
-      const response = await fetch('/predict_average', {
+      const response = await apiFetch('/predict_average', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

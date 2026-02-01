@@ -103,7 +103,11 @@ document.addEventListener('keydown', function(e) {
 // Register Service Worker for PWA
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js')
+    // Use API_BASE for service worker registration if configured
+    const swUrl = window.APP_CONFIG && window.APP_CONFIG.API_BASE 
+      ? `${window.APP_CONFIG.API_BASE}/sw.js` 
+      : '/sw.js';
+    navigator.serviceWorker.register(swUrl)
       .then(registration => {
         console.log('Service Worker registered successfully:', registration.scope);
       })
@@ -113,14 +117,25 @@ if ('serviceWorker' in navigator) {
   });
 }
 
+// Helper function for logout via apiFetch
+async function performLogout() {
+  try {
+    await apiFetch('/logout', { method: 'POST' });
+    apiNavigate('/');
+  } catch (error) {
+    console.error('Logout error:', error);
+    apiNavigate('/');
+  }
+}
+
 // Handle logout from bottom nav
 const logoutNavBtn = document.getElementById('logoutNavBtn');
 if (logoutNavBtn) {
-  logoutNavBtn.addEventListener('click', () => {
-    const form = document.createElement('form');
-    form.method = 'POST';
-    form.action = '/logout';
-    document.body.appendChild(form);
-    form.submit();
-  });
+  logoutNavBtn.addEventListener('click', performLogout);
+}
+
+// Handle logout from top button
+const logoutBtn = document.getElementById('logoutBtn');
+if (logoutBtn) {
+  logoutBtn.addEventListener('click', performLogout);
 }
