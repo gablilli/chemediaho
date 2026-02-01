@@ -101,13 +101,11 @@ document.addEventListener('keydown', function(e) {
 });
 
 // Register Service Worker for PWA
+// Note: Service workers must be served from the same origin as the page
+// Always use local path regardless of API_BASE configuration
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    // Use API_BASE for service worker registration if configured
-    const swUrl = window.APP_CONFIG && window.APP_CONFIG.API_BASE 
-      ? `${window.APP_CONFIG.API_BASE}/sw.js` 
-      : '/sw.js';
-    navigator.serviceWorker.register(swUrl)
+    navigator.serviceWorker.register('/sw.js')
       .then(registration => {
         console.log('Service Worker registered successfully:', registration.scope);
       })
