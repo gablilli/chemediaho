@@ -72,7 +72,8 @@ CORS(app,
 API_KEY = os.environ.get('API_KEY', '').strip() or None  # Treat empty string as None
 
 # Routes that do NOT require API key authentication
-PUBLIC_ROUTES = frozenset(['/', '/manifest.json', '/sw.js'])
+# Note: With API-only backend, public routes are minimal
+PUBLIC_ROUTES = frozenset(['/api/session', '/api/version'])
 
 
 @app.before_request
@@ -202,61 +203,32 @@ app.config.update(
     SESSION_COOKIE_SAMESITE='None' if _https_enabled else 'Lax'  # Cross-origin for HTTPS tunnel
 )
 
-@app.route('/manifest.json')
-def manifest():
-    manifest_data = {
-        "name": "che media ho?",
-        "short_name": "chemediaho?",
-        "description": "Visualizza la media dei voti di ClasseViva",
-        "start_url": "/",
-        "display": "standalone",
-        "background_color": "#130909",
-        "theme_color": "#c84444",
-        "orientation": "portrait",
-        "icons": [
-            {
-                "src": "/static/icons/icon-192.png",
-                "sizes": "192x192",
-                "type": "image/png",
-                "purpose": "any"
-            },
-            {
-                "src": "/static/icons/icon-192.png",
-                "sizes": "192x192",
-                "type": "image/png",
-                "purpose": "maskable"
-            },
-            {
-                "src": "/static/icons/icon-512.png",
-                "sizes": "512x512",
-                "type": "image/png",
-                "purpose": "any"
-            },
-            {
-                "src": "/static/icons/icon-512.png",
-                "sizes": "512x512",
-                "type": "image/png",
-                "purpose": "maskable"
-            }
-        ]
-    }
-    
-    return flask.jsonify(manifest_data)
+# =============================================================================
+# API-ONLY BACKEND
+# =============================================================================
+# This backend returns JSON responses only. No HTML rendering.
+# The frontend is a static site deployed separately (e.g., to Vercel).
+# =============================================================================
 
-@app.route('/sw.js')
-def service_worker():
-    return flask.send_from_directory('static', 'sw.js', mimetype='application/javascript')
+@app.route('/api/session')
+def api_session():
+    """Check if user has an active session"""
+    if 'token' in flask.session:
+        return flask.jsonify({'authenticated': True}), 200
+    return flask.jsonify({'authenticated': False}), 200
 
-@app.route('/')
-def home():
-    return flask.render_template('login.html')
+@app.route('/api/version')
+def api_version():
+    """Return API version info"""
+    return flask.jsonify({'version': APP_VERSION}), 200
 
-@app.route('/login', methods=['GET', 'POST'])
+@app.route('/login', methods=['POST'])
 def login_route():
-    # Redirect GET requests to home page
-    if flask.request.method == 'GET':
-        return flask.redirect('/')
-    
+    """
+    API endpoint for login - returns JSON response.
+    POST /login with form data: user_id, user_pass, login_type
+    Returns: { success: true } or { error: "..." }
+    """
     user_id = flask.request.form.get('user_id', '')
     user_pass = flask.request.form.get('user_pass', '')
     login_type = flask.request.form.get('login_type', 'userid')  # 'userid' or 'email'
@@ -269,7 +241,7 @@ def login_route():
             webidentity = login_response.get("webidentity", "")
             
             if token is None or token == "":
-                return flask.render_template('login.html', error="Token non valido. Riprova.", login_type=login_type)
+                return flask.jsonify({'success': False, 'error': 'Token non valido. Riprova.'}), 401
             
             # Store token, webidentity and login type in session
             flask.session['token'] = token
@@ -284,14 +256,13 @@ def login_route():
             # Store grades in session for other pages
             flask.session['grades_avr'] = grades_avr
             
-            # Redirect to grades page
-            return flask.redirect('/grades')
+            return flask.jsonify({'success': True}), 200
         else:
             # Standard User ID login
             login_response = login(user_id, user_pass)
             token = login_response["token"]
             if token is None or token == "":
-                return flask.render_template('login.html', error="Token non valido. Riprova.", login_type=login_type)
+                return flask.jsonify({'success': False, 'error': 'Token non valido. Riprova.'}), 401
             
             # Store token and user_id in session
             flask.session['token'] = token
@@ -304,25 +275,25 @@ def login_route():
             # Store grades in session for other pages
             flask.session['grades_avr'] = grades_avr
             
-            # Redirect to grades page instead of rendering template
-            return flask.redirect('/grades')
+            return flask.jsonify({'success': True}), 200
     except requests.exceptions.HTTPError as e:
         # Handle 422 and other HTTP errors with user-friendly message
         error_code = getattr(e.response, 'status_code', None) if hasattr(e, 'response') else None
         if error_code == 422:
-            return flask.render_template('login.html', error="Credenziali non valide. Verifica le tue credenziali.", login_type=login_type)
+            return flask.jsonify({'success': False, 'error': 'Credenziali non valide. Verifica le tue credenziali.'}), 401
         else:
-            return flask.render_template('login.html', error=f"Errore di autenticazione. Riprova.", login_type=login_type)
+            return flask.jsonify({'success': False, 'error': 'Errore di autenticazione. Riprova.'}), 500
     except requests.exceptions.RequestException as e:
-        return flask.render_template('login.html', error="Errore di connessione. Verifica la tua connessione internet.", login_type=login_type)
+        return flask.jsonify({'success': False, 'error': 'Errore di connessione. Verifica la tua connessione internet.'}), 500
     except Exception as e:
         logger.error(f"Login error: {e}", exc_info=True)
-        return flask.render_template('login.html', error="Errore imprevisto. Riprova più tardi.", login_type=login_type)
+        return flask.jsonify({'success': False, 'error': 'Errore imprevisto. Riprova più tardi.'}), 500
 
 @app.route('/logout', methods=['POST'])
 def logout():
+    """API endpoint for logout - returns JSON response."""
     flask.session.clear()
-    return flask.redirect('/')
+    return flask.jsonify({'success': True}), 200
 
 @app.route('/refresh_grades', methods=['POST'])
 def refresh_grades():
@@ -367,40 +338,40 @@ def refresh_grades():
 
 @app.route('/grades')
 def grades_page():
-    """Display grades page - requires active session with token"""
+    """API endpoint for grades - returns JSON data."""
     if 'grades_avr' not in flask.session:
-        return flask.redirect('/')
+        return flask.jsonify({'error': 'No active session', 'authenticated': False}), 401
     
     grades_avr = flask.session['grades_avr']
-    return flask.render_template('grades.html', grades_avr=grades_avr)
+    return flask.jsonify(grades_avr), 200
 
 @app.route('/export')
 def export_page():
-    """Display export page - requires active session"""
+    """API endpoint for export check - returns JSON status."""
     if 'token' not in flask.session:
-        return flask.redirect('/')
+        return flask.jsonify({'error': 'No active session', 'authenticated': False}), 401
     
-    return flask.render_template('export.html')
+    return flask.jsonify({'authenticated': True}), 200
 
 @app.route('/settings')
 def settings_page():
-    """Display settings page"""
-    return flask.render_template('settings.html', version=APP_VERSION)
+    """API endpoint for settings - returns JSON data."""
+    return flask.jsonify({'version': APP_VERSION}), 200
 
 @app.route('/overall_average_detail')
 def overall_average_detail_page():
-    """Display overall average detail page with graphs and smart suggestions"""
+    """API endpoint for overall average detail - returns JSON data."""
     if 'grades_avr' not in flask.session:
-        return flask.redirect('/')
+        return flask.jsonify({'error': 'No active session', 'authenticated': False}), 401
     
     grades_avr = flask.session['grades_avr']
-    return flask.render_template('overall_average_detail.html', grades_avr=grades_avr)
+    return flask.jsonify(grades_avr), 200
 
 @app.route('/subject_detail/<subject_name>')
 def subject_detail_page(subject_name):
-    """Display subject detail page with graphs and smart suggestions"""
+    """API endpoint for subject detail - returns JSON data."""
     if 'grades_avr' not in flask.session:
-        return flask.redirect('/')
+        return flask.jsonify({'error': 'No active session', 'authenticated': False}), 401
     
     grades_avr = flask.session['grades_avr']
     
@@ -411,9 +382,9 @@ def subject_detail_page(subject_name):
             break
     
     if not subject_found:
-        return flask.redirect('/grades')
+        return flask.jsonify({'error': 'Subject not found'}), 404
     
-    return flask.render_template('subject_detail.html', grades_avr=grades_avr, subject_name=subject_name)
+    return flask.jsonify({'grades_avr': grades_avr, 'subject_name': subject_name}), 200
 
 @app.route('/set_blue_grade_preference', methods=['POST'])
 def set_blue_grade_preference():
@@ -1189,7 +1160,7 @@ def get_predict_overall_message(change, predicted_average, num_grades, subject):
 def export_csv():
     """Export grades as CSV file"""
     if 'grades_avr' not in flask.session:
-        return flask.redirect('/')
+        return flask.jsonify({'error': 'No active session', 'authenticated': False}), 401
     
     grades_avr = flask.session['grades_avr']
     

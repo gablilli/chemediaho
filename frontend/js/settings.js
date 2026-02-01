@@ -39,6 +39,22 @@ function showNotification(message, type = 'success') {
   }, 3000);
 }
 
+// Load version from API
+async function loadVersion() {
+  try {
+    const response = await apiFetch('/settings');
+    if (response.ok) {
+      const data = await response.json();
+      const versionEl = document.getElementById('appVersion');
+      if (versionEl && data.version) {
+        versionEl.textContent = `v${data.version}`;
+      }
+    }
+  } catch (error) {
+    console.error('Failed to load version:', error);
+  }
+}
+
 // Blue grades preference toggle
 const includeBlueGradesToggle = document.getElementById('includeBlueGradesToggle');
 if (includeBlueGradesToggle) {
@@ -95,8 +111,9 @@ updateBtn.addEventListener('click', async () => {
     const syncData = await syncResponse.json();
     
     if (!syncResponse.ok) {
-      if (syncData.redirect) {
-        apiNavigate(syncData.redirect);
+      if (syncResponse.status === 401) {
+        // Session expired - redirect to login
+        navigateTo('index.html');
         return;
       }
       throw new Error(syncData.error || 'Errore durante la sincronizzazione');
@@ -120,9 +137,9 @@ updateBtn.addEventListener('click', async () => {
     
     showNotification('✨ App aggiornata! Ricaricamento...', 'success');
     
-    // Reload to apply updates - use apiNavigate for consistent URL handling
+    // Reload to grades page
     setTimeout(() => {
-      apiNavigate('/grades');
+      navigateTo('grades.html');
     }, 1500);
   } catch (error) {
     showNotification(error.message || 'Errore durante l\'aggiornamento', 'error');
@@ -131,29 +148,16 @@ updateBtn.addEventListener('click', async () => {
   }
 });
 
-// Helper function for logout via apiFetch
-async function performLogout() {
-  try {
-    await apiFetch('/logout', { method: 'POST' });
-    apiNavigate('/');
-  } catch (error) {
-    console.error('Logout error:', error);
-    apiNavigate('/');
-  }
-}
-
 // Handle logout from bottom nav
 const logoutNavBtn = document.getElementById('logoutNavBtn');
 if (logoutNavBtn) {
   logoutNavBtn.addEventListener('click', performLogout);
 }
 
-// Register Service Worker for PWA
-// Note: Service workers must be served from the same origin as the page
-// Always use local path regardless of API_BASE configuration
+// Register Service Worker for PWA (static frontend - same origin)
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js')
+    navigator.serviceWorker.register('sw.js')
       .then(registration => {
         console.log('Service Worker registered successfully:', registration.scope);
       })
@@ -162,3 +166,6 @@ if ('serviceWorker' in navigator) {
       });
   });
 }
+
+// Load version on page load
+document.addEventListener('DOMContentLoaded', loadVersion);

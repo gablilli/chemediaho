@@ -29,17 +29,6 @@ themeToggle.addEventListener('click', () => {
   localStorage.setItem('theme', newTheme);
 });
 
-// Helper function for logout via apiFetch
-async function performLogout() {
-  try {
-    await apiFetch('/logout', { method: 'POST' });
-    apiNavigate('/');
-  } catch (error) {
-    console.error('Logout error:', error);
-    apiNavigate('/');
-  }
-}
-
 // Handle logout from bottom nav
 const logoutNavBtn = document.getElementById('logoutNavBtn');
 if (logoutNavBtn) {
@@ -77,6 +66,11 @@ if (csvExportForm) {
       });
       
       if (!response.ok) {
+        if (response.status === 401) {
+          // Session expired - redirect to login
+          navigateTo('index.html');
+          return;
+        }
         throw new Error('Errore durante l\'esportazione');
       }
       
@@ -101,3 +95,19 @@ if (csvExportForm) {
     }
   });
 }
+
+// Check session on page load
+async function checkSession() {
+  try {
+    const response = await apiFetch('/export');
+    if (!response.ok) {
+      // Not authenticated - redirect to login
+      navigateTo('index.html');
+    }
+  } catch (error) {
+    console.error('Session check failed:', error);
+    navigateTo('index.html');
+  }
+}
+
+document.addEventListener('DOMContentLoaded', checkSession);
