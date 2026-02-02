@@ -12,12 +12,7 @@
  * - API_KEY: Your API key for backend authentication
  */
 window.APP_CONFIG = {
-  // Backend base URL - MUST be configured for Vercel deployment
-  // Example: 'https://your-tunnel-id.ngrok.io' or 'https://your-tunnel.trycloudflare.com'
-  // For local development, use empty string '' for same-origin requests
-  API_BASE: '',
-  
-  // API key for backend authentication (optional for local dev, required for production)
+  API_BASE: "__API_BASE__",
   API_KEY: null
 };
 
