@@ -11,17 +11,14 @@
  * - API_BASE: Your ngrok/Cloudflare Tunnel URL to the local backend
  * - API_KEY: Your API key for backend authentication
  */
-export default function handler(req, res) {
-  res.setHeader('Content-Type', 'application/javascript');
-  res.setHeader('Cache-Control', 'no-store');
+window.APP_CONFIG = {
+  API_BASE: "__API_BASE__",
+  API_KEY: null
+};
 
-  const apiBase = process.env.BACKEND_BASE_URL || '';
-  const apiKey = process.env.API_KEY || '';
-
-  res.send(`
-    window.APP_CONFIG = {
-      API_BASE: ${JSON.stringify(apiBase)},
-      API_KEY: ${JSON.stringify(apiKey)}
-    };
-  `);
-}
+// Validate configuration on load
+(function validateConfig() {
+  if (typeof window.APP_CONFIG.API_BASE !== 'string') {
+    console.error('[APP_CONFIG] API_BASE must be a string');
+  }
+})();
