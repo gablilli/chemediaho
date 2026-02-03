@@ -13,7 +13,7 @@
  */
 window.APP_CONFIG = {
   API_BASE: "https://api.gabrx.eu.org",
-  API_KEY: none
+  API_KEY: null
 };
 
 // Validate configuration on load
