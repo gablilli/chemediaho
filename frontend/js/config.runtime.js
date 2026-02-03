@@ -13,7 +13,7 @@
  */
 window.APP_CONFIG = {
   API_BASE: "https://api.media.gabrx.eu.org",
-  API_KEY: null
+  API_KEY: "76e12943c9fc9a24578a140c63dae37c44ccba72a007b19884c88bcd3db7be52"
 };
 
 // Validate configuration on load
