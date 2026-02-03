@@ -12,9 +12,8 @@
  * - API_KEY: Your API key for backend authentication
  */
 window.APP_CONFIG = {
-  API_BASE: "https://api.media.gabrx.eu.org",
-  API_KEY: "76e12943c9fc9a24578a140c63dae37c44ccba72a007b19884c88bcd3db7be52"
-};
+  API_BASE: "https://api.gabrx.eu.org",
+  API_KEY: none
 
 // Validate configuration on load
 (function validateConfig() {
