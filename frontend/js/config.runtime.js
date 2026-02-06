@@ -12,7 +12,7 @@
  * - API_KEY: Your API key for backend authentication
  */
 window.APP_CONFIG = {
-  API_BASE: "https://api.gabrx.eu.org",
+  API_BASE: "https://cheapiho.gabrx.eu.org",
   API_KEY: null
 };
 
