@@ -62,7 +62,7 @@ tutto in un unico container: frontend + api.
 - ✅ ideale per uso locale/domestico
 - ✅ basta un `docker compose up`
 
-### 2️⃣ vercel + api locale
+### 2️⃣ vercel + api locale (avanzata)
 
 frontend su vercel, api locale con tunnel https.
 
@@ -72,7 +72,7 @@ frontend su vercel, api locale con tunnel https.
 
 ---
 
-## 🐳 installazione con docker (consigliata)
+## 1 - 🐳 installazione con docker (consigliata)
 
 modalità **all-in-one**: frontend + api nello stesso container.
 
@@ -96,44 +96,7 @@ docker compose up -d
 l'app sarà disponibile su **porta 8001**.
 apri 👉 **[http://localhost:8001](http://localhost:8001)**
 
-se usi **ufw**:
-
-```bash
-sudo ufw allow 8001
-```
-
----
-
-## 🚀 installazione (python)
-
-### prerequisiti
-- python **3.6+**
-- un account **classeviva** attivo
-
-### 1️⃣ clona il repository
-```bash
-git clone https://github.com/gablilli/chemediaho.git
-cd chemediaho
-```
-
-### 2️⃣ installa le dipendenze
-
-```bash
-pip install -r requirements.txt
-```
-
-### 3️⃣ avvia l'app
-
-```bash
-python app.py
-```
-
-apri il browser su 👉 **[http://localhost:8001](http://localhost:8001)**
-inserisci le credenziali e… **buona media! 🧮**
-
----
-
-## 🌐 vercel + api locale
+## 2 - 🌐 vercel + api locale
 
 per utenti avanzati: frontend su vercel, api locale.
 
@@ -141,7 +104,7 @@ per utenti avanzati: frontend su vercel, api locale.
 
 - classeviva usa **akamai waf** che blocca richieste da datacenter
 - l'api deve girare su un **ip residenziale** (casa tua)
-- il frontend può stare su vercel (accessibile ovunque)
+- il frontend può stare su vercel (con tutti i benefici che ne conseguono)
 
 ### setup
 
@@ -150,6 +113,8 @@ per utenti avanzati: frontend su vercel, api locale.
 ```bash
 STANDALONE_MODE=false HTTPS_ENABLED=true API_KEY=tua-chiave-segreta python app.py
 ```
+
+L'```API_KEY``` non è obbligatoria, ma consigliata.
 
 #### 2. esponi l'api con tunnel https
 
@@ -169,14 +134,10 @@ window.APP_CONFIG = {
 };
 ```
 
-#### 4. deploy su vercel
+#### 4. deploya
+fai il first deploy su directory /frontend.
 
-```bash
-cd frontend
-vercel --prod
-```
-
-> ⚠️ **importante**: con questa modalità devi usare `HTTPS_ENABLED=true` per i cookie cross-origin.
+> ⚠️ **importante**: chiaramente con questa modalità devi usare `HTTPS_ENABLED=true` per i cookie cross-origin.
 
 ---
 
@@ -211,25 +172,6 @@ per proteggere l'api da accessi non autorizzati:
 environment:
   - API_KEY=tua-chiave-segreta
 ```
-
-tutte le richieste devono includere l'header `X-API-Key`.
-
----
-
-## 📱 installazione come pwa
-
-### android (chrome)
-
-1. apri l'app
-2. menu ⋮ → *installa app*
-3. conferma
-
-### ios (safari)
-
-1. apri l'app
-2. condividi (□↑)
-3. *aggiungi a home*
-4. conferma
 
 ---
 
@@ -281,6 +223,7 @@ docker logs chemediaho
 
 * verifica credenziali classeviva
 * assicurati che la porta 8001 sia aperta
+* apri una issue
 
 ---
 
