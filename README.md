@@ -115,6 +115,8 @@ STANDALONE_MODE=false HTTPS_ENABLED=true API_KEY=tua-chiave-segreta python app.p
 ```
 
 L'```API_KEY``` non è obbligatoria, ma consigliata.
+[!note]
+> È molto importante che ```HTTPS_ENABLED``` sia true.
 
 #### 2. esponi l'api con tunnel https
 
@@ -123,21 +125,9 @@ ngrok http 8001
 # oppure cloudflare tunnel
 ```
 
-#### 3. configura il frontend
+#### 3. deploya su vercel
 
-modifica `frontend/js/config.runtime.js`:
-
-```javascript
-window.APP_CONFIG = {
-  API_BASE: "https://tuo-tunnel.ngrok.io",
-  API_KEY: "tua-chiave-segreta"
-};
-```
-
-#### 4. deploya
-fai il first deploy su directory /frontend.
-
-> ⚠️ **importante**: chiaramente con questa modalità devi usare `HTTPS_ENABLED=true` per i cookie cross-origin.
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fgablilli%2Fchemediaho%2Ftree%2Fmain%2Ffrontend&env=API_BASE,API_KEY&project-name=mychemediaho&repository-name=mychemediaho)
 
 ---
 
