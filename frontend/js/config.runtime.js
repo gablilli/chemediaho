@@ -1,5 +1,5 @@
 /**
- * Runtime Configuration for che media ho?
+ * runtime configuration for che media ho?
  * 
  * This file provides global configuration for the frontend.
  * 
@@ -14,14 +14,11 @@
  * 
  * 2. VERCEL + LOCAL API MODE:
  *    API_BASE: "https://your-tunnel.ngrok.io" (your ngrok/Cloudflare Tunnel URL)
- *    API_KEY: "your-api-key" (for authentication)
+ *    API_KEY: "your-api-key" (for authentication, optional)
  *    The frontend is deployed on Vercel, the API runs locally.
  */
 window.APP_CONFIG = {
-  // Empty string = same origin (standalone mode)
-  // Set to your tunnel URL for Vercel deployment
   API_BASE: "",
-  
   // API key for authentication (only needed for cross-origin mode)
   API_KEY: null
 };
