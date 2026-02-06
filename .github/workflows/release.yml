@@ -42,7 +42,7 @@ jobs:
 
       - name: Update version in sw.js
         run: |
-          sed -i "s/const CACHE_NAME = 'chemediaho-v[^']*'/const CACHE_NAME = 'chemediaho-v${{ inputs.version }}'/" static/sw.js
+          sed -i "s/const CACHE_NAME = 'chemediaho-v[^']*'/const CACHE_NAME = 'chemediaho-v${{ inputs.version }}'/" frontend/sw.js
           grep "CACHE_NAME" static/sw.js
 
       - name: Get last release tag
