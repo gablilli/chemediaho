@@ -205,7 +205,7 @@ app.secret_key = get_secret_key()
 _https_enabled = os.environ.get('HTTPS_ENABLED', 'false').lower() == 'true'
 
 # Log cookie configuration at startup for debugging
-logger.info(f"Session cookie config: HTTPS_ENABLED={_https_enabled}, Secure={_https_enabled}, SameSite={'None' if _https_enabled else 'Lax'}")
+logger.info(f"Session cookie config: HTTPS_ENABLED={_https_enabled}, SameSite={'None' if _https_enabled else 'Lax'}")
 if not _https_enabled:
     logger.warning("HTTPS_ENABLED is not set! Cross-origin requests will NOT receive session cookies.")
     logger.warning("If using a frontend on a different origin (e.g., Vercel, localhost:3000), set HTTPS_ENABLED=true and use an HTTPS tunnel.")
@@ -273,8 +273,8 @@ def login_route():
             # Store grades in session for other pages
             flask.session['grades_avr'] = grades_avr
             
-            # Log session data was set
-            logger.info(f"Login success - Session keys after login: {list(flask.session.keys())}")
+            # Log session initialization (avoid logging sensitive data)
+            logger.info(f"Login success - Session initialized with {len(flask.session)} keys")
             
             return flask.jsonify({'success': True}), 200
         else:
@@ -295,8 +295,8 @@ def login_route():
             # Store grades in session for other pages
             flask.session['grades_avr'] = grades_avr
             
-            # Log session data was set
-            logger.info(f"Login success - Session keys after login: {list(flask.session.keys())}")
+            # Log session initialization (avoid logging sensitive data)
+            logger.info(f"Login success - Session initialized with {len(flask.session)} keys")
             
             return flask.jsonify({'success': True}), 200
     except requests.exceptions.HTTPError as e:
@@ -362,14 +362,12 @@ def refresh_grades():
 @app.route('/grades')
 def grades_page():
     """API endpoint for grades - returns JSON data."""
-    # Debug logging for session issues
+    # Debug logging for session issues (avoid logging sensitive data)
     cookie_present = bool(flask.request.headers.get('Cookie'))
-    session_keys = list(flask.session.keys())
+    session_count = len(flask.session)
     has_grades = 'grades_avr' in flask.session
     
-    logger.info(f"Grades request - Session keys: {session_keys}")
-    logger.info(f"Grades request - Has grades_avr: {has_grades}")
-    logger.info(f"Grades request - Cookie header present: {cookie_present}")
+    logger.info(f"Grades request - Session has {session_count} keys, has_grades={has_grades}, cookie_present={cookie_present}")
     
     if not has_grades:
         # Provide helpful error message for debugging cross-origin issues
