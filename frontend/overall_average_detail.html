@@ -8,23 +8,23 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="chemediaho?" />
-    <link rel="manifest" href="/manifest.json" />
-    <link rel="icon" type="image/png" sizes="192x192" href="/static/icons/icon-192.png" />
-    <!-- iOS touch icons for various device sizes -->
-    <link rel="apple-touch-icon" href="/static/icons/icon-192.png" />
-    <link rel="apple-touch-icon" sizes="192x192" href="/static/icons/icon-192.png" />
-    <link rel="apple-touch-icon" sizes="512x512" href="/static/icons/icon-512.png" />
+    <link rel="manifest" href="manifest.json" />
+    <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png" />
+    <link rel="apple-touch-icon" href="icons/icon-192.png" />
+    <link rel="apple-touch-icon" sizes="192x192" href="icons/icon-192.png" />
+    <link rel="apple-touch-icon" sizes="512x512" href="icons/icon-512.png" />
     <title>Media Generale - che media ho?</title>
-    <!-- Theme detection - prevent flicker -->
-    <script src="/static/js/theme.js"></script>
+    <script src="js/config.runtime.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/theme.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-    <link rel="stylesheet" href="/static/common.css" />
-    <link rel="stylesheet" href="/static/css/overall_average_detail.css" />
+    <link rel="stylesheet" href="common.css" />
+    <link rel="stylesheet" href="css/overall_average_detail.css" />
   </head>
   <body>
     <!-- Header -->
     <div class="header-section">
-      <button class="back-button" onclick="window.location.href='/grades'">
+      <button class="back-button" onclick="navigateTo('grades.html')">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
           <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/>
         </svg>
@@ -42,18 +42,16 @@
           <svg class="circle-progress-large">
             <circle class="circle-progress-bg-large" cx="70" cy="70" r="60"></circle>
             <circle 
-              class="circle-progress-fill-large {% if grades_avr['all_avr'] >= 6.5 %}excellent{% elif grades_avr['all_avr'] >= 5.5 %}pass{% else %}fail{% endif %}"
+              class="circle-progress-fill-large"
+              id="overallCircle"
               cx="70" 
               cy="70" 
               r="60"
               stroke-dasharray="377"
               stroke-dashoffset="377"
-              data-target="{{ (grades_avr['all_avr'] / 10 * 377) | round }}"
             ></circle>
           </svg>
-          <div class="circle-grade-large {% if grades_avr['all_avr'] >= 6.5 %}grade-excellent{% elif grades_avr['all_avr'] >= 5.5 %}grade-pass{% else %}grade-fail{% endif %}">
-            {{ grades_avr["all_avr"] | round(1) }}
-          </div>
+          <div class="circle-grade-large" id="overallGrade">-</div>
         </div>
         <div class="average-label">Media Generale</div>
       </div>
@@ -125,11 +123,7 @@
             <label class="form-label" for="predictSubject">Materia</label>
             <select class="form-select" id="predictSubject" required>
               <option value="">Seleziona una materia...</option>
-              {% for period in grades_avr.keys() if period != 'all_avr' %}
-                {% for subject in grades_avr[period].keys() if subject != 'period_avr' %}
-                  <option value="{{ subject }}|{{ period }}">{{ subject }} (Periodo {{ period }})</option>
-                {% endfor %}
-              {% endfor %}
+              <!-- Will be populated by JavaScript -->
             </select>
           </div>
 
@@ -179,10 +173,6 @@
       </div>
     </div>
 
-    <script>
-      // Inject data from backend for overall_average_detail.js
-      window.gradesData = {{ grades_avr | tojson }};
-    </script>
-    <script src="/static/js/overall_average_detail.js"></script>
+    <script src="js/overall_average_detail.js"></script>
   </body>
 </html>

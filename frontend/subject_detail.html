@@ -8,27 +8,28 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="chemediaho?" />
-    <link rel="manifest" href="/manifest.json" />
-    <link rel="icon" type="image/png" sizes="192x192" href="/static/icons/icon-192.png" />
-    <!-- iOS touch icons for various device sizes -->
-    <link rel="apple-touch-icon" href="/static/icons/icon-192.png" />
-    <link rel="apple-touch-icon" sizes="192x192" href="/static/icons/icon-192.png" />
-    <link rel="apple-touch-icon" sizes="512x512" href="/static/icons/icon-512.png" />
-    <title>{{ subject_name }} - che media ho?</title>
-    <script src="/static/js/theme.js"></script>
+    <link rel="manifest" href="manifest.json" />
+    <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png" />
+    <link rel="apple-touch-icon" href="icons/icon-192.png" />
+    <link rel="apple-touch-icon" sizes="192x192" href="icons/icon-192.png" />
+    <link rel="apple-touch-icon" sizes="512x512" href="icons/icon-512.png" />
+    <title>Dettaglio Materia - che media ho?</title>
+    <script src="js/config.runtime.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/theme.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-    <link rel="stylesheet" href="/static/common.css" />
-    <link rel="stylesheet" href="/static/css/subject_detail.css" />
+    <link rel="stylesheet" href="common.css" />
+    <link rel="stylesheet" href="css/subject_detail.css" />
   </head>
   <body>
     <!-- Header -->
     <div class="header-section">
-      <button class="back-button" onclick="window.location.href='/grades'">
+      <button class="back-button" onclick="navigateTo('grades.html')">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
           <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/>
         </svg>
       </button>
-      <div class="header-title">{{ subject_name }}</div>
+      <div class="header-title" id="subjectTitle">Caricamento...</div>
     </div>
 
     <!-- Error Notification -->
@@ -37,46 +38,22 @@
     <div class="container">
       <!-- Subject Info Card -->
       <div class="info-card">
-        {% set ns = namespace(subject_average=0, total_grades=0, first_found=False, highest_grade=0, lowest_grade=10, grade_types={}) %}
-        {% for period in grades_avr.keys() if period != 'all_avr' %}
-          {% if subject_name in grades_avr[period] %}
-            {% set subject_data = grades_avr[period][subject_name] %}
-            {% if not ns.first_found %}
-              {% set ns.subject_average = subject_data.avr %}
-              {% set ns.first_found = True %}
-            {% endif %}
-            {% set ns.total_grades = ns.total_grades + subject_data.grades|length %}
-            {% for grade in subject_data.grades %}
-              {% if grade.decimalValue > ns.highest_grade %}
-                {% set ns.highest_grade = grade.decimalValue %}
-              {% endif %}
-              {% if grade.decimalValue < ns.lowest_grade %}
-                {% set ns.lowest_grade = grade.decimalValue %}
-              {% endif %}
-            {% endfor %}
-          {% endif %}
-        {% endfor %}
-        
         <div class="info-grid">
           <div class="info-item">
             <div class="info-label">Media</div>
-            <div class="info-value {% if ns.subject_average >= 6.5 %}excellent{% elif ns.subject_average >= 5.5 %}pass{% else %}fail{% endif %}">
-              {{ ns.subject_average | round(1) }}
-            </div>
+            <div class="info-value" id="subjectAverage">-</div>
           </div>
           <div class="info-item">
             <div class="info-label">Voti Totali</div>
-            <div class="info-value">{{ ns.total_grades }}</div>
+            <div class="info-value" id="totalGrades">-</div>
           </div>
           <div class="info-item">
             <div class="info-label">Voto più alto</div>
-            <div class="info-value excellent">{{ ns.highest_grade | round(1) }}</div>
+            <div class="info-value excellent" id="highestGrade">-</div>
           </div>
           <div class="info-item">
             <div class="info-label">Voto più basso</div>
-            <div class="info-value {% if ns.lowest_grade >= 6.5 %}excellent{% elif ns.lowest_grade >= 5.5 %}pass{% else %}fail{% endif %}">
-              {{ ns.lowest_grade | round(1) }}
-            </div>
+            <div class="info-value" id="lowestGrade">-</div>
           </div>
         </div>
       </div>
@@ -84,27 +61,10 @@
       <!-- Grades by Period -->
       <div class="section-card">
         <div class="section-title">📊 Voti per Periodo</div>
-        {% for period in grades_avr.keys() | sort if period != 'all_avr' %}
-          {% if subject_name in grades_avr[period] %}
-            {% set subject_data = grades_avr[period][subject_name] %}
-            <div style="margin-bottom: 20px;">
-              <div style="text-align: center; margin-bottom: 12px;">
-                <span class="period-badge" style="font-size: 14px;">Periodo {{ period }}</span>
-              </div>
-              <div class="grades-list">
-                {% for grade in subject_data.grades %}
-                  <button
-                    type="button"
-                    class="grade-badge {% if grade.isBlue %}blue{% elif grade.decimalValue >= 6.5 %}excellent{% elif grade.decimalValue >= 5.5 %}pass{% else %}fail{% endif %}"
-                    onclick='showModal({{ grade | tojson | safe }})'
-                  >
-                    {{ grade.decimalValue }}
-                  </button>
-                {% endfor %}
-              </div>
-            </div>
-          {% endif %}
-        {% endfor %}
+        <div id="gradesByPeriod">
+          <!-- Will be populated by JavaScript -->
+          <div class="loading-message">Caricamento voti...</div>
+        </div>
       </div>
 
       <!-- Time Series Chart -->
@@ -139,11 +99,7 @@
             <label class="form-label" for="periodSelect">Periodo</label>
             <select class="form-select" id="periodSelect" required>
               <option value="">Seleziona un periodo...</option>
-              {% for period in grades_avr.keys() | sort if period != 'all_avr' %}
-                {% if subject_name in grades_avr[period] %}
-                  <option value="{{ period }}">Periodo {{ period }}</option>
-                {% endif %}
-              {% endfor %}
+              <!-- Will be populated by JavaScript -->
             </select>
           </div>
 
@@ -215,11 +171,7 @@
             <label class="form-label" for="predictPeriod">Periodo</label>
             <select class="form-select" id="predictPeriod" required>
               <option value="">Seleziona un periodo...</option>
-              {% for period in grades_avr.keys() | sort if period != 'all_avr' %}
-                {% if subject_name in grades_avr[period] %}
-                  <option value="{{ period }}">Periodo {{ period }}</option>
-                {% endif %}
-              {% endfor %}
+              <!-- Will be populated by JavaScript -->
             </select>
           </div>
 
@@ -261,11 +213,6 @@
       </div>
     </div>
 
-    <script>
-      // Inject data from backend for subject_detail.js
-      window.gradesData = {{ grades_avr | tojson }};
-      window.subjectName = {{ subject_name | tojson }};
-    </script>
-    <script src="/static/js/subject_detail.js"></script>
+    <script src="js/subject_detail.js"></script>
   </body>
 </html>

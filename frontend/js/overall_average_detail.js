@@ -1,8 +1,80 @@
+// =============================================================================
+// Overall Average Detail Page - Fetches data from API and renders dynamically
+// =============================================================================
+
+// Global state - will be loaded from API
+let gradesData = {};
+
+// Load data from API
+async function loadOverallData() {
+  try {
+    const response = await apiFetch('/overall_average_detail');
+    
+    if (!response.ok) {
+      if (response.status === 401) {
+        navigateTo('index.html');
+        return;
+      }
+      throw new Error('Failed to load data');
+    }
+    
+    gradesData = await response.json();
+    
+    // Render the page content
+    renderOverallAverage();
+    populateSubjectSelector();
+    createOverallTrendChart();
+    displaySavedGoal();
+    
+  } catch (error) {
+    console.error('Error loading data:', error);
+    showError('Errore nel caricamento dei dati');
+  }
+}
+
+// Render overall average display
+function renderOverallAverage() {
+  const allAvr = gradesData.all_avr || 0;
+  const overallCircle = document.getElementById('overallCircle');
+  const overallGrade = document.getElementById('overallGrade');
+  
+  // Update text and class
+  overallGrade.textContent = allAvr.toFixed(1);
+  overallGrade.className = `circle-grade-large grade-${getGradeClass(allAvr)}`;
+  overallCircle.classList.add(getGradeClass(allAvr));
+  
+  // Animate circle
+  animateCircle(overallCircle, allAvr);
+}
+
+// Populate subject selector
+function populateSubjectSelector() {
+  const predictSubject = document.getElementById('predictSubject');
+  if (!predictSubject) return;
+  
+  let options = '<option value="">Seleziona una materia...</option>';
+  
+  for (const period of Object.keys(gradesData).filter(k => k !== 'all_avr').sort()) {
+    for (const subject of Object.keys(gradesData[period]).filter(k => k !== 'period_avr')) {
+      options += `<option value="${subject}|${period}">${subject} (Periodo ${period})</option>`;
+    }
+  }
+  
+  predictSubject.innerHTML = options;
+}
+
+// Get grade class based on value
+function getGradeClass(value) {
+  if (value >= 6.5) return 'excellent';
+  if (value >= 5.5) return 'pass';
+  return 'fail';
+}
+
 // Animate circle progress bars
-function animateCircle(circle) {
-  const target = parseFloat(circle.getAttribute('data-target'));
-  const radius = parseFloat(circle.getAttribute('r'));
+function animateCircle(circle, value) {
+  const radius = 60;
   const circumference = 2 * Math.PI * radius;
+  const target = (value / 10) * circumference;
   
   // Start from full (no progress)
   circle.style.strokeDashoffset = circumference;
@@ -13,18 +85,10 @@ function animateCircle(circle) {
   }, 100);
 }
 
-// Animate all circles on page load
+// Initialize on page load
 document.addEventListener('DOMContentLoaded', () => {
-  document.querySelectorAll('.circle-progress-fill-large[data-target]').forEach(circle => {
-    animateCircle(circle);
-  });
-  
-  // Create chart
-  createOverallTrendChart();
+  loadOverallData();
 });
-
-// Store grades data (injected by template)
-const gradesData = window.gradesData || [];
 
 // Create time series chart for overall average
 function createOverallTrendChart() {
@@ -159,8 +223,8 @@ function clearSavedGoal() {
   displaySavedGoal();
 }
 
-// Display saved goal on page load
-displaySavedGoal();
+// Display saved goal (called from loadOverallData)
+// displaySavedGoal();
 
 // Smart suggestions form handler
 const smartSuggestionsForm = document.getElementById('smartSuggestionsForm');
@@ -181,7 +245,7 @@ smartSuggestionsForm.addEventListener('submit', async function(e) {
   calculateBtn.textContent = 'Calcolo in corso...';
 
   try {
-    const response = await fetch('/calculate_goal_overall', {
+    const response = await apiFetch('/calculate_goal_overall', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -303,7 +367,7 @@ predictionsForm.addEventListener('submit', async function(e) {
   predictBtn.textContent = 'Calcolo in corso...';
 
   try {
-    const response = await fetch('/predict_average_overall', {
+    const response = await apiFetch('/predict_average_overall', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

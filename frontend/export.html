@@ -8,16 +8,17 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="chemediaho?" />
-    <link rel="manifest" href="/manifest.json" />
-    <link rel="icon" type="image/png" sizes="192x192" href="/static/icons/icon-192.png" />
-    <!-- iOS touch icons for various device sizes -->
-    <link rel="apple-touch-icon" href="/static/icons/icon-192.png" />
-    <link rel="apple-touch-icon" sizes="192x192" href="/static/icons/icon-192.png" />
-    <link rel="apple-touch-icon" sizes="512x512" href="/static/icons/icon-512.png" />
+    <link rel="manifest" href="manifest.json" />
+    <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png" />
+    <link rel="apple-touch-icon" href="icons/icon-192.png" />
+    <link rel="apple-touch-icon" sizes="192x192" href="icons/icon-192.png" />
+    <link rel="apple-touch-icon" sizes="512x512" href="icons/icon-512.png" />
     <title>Esporta - che media ho?</title>
-    <script src="/static/js/theme.js"></script>
-    <link rel="stylesheet" href="/static/common.css" />
-    <link rel="stylesheet" href="/static/css/export.css" />
+    <script src="js/config.runtime.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/theme.js"></script>
+    <link rel="stylesheet" href="common.css" />
+    <link rel="stylesheet" href="css/export.css" />
   </head>
   <body>
     <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme">
@@ -33,9 +34,7 @@
         <line x1="18.36" x2="19.78" y1="5.64" y2="4.22"/>
       </svg>
     </button>
-    <form action="/logout" method="post" style="display: inline;">
-      <button type="submit" class="logout-btn">Esci</button>
-    </form>
+    <button type="button" class="logout-btn" id="logoutBtn">Esci</button>
 
     <div class="header-section">
       <h1 class="page-title">Esporta Voti</h1>
@@ -64,8 +63,8 @@
               </p>
             </div>
           </div>
-          <form action="/export/csv" method="post">
-            <button type="submit" class="export-button">
+          <form id="csvExportForm">
+            <button type="submit" class="export-button" id="csvExportBtn">
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
                 <polyline points="7 10 12 15 17 10"/>
@@ -96,14 +95,14 @@
 
     <!-- Bottom Navigation Bar -->
     <nav class="bottom-nav">
-      <a href="/grades" class="nav-item">
+      <a href="grades.html" class="nav-item">
         <svg class="nav-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
           <polyline points="9 22 9 12 15 12 15 22"/>
         </svg>
         <span class="nav-label">Medie</span>
       </a>
-      <a href="/export" class="nav-item active">
+      <a href="export.html" class="nav-item active">
         <svg class="nav-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
           <polyline points="7 10 12 15 17 10"/>
@@ -111,7 +110,7 @@
         </svg>
         <span class="nav-label">Esporta</span>
       </a>
-      <a href="/settings" class="nav-item">
+      <a href="settings.html" class="nav-item">
         <svg class="nav-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <circle cx="12" cy="12" r="3"/>
           <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
@@ -128,6 +127,6 @@
       </button>
     </nav>
 
-    <script src="/static/js/export.js"></script>
+    <script src="js/export.js"></script>
   </body>
 </html>

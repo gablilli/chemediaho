@@ -1,3 +1,27 @@
+"""
+=============================================================================
+LOCAL-ONLY BACKEND - DO NOT DEPLOY TO CLOUD SERVICES
+=============================================================================
+This backend MUST run locally on a residential IP address.
+
+It is designed to bypass Akamai WAF blocking when calling web.spaggiari.eu,
+which requires outbound requests to originate from a residential IP.
+
+DO NOT DEPLOY THIS BACKEND TO:
+- Vercel, Netlify, or any other serverless platform
+- Fly.io, Railway, Render, or any other cloud hosting provider
+- AWS Lambda, Google Cloud Functions, Azure Functions, etc.
+
+The frontend should be deployed to Vercel and connect to this local backend
+via an HTTPS tunnel (ngrok, Cloudflare Tunnel, etc.).
+
+This setup ensures:
+- Outbound requests to web.spaggiari.eu come from your residential IP
+- The frontend can safely call the backend over HTTPS
+- Akamai WAF is bypassed for scraping operations
+=============================================================================
+"""
+
 import requests
 import json
 import flask
@@ -9,8 +33,93 @@ import logging
 import re
 from datetime import datetime
 from bs4 import BeautifulSoup
+from flask_cors import CORS
 
-app = flask.Flask(__name__)
+# -----------------------------------------------------------------------------
+# Standalone Mode (Docker all-in-one)
+# -----------------------------------------------------------------------------
+# When STANDALONE_MODE=true, the Flask app serves both the API and the static
+# frontend files. This is the recommended mode for Docker deployments.
+#
+# When STANDALONE_MODE=false (default), the Flask app only serves the API.
+# The frontend should be deployed separately (e.g., to Vercel).
+# -----------------------------------------------------------------------------
+STANDALONE_MODE = os.environ.get('STANDALONE_MODE', 'true').lower() == 'true'
+
+if STANDALONE_MODE:
+    app = flask.Flask(__name__, static_folder='frontend', static_url_path='')
+else:
+    app = flask.Flask(__name__)
+
+# -----------------------------------------------------------------------------
+# CORS Configuration for Vercel Frontend
+# -----------------------------------------------------------------------------
+# Allow requests from Vercel preview/production domains and localhost for dev.
+# Credentials (cookies/session) are enabled for cross-origin session handling.
+#
+# NOTE: The regex pattern allows any *.vercel.app subdomain. This is intentional
+# because Vercel preview deployments get random subdomains.
+# -----------------------------------------------------------------------------
+CORS(app,
+     origins=[
+         r"https://.*\.vercel\.app",  # Vercel preview and production domains
+         "http://localhost:3000"       # Local frontend development
+     ],
+     supports_credentials=True,        # Allow cookies/session across origins
+     allow_headers=["Content-Type", "X-API-Key"],  # Allow custom headers
+     expose_headers=["Content-Type"])
+
+# -----------------------------------------------------------------------------
+# API Key Protection
+# -----------------------------------------------------------------------------
+# All routes require a valid X-API-Key header, except for:
+# - / (home page)
+# - /manifest.json (PWA manifest)
+# - /sw.js (service worker)
+# - /static/* (static files)
+#
+# The API key is read from the API_KEY environment variable.
+# -----------------------------------------------------------------------------
+API_KEY = os.environ.get('API_KEY', '').strip() or None  # Treat empty string as None
+
+# Routes that do NOT require API key authentication
+PUBLIC_ROUTES = frozenset(['/api/session', '/api/version'])
+
+
+@app.before_request
+def check_api_key():
+    """
+    Middleware to validate API key for protected routes.
+    
+    Returns 401 Unauthorized if:
+    - API_KEY environment variable is set AND
+    - The route is not in PUBLIC_ROUTES AND
+    - The route does not start with /static/ AND
+    - The X-API-Key header is missing or does not match
+    """
+    # Skip API key check if no API_KEY is configured (development mode)
+    if not API_KEY:
+        return None
+    
+    # Allow CORS preflight requests (OPTIONS) without API key
+    # This is required for browsers to complete the CORS handshake
+    if flask.request.method == 'OPTIONS':
+        return None
+    
+    # Allow public routes without API key
+    if flask.request.path in PUBLIC_ROUTES:
+        return None
+    
+    # Allow static files without API key
+    if flask.request.path.startswith('/static/'):
+        return None
+    
+    # Validate API key for all other routes
+    provided_key = flask.request.headers.get('X-API-Key')
+    if not provided_key or not secrets.compare_digest(provided_key, API_KEY):
+        return flask.jsonify({'error': 'Unauthorized: Invalid or missing API key'}), 401
+    
+    return None
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -81,71 +190,113 @@ def get_secret_key():
 
 app.secret_key = get_secret_key()
 
-# Additional security configurations for sessions
+# -----------------------------------------------------------------------------
+# Session Cookie Configuration for HTTPS Tunnel Usage
+# -----------------------------------------------------------------------------
+# When running behind an HTTPS tunnel (ngrok, Cloudflare Tunnel), session
+# cookies must be configured for cross-origin usage
+# To run with HTTPS tunnel:
+#   HTTPS_ENABLED=true API_KEY=your-key python app.py
+# -----------------------------------------------------------------------------
+_https_enabled = os.environ.get('HTTPS_ENABLED', 'false').lower() == 'true'
+
+# Log cookie configuration at startup for debugging
+logger.info(f"Session cookie config: HTTPS_ENABLED={_https_enabled}, SameSite={'None' if _https_enabled else 'Lax'}")
+if not _https_enabled:
+    logger.warning("HTTPS_ENABLED is not set! Cross-origin requests will NOT receive session cookies.")
+    logger.warning("If using a frontend on a different origin (e.g., Vercel, localhost:3000), set HTTPS_ENABLED=true and use an HTTPS tunnel.")
+
 app.config.update(
-    SESSION_COOKIE_SECURE=os.environ.get('HTTPS_ENABLED', 'false').lower() == 'true',
-    SESSION_COOKIE_HTTPONLY=True,  # Prevent JavaScript access to session cookie
-    SESSION_COOKIE_SAMESITE='Lax'  # CSRF protection
+    SESSION_COOKIE_SECURE=_https_enabled,        # Secure cookies over HTTPS tunnel
+    SESSION_COOKIE_HTTPONLY=True,                # Prevent JavaScript access (XSS protection)
+    SESSION_COOKIE_SAMESITE='None' if _https_enabled else 'Lax'  # Cross-origin for HTTPS tunnel
 )
 
-@app.route('/manifest.json')
-def manifest():
-    manifest_data = {
-        "name": "che media ho?",
-        "short_name": "chemediaho?",
-        "description": "Visualizza la media dei voti di ClasseViva",
-        "start_url": "/",
-        "display": "standalone",
-        "background_color": "#130909",
-        "theme_color": "#c84444",
-        "orientation": "portrait",
-        "icons": [
-            {
-                "src": "/static/icons/icon-192.png",
-                "sizes": "192x192",
-                "type": "image/png",
-                "purpose": "any"
-            },
-            {
-                "src": "/static/icons/icon-192.png",
-                "sizes": "192x192",
-                "type": "image/png",
-                "purpose": "maskable"
-            },
-            {
-                "src": "/static/icons/icon-512.png",
-                "sizes": "512x512",
-                "type": "image/png",
-                "purpose": "any"
-            },
-            {
-                "src": "/static/icons/icon-512.png",
-                "sizes": "512x512",
-                "type": "image/png",
-                "purpose": "maskable"
-            }
-        ]
-    }
+# =============================================================================
+# STANDALONE MODE: Serve static frontend files
+# =============================================================================
+# When STANDALONE_MODE=true, the Flask app serves the frontend as static files.
+# This enables "all-in-one" Docker deployment without a separate frontend server.
+# =============================================================================
+
+if STANDALONE_MODE:
+    logger.info("Running in STANDALONE mode - serving frontend files from /frontend")
     
-    return flask.jsonify(manifest_data)
+    @app.route('/')
+    def serve_index():
+        """Serve the main login page"""
+        return flask.send_from_directory('frontend', 'index.html')
+    
+    @app.route('/grades.html')
+    def serve_grades():
+        """Serve the grades page"""
+        return flask.send_from_directory('frontend', 'grades.html')
+    
+    @app.route('/export.html')
+    def serve_export():
+        """Serve the export page"""
+        return flask.send_from_directory('frontend', 'export.html')
+    
+    @app.route('/settings.html')
+    def serve_settings():
+        """Serve the settings page"""
+        return flask.send_from_directory('frontend', 'settings.html')
+    
+    @app.route('/subject_detail.html')
+    def serve_subject_detail():
+        """Serve the subject detail page"""
+        return flask.send_from_directory('frontend', 'subject_detail.html')
+    
+    @app.route('/overall_average_detail.html')
+    def serve_overall_average_detail():
+        """Serve the overall average detail page"""
+        return flask.send_from_directory('frontend', 'overall_average_detail.html')
+    
+    @app.route('/manifest.json')
+    def serve_manifest():
+        """Serve PWA manifest"""
+        return flask.send_from_directory('frontend', 'manifest.json')
+    
+    @app.route('/sw.js')
+    def serve_sw():
+        """Serve service worker"""
+        return flask.send_from_directory('frontend', 'sw.js')
+else:
+    logger.info("Running in API-ONLY mode - frontend should be deployed separately (e.g., Vercel)")
 
-@app.route('/sw.js')
-def service_worker():
-    return flask.send_from_directory('static', 'sw.js', mimetype='application/javascript')
+# =============================================================================
+# API ENDPOINTS
+# =============================================================================
+# JSON-only responses. No HTML rendering.
+# The frontend is either served by Flask (standalone) or deployed separately.
+# =============================================================================
 
-@app.route('/')
-def home():
-    return flask.render_template('login.html')
+@app.route('/api/session')
+def api_session():
+    """Check if user has an active session"""
+    if 'token' in flask.session:
+        return flask.jsonify({'authenticated': True}), 200
+    return flask.jsonify({'authenticated': False}), 200
 
-@app.route('/login', methods=['GET', 'POST'])
+@app.route('/api/version')
+def api_version():
+    """Return API version info"""
+    return flask.jsonify({'version': APP_VERSION}), 200
+
+@app.route('/login', methods=['POST'])
 def login_route():
-    # Redirect GET requests to home page
-    if flask.request.method == 'GET':
-        return flask.redirect('/')
-    
+    """
+    API endpoint for login - returns JSON response.
+    POST /login with form data: user_id, user_pass, login_type
+    Returns: { success: true } or { error: "..." }
+    """
     user_id = flask.request.form.get('user_id', '')
     user_pass = flask.request.form.get('user_pass', '')
     login_type = flask.request.form.get('login_type', 'userid')  # 'userid' or 'email'
+    
+    # Log session cookie configuration for debugging
+    logger.info(f"Session cookie config: Secure={app.config.get('SESSION_COOKIE_SECURE')}, SameSite={app.config.get('SESSION_COOKIE_SAMESITE')}")
+    logger.info(f"HTTPS_ENABLED={os.environ.get('HTTPS_ENABLED', 'false')}")
     
     try:
         if login_type == 'email':
@@ -155,7 +306,7 @@ def login_route():
             webidentity = login_response.get("webidentity", "")
             
             if token is None or token == "":
-                return flask.render_template('login.html', error="Token non valido. Riprova.", login_type=login_type)
+                return flask.jsonify({'success': False, 'error': 'Token non valido. Riprova.'}), 401
             
             # Store token, webidentity and login type in session
             flask.session['token'] = token
@@ -170,14 +321,16 @@ def login_route():
             # Store grades in session for other pages
             flask.session['grades_avr'] = grades_avr
             
-            # Redirect to grades page
-            return flask.redirect('/grades')
+            # Log session initialization (avoid logging sensitive data)
+            logger.info(f"Login success - Session initialized with {len(flask.session)} keys")
+            
+            return flask.jsonify({'success': True}), 200
         else:
             # Standard User ID login
             login_response = login(user_id, user_pass)
             token = login_response["token"]
             if token is None or token == "":
-                return flask.render_template('login.html', error="Token non valido. Riprova.", login_type=login_type)
+                return flask.jsonify({'success': False, 'error': 'Token non valido. Riprova.'}), 401
             
             # Store token and user_id in session
             flask.session['token'] = token
@@ -190,25 +343,28 @@ def login_route():
             # Store grades in session for other pages
             flask.session['grades_avr'] = grades_avr
             
-            # Redirect to grades page instead of rendering template
-            return flask.redirect('/grades')
+            # Log session initialization (avoid logging sensitive data)
+            logger.info(f"Login success - Session initialized with {len(flask.session)} keys")
+            
+            return flask.jsonify({'success': True}), 200
     except requests.exceptions.HTTPError as e:
         # Handle 422 and other HTTP errors with user-friendly message
         error_code = getattr(e.response, 'status_code', None) if hasattr(e, 'response') else None
         if error_code == 422:
-            return flask.render_template('login.html', error="Credenziali non valide. Verifica le tue credenziali.", login_type=login_type)
+            return flask.jsonify({'success': False, 'error': 'Credenziali non valide. Verifica le tue credenziali.'}), 401
         else:
-            return flask.render_template('login.html', error=f"Errore di autenticazione. Riprova.", login_type=login_type)
+            return flask.jsonify({'success': False, 'error': 'Errore di autenticazione. Riprova.'}), 500
     except requests.exceptions.RequestException as e:
-        return flask.render_template('login.html', error="Errore di connessione. Verifica la tua connessione internet.", login_type=login_type)
+        return flask.jsonify({'success': False, 'error': 'Errore di connessione. Verifica la tua connessione internet.'}), 500
     except Exception as e:
         logger.error(f"Login error: {e}", exc_info=True)
-        return flask.render_template('login.html', error="Errore imprevisto. Riprova più tardi.", login_type=login_type)
+        return flask.jsonify({'success': False, 'error': 'Errore imprevisto. Riprova più tardi.'}), 500
 
 @app.route('/logout', methods=['POST'])
 def logout():
+    """API endpoint for logout - returns JSON response."""
     flask.session.clear()
-    return flask.redirect('/')
+    return flask.jsonify({'success': True}), 200
 
 @app.route('/refresh_grades', methods=['POST'])
 def refresh_grades():
@@ -221,29 +377,29 @@ def refresh_grades():
         login_type = flask.session.get('login_type', 'userid')
         
         if login_type == 'email':
-            # Email login - use HTML scraping
+            # html scraping
             webidentity = flask.session.get('webidentity', '')
             grades_data = get_grades_email(token, webidentity)
             grades_avr = calculate_avr(grades_data)
         else:
-            # Standard User ID login - use REST API
+            # rest api
             if 'user_id' not in flask.session:
                 return flask.jsonify({'error': 'User ID not found in session'}), 400
             
             user_id = flask.session['user_id']
             student_id = "".join(filter(str.isdigit, user_id))
             
-            # Fetch fresh grades from API - take all grades as-is without filtering
+            # fetch grades
             grades_avr = calculate_avr(get_grades(student_id, token))
         
-        # Update session with fresh data
+        # update session
         flask.session['grades_avr'] = grades_avr
         
         return flask.jsonify({'success': True, 'message': 'Voti aggiornati'}), 200
     except requests.exceptions.HTTPError as e:
         error_code = getattr(e.response, 'status_code', None) if hasattr(e, 'response') else None
         if error_code == 401:
-            # Token expired, redirect to login
+            # token expired so redirect to login
             flask.session.clear()
             return flask.jsonify({'error': 'Sessione scaduta', 'redirect': '/'}), 401
         return flask.jsonify({'error': 'Errore durante l\'aggiornamento'}), 500
@@ -253,40 +409,58 @@ def refresh_grades():
 
 @app.route('/grades')
 def grades_page():
-    """Display grades page - requires active session with token"""
-    if 'grades_avr' not in flask.session:
-        return flask.redirect('/')
+    """API endpoint for grades - returns JSON data."""
+    # debug logging (without sensitive data)
+    cookie_present = bool(flask.request.headers.get('Cookie'))
+    session_count = len(flask.session)
+    has_grades = 'grades_avr' in flask.session
+    
+    logger.info(f"Grades request - Session has {session_count} keys, has_grades={has_grades}, cookie_present={cookie_present}")
+    
+    if not has_grades:
+        # debug errors
+        if not cookie_present:
+            logger.warning("No Cookie header in request - likely a cross-origin issue. Set HTTPS_ENABLED=true and use an HTTPS tunnel.")
+            return flask.jsonify({
+                'error': 'No active session',
+                'authenticated': False,
+                'debug': {
+                    'cookie_received': False,
+                    'hint': 'If using cross-origin (different domain/port), set HTTPS_ENABLED=true and use an HTTPS tunnel'
+                }
+            }), 401
+        return flask.jsonify({'error': 'No active session', 'authenticated': False}), 401
     
     grades_avr = flask.session['grades_avr']
-    return flask.render_template('grades.html', grades_avr=grades_avr)
+    return flask.jsonify(grades_avr), 200
 
 @app.route('/export')
 def export_page():
-    """Display export page - requires active session"""
+    """API endpoint for export check - returns JSON status."""
     if 'token' not in flask.session:
-        return flask.redirect('/')
+        return flask.jsonify({'error': 'No active session', 'authenticated': False}), 401
     
-    return flask.render_template('export.html')
+    return flask.jsonify({'authenticated': True}), 200
 
 @app.route('/settings')
 def settings_page():
-    """Display settings page"""
-    return flask.render_template('settings.html', version=APP_VERSION)
+    """API endpoint for settings - returns JSON data."""
+    return flask.jsonify({'version': APP_VERSION}), 200
 
 @app.route('/overall_average_detail')
 def overall_average_detail_page():
-    """Display overall average detail page with graphs and smart suggestions"""
+    """API endpoint for overall average detail - returns JSON data."""
     if 'grades_avr' not in flask.session:
-        return flask.redirect('/')
+        return flask.jsonify({'error': 'No active session', 'authenticated': False}), 401
     
     grades_avr = flask.session['grades_avr']
-    return flask.render_template('overall_average_detail.html', grades_avr=grades_avr)
+    return flask.jsonify(grades_avr), 200
 
 @app.route('/subject_detail/<subject_name>')
 def subject_detail_page(subject_name):
-    """Display subject detail page with graphs and smart suggestions"""
+    """API endpoint for subject detail - returns JSON data."""
     if 'grades_avr' not in flask.session:
-        return flask.redirect('/')
+        return flask.jsonify({'error': 'No active session', 'authenticated': False}), 401
     
     grades_avr = flask.session['grades_avr']
     
@@ -297,9 +471,9 @@ def subject_detail_page(subject_name):
             break
     
     if not subject_found:
-        return flask.redirect('/grades')
+        return flask.jsonify({'error': 'Subject not found'}), 404
     
-    return flask.render_template('subject_detail.html', grades_avr=grades_avr, subject_name=subject_name)
+    return flask.jsonify({'grades_avr': grades_avr, 'subject_name': subject_name}), 200
 
 @app.route('/set_blue_grade_preference', methods=['POST'])
 def set_blue_grade_preference():
@@ -308,10 +482,10 @@ def set_blue_grade_preference():
         data = flask.request.get_json()
         include_blue_grades = data.get('include_blue_grades', True)
         
-        # Store preference in session
+        # store preference
         flask.session['include_blue_grades'] = include_blue_grades
         
-        # If we have grades, recalculate averages with the new preference
+        # if we have grades, recalculate
         if 'grades_avr' in flask.session:
             grades_avr = flask.session['grades_avr']
             recalculate_averages(grades_avr, not include_blue_grades)
@@ -326,7 +500,7 @@ def set_blue_grade_preference():
 
 def recalculate_averages(grades_avr, exclude_blue=False):
     """Recalculate subject, period, and overall averages based on blue grade preference"""
-    # Recalculate subject averages
+    # recalculate sjubect averages
     for period in grades_avr:
         if period == 'all_avr':
             continue
@@ -337,7 +511,7 @@ def recalculate_averages(grades_avr, exclude_blue=False):
                            if not (exclude_blue and g.get('isBlue', False))]
             grades_avr[period][subject]["avr"] = sum(subject_grades) / len(subject_grades) if subject_grades else 0
     
-    # Recalculate period averages
+    # recalculate period averages
     for period in grades_avr:
         if period == 'all_avr':
             continue
@@ -349,7 +523,7 @@ def recalculate_averages(grades_avr, exclude_blue=False):
                                 if not (exclude_blue and g.get('isBlue', False))])
         grades_avr[period]["period_avr"] = sum(period_grades) / len(period_grades) if period_grades else 0
     
-    # Recalculate overall average
+    # recalculate overall average
     all_grades = []
     for period in grades_avr:
         if period == 'all_avr':
@@ -371,13 +545,12 @@ def calculate_goal():
     try:
         data = flask.request.get_json()
         period = data.get('period')
-        subject = data.get('subject')  # Optional now
+        subject = data.get('subject')  # optional
         target_average = float(data.get('target_average'))
-        num_grades = int(data.get('num_grades', 1))  # Number of grades to calculate for
+        num_grades = int(data.get('num_grades', 1))
         
         grades_avr = flask.session['grades_avr']
         
-        # Validate inputs
         if not period or period not in grades_avr:
             return flask.jsonify({'error': 'Periodo non trovato'}), 400
         
@@ -387,7 +560,7 @@ def calculate_goal():
         if num_grades < 1 or num_grades > 10:
             return flask.jsonify({'error': 'Il numero di voti deve essere tra 1 e 10'}), 400
         
-        # If no subject specified, return intelligent suggestions for the period
+        # return intelligent suggestions if no subject
         if not subject:
             suggestions = calculate_period_subject_suggestions(grades_avr, period, target_average, num_grades)
             
@@ -400,16 +573,15 @@ def calculate_goal():
                 'message': get_period_suggestion_message(suggestions, target_average, num_grades, period)
             }), 200
         
-        # If subject is specified, calculate for that specific subject
         if subject not in grades_avr[period]:
             return flask.jsonify({'error': 'Materia non trovata nel periodo selezionato'}), 400
         
-        # Get current grades with validation
+        # get current grades
         subject_data = grades_avr[period][subject]
         if 'grades' not in subject_data or not isinstance(subject_data['grades'], list):
             return flask.jsonify({'error': 'Dati dei voti non validi'}), 400
         
-        # Extract grades with validation
+        # extract grades
         current_grades = []
         for g in subject_data['grades']:
             if isinstance(g, dict) and 'decimalValue' in g and g['decimalValue'] is not None:
@@ -422,7 +594,7 @@ def calculate_goal():
         current_sum = sum(current_grades)
         current_average = subject_data.get('avr', current_sum / current_count if current_count > 0 else 0)
         
-        # Check if current average already meets or exceeds target
+        # check if current grade already meets or exceed target
         if current_average >= target_average:
             return flask.jsonify({
                 'success': True,
@@ -481,7 +653,6 @@ def round_to_allowed_grade(grade):
     if grade > max(ALLOWED_GRADES):
         return max(ALLOWED_GRADES)
     
-    # Find the closest allowed grade
     closest = min(ALLOWED_GRADES, key=lambda x: abs(x - grade))
     return closest
 
@@ -518,24 +689,20 @@ def predict_average():
         
         grades_avr = flask.session['grades_avr']
         
-        # Validate inputs
         if period not in grades_avr or subject not in grades_avr[period]:
             return flask.jsonify({'error': 'Materia o periodo non trovato'}), 400
         
         if not predicted_grades or not isinstance(predicted_grades, list):
             return flask.jsonify({'error': 'Inserisci almeno un voto previsto'}), 400
         
-        # Validate predicted grades
         for grade in predicted_grades:
             if not isinstance(grade, (int, float)) or grade < 1 or grade > 10:
                 return flask.jsonify({'error': 'Tutti i voti devono essere tra 1 e 10'}), 400
         
-        # Get current grades with validation
         subject_data = grades_avr[period][subject]
         if 'grades' not in subject_data or not isinstance(subject_data['grades'], list):
             return flask.jsonify({'error': 'Dati dei voti non validi'}), 400
         
-        # Extract current grades
         current_grades = []
         for g in subject_data['grades']:
             if isinstance(g, dict) and 'decimalValue' in g and g['decimalValue'] is not None:
@@ -546,14 +713,11 @@ def predict_average():
         
         current_average = subject_data.get('avr', sum(current_grades) / len(current_grades))
         
-        # Calculate predicted average
         all_grades = current_grades + predicted_grades
         predicted_average = sum(all_grades) / len(all_grades)
         
-        # Calculate change
         change = predicted_average - current_average
         
-        # Generate message
         message = get_predict_message(change, predicted_average, len(predicted_grades))
         
         return flask.jsonify({
@@ -628,20 +792,17 @@ def calculate_goal_overall():
     
     try:
         data = flask.request.get_json()
-        subject = data.get('subject')  # Optional
+        subject = data.get('subject')  # optional
         target_overall_average = float(data.get('target_average'))
-        num_grades_input = data.get('num_grades')  # Optional - will auto-calculate if not provided
+        num_grades_input = data.get('num_grades')  # optional - will auto-calculate if not provided
         
         grades_avr = flask.session['grades_avr']
         
-        # Validate inputs
         if target_overall_average < 1 or target_overall_average > 10:
             return flask.jsonify({'error': 'La media target deve essere tra 1 e 10'}), 400
         
-        # Get current overall average
         current_overall_average = grades_avr.get('all_avr', 0)
         
-        # Check if current average already meets or exceeds target
         if current_overall_average >= target_overall_average:
             return flask.jsonify({
                 'success': True,
@@ -654,7 +815,6 @@ def calculate_goal_overall():
                 'message': f"🎉 Obiettivo già raggiunto! La tua media generale attuale ({round(current_overall_average, 2)}) è già pari o superiore all'obiettivo di {target_overall_average}."
             }), 200
         
-        # Collect all current grades from all subjects in all periods (excluding blue grades)
         all_grades_list = get_all_grades(grades_avr)
         
         if not all_grades_list:
@@ -663,7 +823,6 @@ def calculate_goal_overall():
         current_total = sum(all_grades_list)
         current_count = len(all_grades_list)
         
-        # Auto-calculate num_grades if not provided, otherwise use provided value
         if num_grades_input is None:
             num_grades, _ = calculate_optimal_grades_needed(current_total, current_count, target_overall_average)
             auto_calculated = True
@@ -777,7 +936,6 @@ def calculate_subject_suggestions(grades_avr, target_overall_average, num_grades
     """
     suggestions = []
     
-    # Get all grades to calculate current overall average
     all_grades_list = get_all_grades(grades_avr)
     if not all_grades_list:
         return []
@@ -785,7 +943,6 @@ def calculate_subject_suggestions(grades_avr, target_overall_average, num_grades
     current_total = sum(all_grades_list)
     current_count = len(all_grades_list)
     
-    # Get all unique subjects across all periods
     all_subjects = set()
     for period in grades_avr:
         if period == 'all_avr':
@@ -794,9 +951,7 @@ def calculate_subject_suggestions(grades_avr, target_overall_average, num_grades
             if subject != 'period_avr':
                 all_subjects.add(subject)
     
-    # For each subject, calculate what grade is needed and score difficulty
     for subject in all_subjects:
-        # Get current average for this subject (across all periods)
         subject_grades = []
         for period in grades_avr:
             if period == 'all_avr':
@@ -813,20 +968,15 @@ def calculate_subject_suggestions(grades_avr, target_overall_average, num_grades
         
         current_subject_avg = sum(subject_grades) / len(subject_grades)
         
-        # Calculate what grade is needed in THIS subject to reach the target overall average
         # Formula: (current_total + required_sum) / (current_count + num_grades) = target_overall_average
         # required_sum = target_overall_average * (current_count + num_grades) - current_total
         required_sum = target_overall_average * (current_count + num_grades) - current_total
         required_average_grade = required_sum / num_grades if num_grades > 0 else 10
         
-        # The required grade for this subject - clip to allowed range for display
         display_required_grade = round_to_allowed_grade(required_average_grade)
         
-        # Achievability check - is this goal achievable in this subject?
         is_achievable = required_average_grade <= max(ALLOWED_GRADES)
         
-        # Combined score for sorting: prioritize subjects with lower required grades
-        # and higher impact (fewer existing grades)
         # Lower score = better suggestion
         impact_factor = 1.0 / (len(subject_grades) + num_grades) * 100
         combined_score = required_average_grade - (impact_factor * SUGGESTION_IMPACT_WEIGHT)
@@ -883,16 +1033,12 @@ def calculate_period_subject_suggestions(grades_avr, period, target_average, num
     current_period_count = len(all_period_grades)
     current_period_avg = current_period_total / current_period_count
     
-    # Check if period average already meets target
     if current_period_avg >= target_average:
         return []  # Already achieved - no suggestions needed
     
-    # Calculate the required grade if grades are added to the overall period
-    # (not to a specific subject but to the period total)
     required_sum = target_average * (current_period_count + num_grades) - current_period_total
     baseline_required_grade = required_sum / num_grades if num_grades > 0 else 10
     
-    # For each subject in the period, calculate what grade is needed and score difficulty
     for subject in period_subjects:
         subject_data = grades_avr[period][subject]
         
@@ -908,8 +1054,6 @@ def calculate_period_subject_suggestions(grades_avr, period, target_average, num
         current_subject_avg = sum(subject_grades) / len(subject_grades)
         num_subject_grades = len(subject_grades)
         
-        # The required grade is the same for all subjects since we're adding to the period total
-        # (adding a grade anywhere affects the period average the same way)
         required_grade = baseline_required_grade
         
         # Achievability check
@@ -918,10 +1062,8 @@ def calculate_period_subject_suggestions(grades_avr, period, target_average, num
         # Display grade (rounded to allowed values)
         display_required_grade = round_to_allowed_grade(required_grade)
         
-        # Impact factor: subjects with fewer grades have more impact per new grade
         impact_factor = 1.0 / (num_subject_grades + num_grades) * 100
         
-        # Combined score for sorting: prioritize by required grade and impact
         combined_score = required_grade - (impact_factor * SUGGESTION_IMPACT_WEIGHT)
         
         suggestions.append({
@@ -1008,32 +1150,26 @@ def predict_average_overall():
         
         grades_avr = flask.session['grades_avr']
         
-        # Validate inputs
         if period not in grades_avr or subject not in grades_avr[period]:
             return flask.jsonify({'error': 'Materia o periodo non trovato'}), 400
         
         if not predicted_grades or not isinstance(predicted_grades, list):
             return flask.jsonify({'error': 'Inserisci almeno un voto previsto'}), 400
         
-        # Validate predicted grades
         for grade in predicted_grades:
             if not isinstance(grade, (int, float)) or grade < 1 or grade > 10:
                 return flask.jsonify({'error': 'Tutti i voti devono essere tra 1 e 10'}), 400
         
-        # Get current overall average
         current_overall_average = grades_avr.get('all_avr', 0)
         
-        # Collect all current grades from all subjects in all periods (excluding blue grades)
         all_grades_list = get_all_grades(grades_avr)
         
         if not all_grades_list:
             return flask.jsonify({'error': 'Nessun voto disponibile'}), 400
         
-        # Calculate predicted overall average with new grades added
         all_grades_with_predicted = all_grades_list + predicted_grades
         predicted_overall_average = sum(all_grades_with_predicted) / len(all_grades_with_predicted)
         
-        # Calculate change
         change = predicted_overall_average - current_overall_average
         
         # Generate message
@@ -1075,18 +1211,15 @@ def get_predict_overall_message(change, predicted_average, num_grades, subject):
 def export_csv():
     """Export grades as CSV file"""
     if 'grades_avr' not in flask.session:
-        return flask.redirect('/')
+        return flask.jsonify({'error': 'No active session', 'authenticated': False}), 401
     
     grades_avr = flask.session['grades_avr']
     
-    # Create CSV in memory
     output = io.StringIO()
     writer = csv.writer(output)
     
-    # Write header
     writer.writerow(['Periodo', 'Materia', 'Voto', 'Data', 'Tipo', 'Docente', 'Note'])
     
-    # Write data
     for period in sorted(grades_avr.keys()):
         if period == 'all_avr':
             continue
@@ -1106,7 +1239,6 @@ def export_csv():
                     grade.get('notesForFamily', '')
                 ])
     
-    # Prepare response
     output.seek(0)
     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
     
@@ -1139,12 +1271,6 @@ def login_email(email, password):
     """
     Login using email credentials via the web authentication endpoint.
     Returns a dictionary with the PHPSESSID token and user identity.
-    
-    Based on the example:
-    - POST to https://web.spaggiari.eu/auth-p7/app/default/AuthApi4.php?a=aLoginPwd
-    - Send form data with uid and pwd fields
-    - Extract PHPSESSID from Set-Cookie header
-    - Use the login uid as webidentity (as shown in the example)
     """
     url = "https://web.spaggiari.eu/auth-p7/app/default/AuthApi4.php?a=aLoginPwd"
     
@@ -1153,7 +1279,6 @@ def login_email(email, password):
         "User-Agent": DEFAULT_USER_AGENT
     }
     
-    # Send as URL-encoded form data (matching the cURL example)
     data = {
         "cid": "",
         "uid": email,
@@ -1162,10 +1287,8 @@ def login_email(email, password):
         "target": ""
     }
     
-    # Create a session to properly handle cookies
     session = requests.Session()
     
-    # Send request - don't follow redirects to capture session cookie on redirect
     response = session.post(url, headers=headers, data=data, allow_redirects=False)
     
     logger.info(f"Email login response status: {response.status_code}")
@@ -1177,14 +1300,11 @@ def login_email(email, password):
             response=response
         )
     
-    # Extract PHPSESSID from session cookies (session handles cookies across redirects)
     phpsessid = session.cookies.get("PHPSESSID")
     
-    # If not in session cookies, try to extract from Set-Cookie header manually
     if not phpsessid:
         phpsessid = response.cookies.get("PHPSESSID")
     
-    # If still not found, try to extract from Set-Cookie header directly
     if not phpsessid:
         set_cookie = response.headers.get("Set-Cookie", "")
         phpsessid_match = re.search(r'PHPSESSID=([^;]+)', set_cookie)
@@ -1196,7 +1316,6 @@ def login_email(email, password):
         logger.info("Following redirect to get session cookie...")
         redirect_url = response.headers.get("Location", "")
         if redirect_url:
-            # Follow redirect and check for successful response
             redirect_response = session.get(redirect_url, headers={"User-Agent": DEFAULT_USER_AGENT})
             if redirect_response.status_code == 200:
                 phpsessid = session.cookies.get("PHPSESSID")
@@ -1204,8 +1323,7 @@ def login_email(email, password):
     logger.info(f"Session cookie extracted: {bool(phpsessid)}")
     
     if phpsessid:
-        # Based on the example code, webidentity is the same uid used for login
-        # "Cookie": `PHPSESSID=${token}; webidentity=${userData.uid};`
+        # webidentity is the same uid used for login
         webidentity = email
         logger.info(f"Login successful for: {email}")
         return {
@@ -1338,7 +1456,6 @@ def get_grades_email(phpsessid, webidentity):
         error_response.status_code = 401
         raise requests.exceptions.HTTPError("Session expired", response=error_response)
     
-    # Grade value mapping (same as in the problem statement)
     mark_table = {
         "1": 1, "1+": 1.25, "1½": 1.5, "2-": 1.75, "2": 2, "2+": 2.25, "2½": 2.5,
         "3-": 2.75, "3": 3, "3+": 3.25, "3½": 3.5, "4-": 3.75, "4": 4, "4+": 4.25,
@@ -1350,12 +1467,10 @@ def get_grades_email(phpsessid, webidentity):
     
     grades = []
     
-    # Find all period tables
     period_tables = soup.find_all('table', attrs={'sessione': True})
     
     for table in period_tables:
         period_code = table.get('sessione', '')
-        # Extract period number from the period code
         period_match = re.search(r'(\d+)', period_code)
         # The HTML sessione attribute contains the direct period number (1, 2, 3...)
         # but calculate_avr expects the API format which is offset by 1 (e.g., period 1 = 2)
@@ -1371,7 +1486,6 @@ def get_grades_email(phpsessid, webidentity):
         current_subject_name = None
         
         for row in rows:
-            # Check if this is a subject header row
             if 'riga_competenza_default' in row.get('class', []):
                 current_subject_id = row.get('materia_id')
                 continue
@@ -1461,11 +1575,11 @@ def calculate_avr(grades):
         # For example, what users call "Periodo 2" has periodPos=3 in the API
         # We decrement by 1 to match user expectations
         period_pos = grade["periodPos"] - 1
-        # Safeguard: ensure period is at least 1
+        # ensure period is at least 1
         if period_pos < 1:
             period_pos = 1
         period = str(period_pos)
-        # Always skip grades without a decimal value
+        # always skip grades without a decimal value (so we exclude irc)
         if grade["decimalValue"] is None:
             continue
         # Take all grades from Spaggiari as-is without filtering
@@ -1476,7 +1590,7 @@ def calculate_avr(grades):
         
         grades_avr[period][grade["subjectDesc"]]["count"] += 1
         
-        # Append grade as a dictionary with additional fields
+        # append grade as a dictionary with additional fields
         grades_avr[period][grade["subjectDesc"]]["grades"].append({
             "decimalValue": grade["decimalValue"],
             "evtDate": grade["evtDate"],
@@ -1486,7 +1600,7 @@ def calculate_avr(grades):
             "isBlue": grade["color"] == "blue"
         })
     
-    # Calculate average per subject
+    # calculate average per subject
     for period in grades_avr:
         for subject in grades_avr[period]:
             subject_grades = [g['decimalValue'] for g in grades_avr[period][subject]['grades']]

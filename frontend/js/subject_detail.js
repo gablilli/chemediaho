@@ -1,6 +1,163 @@
-// Store grades data (injected by template)
-const gradesData = window.gradesData || [];
-const subjectName = window.subjectName || '';
+// =============================================================================
+// Subject Detail Page - Fetches data from API and renders dynamically
+// =============================================================================
+
+// Global state - will be loaded from API
+let gradesData = {};
+let subjectName = '';
+
+// Get subject name from URL parameter
+function getSubjectFromURL() {
+  const params = new URLSearchParams(window.location.search);
+  return params.get('subject') || '';
+}
+
+// Load data from API
+async function loadSubjectData() {
+  subjectName = getSubjectFromURL();
+  
+  if (!subjectName) {
+    navigateTo('grades.html');
+    return;
+  }
+  
+  // Update page title
+  document.getElementById('subjectTitle').textContent = subjectName;
+  document.title = `${subjectName} - che media ho?`;
+  
+  try {
+    const response = await apiFetch(`/subject_detail/${encodeURIComponent(subjectName)}`);
+    
+    if (!response.ok) {
+      if (response.status === 401) {
+        navigateTo('index.html');
+        return;
+      }
+      if (response.status === 404) {
+        navigateTo('grades.html');
+        return;
+      }
+      throw new Error('Failed to load subject data');
+    }
+    
+    const data = await response.json();
+    gradesData = data.grades_avr;
+    
+    // Render the page content
+    renderSubjectInfo();
+    renderGradesByPeriod();
+    populatePeriodSelectors();
+    createGradesTrendChart();
+    displaySavedGoal();
+    
+  } catch (error) {
+    console.error('Error loading subject data:', error);
+    showError('Errore nel caricamento dei dati');
+  }
+}
+
+// Render subject info card
+function renderSubjectInfo() {
+  let subjectAverage = 0;
+  let totalGrades = 0;
+  let highestGrade = 0;
+  let lowestGrade = 10;
+  let firstFound = false;
+  
+  for (const period of Object.keys(gradesData).filter(k => k !== 'all_avr')) {
+    if (gradesData[period][subjectName]) {
+      const subjectData = gradesData[period][subjectName];
+      if (!firstFound) {
+        subjectAverage = subjectData.avr;
+        firstFound = true;
+      }
+      totalGrades += subjectData.grades.length;
+      for (const grade of subjectData.grades) {
+        if (grade.decimalValue > highestGrade) highestGrade = grade.decimalValue;
+        if (grade.decimalValue < lowestGrade) lowestGrade = grade.decimalValue;
+      }
+    }
+  }
+  
+  const avgEl = document.getElementById('subjectAverage');
+  avgEl.textContent = subjectAverage.toFixed(1);
+  avgEl.className = `info-value ${getGradeClass(subjectAverage)}`;
+  
+  document.getElementById('totalGrades').textContent = totalGrades;
+  document.getElementById('highestGrade').textContent = highestGrade.toFixed(1);
+  
+  const lowestEl = document.getElementById('lowestGrade');
+  lowestEl.textContent = lowestGrade.toFixed(1);
+  lowestEl.className = `info-value ${getGradeClass(lowestGrade)}`;
+}
+
+// Render grades by period
+function renderGradesByPeriod() {
+  const container = document.getElementById('gradesByPeriod');
+  let html = '';
+  
+  const periods = Object.keys(gradesData).filter(k => k !== 'all_avr').sort();
+  
+  for (const period of periods) {
+    if (gradesData[period][subjectName]) {
+      const subjectData = gradesData[period][subjectName];
+      html += `
+        <div style="margin-bottom: 20px;">
+          <div style="text-align: center; margin-bottom: 12px;">
+            <span class="period-badge" style="font-size: 14px;">Periodo ${period}</span>
+          </div>
+          <div class="grades-list">
+      `;
+      
+      for (const grade of subjectData.grades) {
+        const gradeClass = grade.isBlue ? 'blue' : getGradeClass(grade.decimalValue);
+        html += `
+          <button
+            type="button"
+            class="grade-badge ${gradeClass}"
+            onclick='showModal(${JSON.stringify(grade).replace(/'/g, "\\'")})'
+          >
+            ${grade.decimalValue}
+          </button>
+        `;
+      }
+      
+      html += `
+          </div>
+        </div>
+      `;
+    }
+  }
+  
+  container.innerHTML = html;
+}
+
+// Populate period selectors
+function populatePeriodSelectors() {
+  const periodSelect = document.getElementById('periodSelect');
+  const predictPeriod = document.getElementById('predictPeriod');
+  
+  const periods = Object.keys(gradesData).filter(k => k !== 'all_avr').sort();
+  
+  const options = periods
+    .filter(p => gradesData[p][subjectName])
+    .map(p => `<option value="${p}">Periodo ${p}</option>`)
+    .join('');
+  
+  if (periodSelect) {
+    periodSelect.innerHTML = '<option value="">Seleziona un periodo...</option>' + options;
+  }
+  if (predictPeriod) {
+    predictPeriod.innerHTML = '<option value="">Seleziona un periodo...</option>' + options;
+  }
+}
+
+// Get grade class based on value
+function getGradeClass(value) {
+  if (value >= 6.5) return 'excellent';
+  if (value >= 5.5) return 'pass';
+  return 'fail';
+}
 
 // Create time series chart for subject grades
 function createGradesTrendChart() {
@@ -118,7 +275,7 @@ function createGradesTrendChart() {
 
 // Initialize chart after page load
 document.addEventListener('DOMContentLoaded', () => {
-  createGradesTrendChart();
+  loadSubjectData();
 });
 
 // Goal persistence functions
@@ -181,8 +338,8 @@ function clearSavedGoal() {
   displaySavedGoal();
 }
 
-// Display saved goal on page load
-displaySavedGoal();
+// Display saved goal on page load (called from loadSubjectData)
+// displaySavedGoal();
 
 // Goal form handler
 const goalForm = document.getElementById('goalForm');
@@ -205,7 +362,7 @@ goalForm.addEventListener('submit', async function(e) {
   calculateBtn.textContent = 'Calcolo in corso...';
 
   try {
-    const response = await fetch('/calculate_goal', {
+    const response = await apiFetch('/calculate_goal', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -361,7 +518,7 @@ if (predictionsForm) {
     predictBtn.textContent = 'Calcolo in corso...';
 
     try {
-      const response = await fetch('/predict_average', {
+      const response = await apiFetch('/predict_average', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

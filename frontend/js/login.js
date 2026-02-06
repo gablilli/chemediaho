@@ -183,16 +183,45 @@ const form = document.getElementById('loginForm');
 const errorMessage = document.getElementById('errorMessage');
 const submitBtn = document.getElementById('submitBtn');
 
-form.addEventListener('submit', function(e) {
+// Handle form submission via JavaScript using apiFetch
+form.addEventListener('submit', async function(e) {
+  e.preventDefault();
+  
   errorMessage.textContent = '';
   submitBtn.disabled = true;
   submitBtn.textContent = 'Accesso...';
+  
+  try {
+    const formData = new FormData(form);
+    const response = await apiFetch('/login', {
+      method: 'POST',
+      body: formData
+    });
+    
+    const data = await response.json();
+    
+    if (response.ok && data.success) {
+      // Login successful - navigate to grades page
+      navigateTo('grades.html');
+      return;
+    }
+    
+    // Show error message
+    errorMessage.textContent = data.error || 'Errore durante il login. Riprova.';
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Accedi';
+  } catch (error) {
+    console.error('Login error:', error);
+    errorMessage.textContent = 'Errore di connessione. Verifica la tua connessione internet.';
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Accedi';
+  }
 });
 
 // Register Service Worker for PWA
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js')
+    navigator.serviceWorker.register('sw.js')
       .then(registration => {
         console.log('Service Worker registered successfully:', registration.scope);
       })

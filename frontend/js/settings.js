@@ -39,6 +39,22 @@ function showNotification(message, type = 'success') {
   }, 3000);
 }
 
+// Load version from API
+async function loadVersion() {
+  try {
+    const response = await apiFetch('/settings');
+    if (response.ok) {
+      const data = await response.json();
+      const versionEl = document.getElementById('appVersion');
+      if (versionEl && data.version) {
+        versionEl.textContent = `v${data.version}`;
+      }
+    }
+  } catch (error) {
+    console.error('Failed to load version:', error);
+  }
+}
+
 // Blue grades preference toggle
 const includeBlueGradesToggle = document.getElementById('includeBlueGradesToggle');
 if (includeBlueGradesToggle) {
@@ -53,8 +69,8 @@ if (includeBlueGradesToggle) {
     localStorage.setItem('includeBlueGrades', include);
     
     try {
-      // Notify backend about the preference change
-      const response = await fetch('/set_blue_grade_preference', {
+      // Notify backend about the preference change using apiFetch
+      const response = await apiFetch('/set_blue_grade_preference', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -83,9 +99,9 @@ updateBtn.addEventListener('click', async () => {
   updateBtn.disabled = true;
   
   try {
-    // Step 1: Sync grades
+    // Step 1: Sync grades using apiFetch
     showNotification('Sincronizzazione voti in corso...', 'info');
-    const syncResponse = await fetch('/refresh_grades', {
+    const syncResponse = await apiFetch('/refresh_grades', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -95,8 +111,9 @@ updateBtn.addEventListener('click', async () => {
     const syncData = await syncResponse.json();
     
     if (!syncResponse.ok) {
-      if (syncData.redirect) {
-        window.location.href = syncData.redirect;
+      if (syncResponse.status === 401) {
+        // Session expired - redirect to login
+        navigateTo('index.html');
         return;
       }
       throw new Error(syncData.error || 'Errore durante la sincronizzazione');
@@ -120,9 +137,9 @@ updateBtn.addEventListener('click', async () => {
     
     showNotification('✨ App aggiornata! Ricaricamento...', 'success');
     
-    // Reload to apply updates
+    // Reload to grades page
     setTimeout(() => {
-      window.location.href = '/grades';
+      navigateTo('grades.html');
     }, 1500);
   } catch (error) {
     showNotification(error.message || 'Errore durante l\'aggiornamento', 'error');
@@ -134,19 +151,13 @@ updateBtn.addEventListener('click', async () => {
 // Handle logout from bottom nav
 const logoutNavBtn = document.getElementById('logoutNavBtn');
 if (logoutNavBtn) {
-  logoutNavBtn.addEventListener('click', () => {
-    const form = document.createElement('form');
-    form.method = 'POST';
-    form.action = '/logout';
-    document.body.appendChild(form);
-    form.submit();
-  });
+  logoutNavBtn.addEventListener('click', performLogout);
 }
 
-// Register Service Worker for PWA
+// Register Service Worker for PWA (static frontend - same origin)
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js')
+    navigator.serviceWorker.register('sw.js')
       .then(registration => {
         console.log('Service Worker registered successfully:', registration.scope);
       })
@@ -155,3 +166,6 @@ if ('serviceWorker' in navigator) {
       });
   });
 }
+
+// Load version on page load
+document.addEventListener('DOMContentLoaded', loadVersion);

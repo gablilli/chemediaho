@@ -8,16 +8,19 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="chemediaho?" />
-    <link rel="manifest" href="/manifest.json" />
-    <link rel="icon" type="image/png" sizes="192x192" href="/static/icons/icon-192.png" />
+    <link rel="manifest" href="manifest.json" />
+    <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png" />
     <!-- iOS touch icons for various device sizes -->
-    <link rel="apple-touch-icon" href="/static/icons/icon-192.png" />
-    <link rel="apple-touch-icon" sizes="192x192" href="/static/icons/icon-192.png" />
-    <link rel="apple-touch-icon" sizes="512x512" href="/static/icons/icon-512.png" />
+    <link rel="apple-touch-icon" href="icons/icon-192.png" />
+    <link rel="apple-touch-icon" sizes="192x192" href="icons/icon-192.png" />
+    <link rel="apple-touch-icon" sizes="512x512" href="icons/icon-512.png" />
     <title>Autenticazione - che media ho?</title>
-    <script src="/static/js/theme.js"></script>
-    <link rel="stylesheet" href="/static/common.css" />
-    <link rel="stylesheet" href="/static/css/login.css" />
+    <!-- Runtime config must load first -->
+    <script src="js/config.runtime.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/theme.js"></script>
+    <link rel="stylesheet" href="common.css" />
+    <link rel="stylesheet" href="css/login.css" />
   </head>
   <body>
     <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme">
@@ -64,26 +67,26 @@
 
         <!-- Login Type Tabs -->
         <div class="login-tabs">
-          <button type="button" class="login-tab {% if not login_type or login_type == 'userid' %}active{% endif %}" data-tab="userid" onclick="switchLoginTab('userid')">User ID</button>
-          <button type="button" class="login-tab {% if login_type == 'email' %}active{% endif %}" data-tab="email" onclick="switchLoginTab('email')">Email</button>
+          <button type="button" class="login-tab active" data-tab="userid" onclick="switchLoginTab('userid')">User ID</button>
+          <button type="button" class="login-tab" data-tab="email" onclick="switchLoginTab('email')">Email</button>
         </div>
 
-        <form action="/login" method="post" id="loginForm">
-          <input type="hidden" name="login_type" id="login_type" value="{% if login_type %}{{ login_type }}{% else %}userid{% endif %}">
+        <form id="loginForm">
+          <input type="hidden" name="login_type" id="login_type" value="userid">
           
           <div class="form-group">
             <label for="user_id" class="form-label" id="user_id_label"
                    data-userid-label="User ID"
-                   data-email-label="Email">{% if login_type == 'email' %}Email{% else %}User ID{% endif %}</label>
+                   data-email-label="Email">User ID</label>
             <div class="input-wrapper">
               <input 
-                type="{% if login_type == 'email' %}email{% else %}text{% endif %}" 
+                type="text" 
                 class="form-input" 
                 id="user_id" 
                 name="user_id" 
                 data-userid-placeholder="G123456789P"
                 data-email-placeholder="nome@esempio.com"
-                placeholder="{% if login_type == 'email' %}nome@esempio.com{% else %}G123456789P{% endif %}"
+                placeholder="G123456789P"
                 required
                 autocomplete="username"
               />
@@ -105,7 +108,7 @@
             </div>
           </div>
 
-          <div class="error-message" id="errorMessage">{% if error %}{{ error }}{% endif %}</div>
+          <div class="error-message" id="errorMessage"></div>
 
           <button type="submit" class="btn-submit" id="submitBtn">
             Accedi
@@ -251,6 +254,6 @@
       </div>
     </div>
 
-    <script src="/static/js/login.js"></script>
+    <script src="js/login.js"></script>
   </body>
 </html>
