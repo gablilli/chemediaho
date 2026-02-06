@@ -141,40 +141,6 @@ fai il first deploy su directory /frontend.
 
 ---
 
-## 🔐 configurazione avanzata
-
-### variabili d'ambiente
-
-| variabile | default | descrizione |
-|-----------|---------|-------------|
-| `STANDALONE_MODE` | `true` | `true` = frontend + api insieme, `false` = solo api |
-| `HTTPS_ENABLED` | `false` | `true` = abilita cookie sicuri per https |
-| `API_KEY` | - | chiave per autenticare richieste api |
-
-### https & sicurezza cookie
-
-di default l'app gira in **http** (uso locale/domestico).
-se sei dietro un **proxy https**, abilita:
-
-```yaml
-environment:
-  - FLASK_ENV=production
-  - HTTPS_ENABLED=true
-```
-
-questo abilita il flag `secure` sui cookie di sessione.
-
-### protezione api key
-
-per proteggere l'api da accessi non autorizzati:
-
-```yaml
-environment:
-  - API_KEY=tua-chiave-segreta
-```
-
----
-
 ## 🔑 chiave segreta e sessioni
 
 * generata automaticamente al primo avvio (`secret_key.txt`)
