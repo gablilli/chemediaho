@@ -192,10 +192,23 @@ app.secret_key = get_secret_key()
 # - SESSION_COOKIE_SAMESITE: Set to 'None' for cross-origin requests from
 #   Vercel frontend, or 'Lax' for same-origin development
 #
-# IMPORTANT: SameSite=None requires Secure=True, so both are enabled when
-# HTTPS_ENABLED=true. This is the recommended configuration for HTTPS tunnels.
+# IMPORTANT: 
+# - SameSite=None requires Secure=True, so both are enabled when HTTPS_ENABLED=true
+# - For cross-origin requests (frontend on different domain/port), you MUST set
+#   HTTPS_ENABLED=true and use an HTTPS tunnel (ngrok, Cloudflare Tunnel)
+# - Without HTTPS_ENABLED=true, cookies will NOT be sent with cross-origin
+#   JavaScript requests (fetch/XHR), causing 401 errors after login
+#
+# To run with HTTPS tunnel:
+#   HTTPS_ENABLED=true API_KEY=your-key python app.py
 # -----------------------------------------------------------------------------
 _https_enabled = os.environ.get('HTTPS_ENABLED', 'false').lower() == 'true'
+
+# Log cookie configuration at startup for debugging
+logger.info(f"Session cookie config: HTTPS_ENABLED={_https_enabled}, Secure={_https_enabled}, SameSite={'None' if _https_enabled else 'Lax'}")
+if not _https_enabled:
+    logger.warning("HTTPS_ENABLED is not set! Cross-origin requests will NOT receive session cookies.")
+    logger.warning("If using a frontend on a different origin (e.g., Vercel, localhost:3000), set HTTPS_ENABLED=true and use an HTTPS tunnel.")
 
 app.config.update(
     SESSION_COOKIE_SECURE=_https_enabled,        # Secure cookies over HTTPS tunnel
@@ -233,6 +246,10 @@ def login_route():
     user_pass = flask.request.form.get('user_pass', '')
     login_type = flask.request.form.get('login_type', 'userid')  # 'userid' or 'email'
     
+    # Log session cookie configuration for debugging
+    logger.info(f"Session cookie config: Secure={app.config.get('SESSION_COOKIE_SECURE')}, SameSite={app.config.get('SESSION_COOKIE_SAMESITE')}")
+    logger.info(f"HTTPS_ENABLED={os.environ.get('HTTPS_ENABLED', 'false')}")
+    
     try:
         if login_type == 'email':
             # Email-based login
@@ -256,6 +273,9 @@ def login_route():
             # Store grades in session for other pages
             flask.session['grades_avr'] = grades_avr
             
+            # Log session data was set
+            logger.info(f"Login success - Session keys after login: {list(flask.session.keys())}")
+            
             return flask.jsonify({'success': True}), 200
         else:
             # Standard User ID login
@@ -274,6 +294,9 @@ def login_route():
             
             # Store grades in session for other pages
             flask.session['grades_avr'] = grades_avr
+            
+            # Log session data was set
+            logger.info(f"Login success - Session keys after login: {list(flask.session.keys())}")
             
             return flask.jsonify({'success': True}), 200
     except requests.exceptions.HTTPError as e:
@@ -339,7 +362,27 @@ def refresh_grades():
 @app.route('/grades')
 def grades_page():
     """API endpoint for grades - returns JSON data."""
-    if 'grades_avr' not in flask.session:
+    # Debug logging for session issues
+    cookie_present = bool(flask.request.headers.get('Cookie'))
+    session_keys = list(flask.session.keys())
+    has_grades = 'grades_avr' in flask.session
+    
+    logger.info(f"Grades request - Session keys: {session_keys}")
+    logger.info(f"Grades request - Has grades_avr: {has_grades}")
+    logger.info(f"Grades request - Cookie header present: {cookie_present}")
+    
+    if not has_grades:
+        # Provide helpful error message for debugging cross-origin issues
+        if not cookie_present:
+            logger.warning("No Cookie header in request - likely a cross-origin issue. Set HTTPS_ENABLED=true and use an HTTPS tunnel.")
+            return flask.jsonify({
+                'error': 'No active session',
+                'authenticated': False,
+                'debug': {
+                    'cookie_received': False,
+                    'hint': 'If using cross-origin (different domain/port), set HTTPS_ENABLED=true and use an HTTPS tunnel'
+                }
+            }), 401
         return flask.jsonify({'error': 'No active session', 'authenticated': False}), 401
     
     grades_avr = flask.session['grades_avr']
