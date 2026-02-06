@@ -35,7 +35,22 @@ from datetime import datetime
 from bs4 import BeautifulSoup
 from flask_cors import CORS
 
-app = flask.Flask(__name__)
+# -----------------------------------------------------------------------------
+# Standalone Mode (Docker all-in-one)
+# -----------------------------------------------------------------------------
+# When STANDALONE_MODE=true, the Flask app serves both the API and the static
+# frontend files. This is the recommended mode for Docker deployments.
+#
+# When STANDALONE_MODE=false (default), the Flask app only serves the API.
+# The frontend should be deployed separately (e.g., to Vercel).
+# -----------------------------------------------------------------------------
+STANDALONE_MODE = os.environ.get('STANDALONE_MODE', 'true').lower() == 'true'
+
+# Configure Flask static folder based on mode
+if STANDALONE_MODE:
+    app = flask.Flask(__name__, static_folder='frontend', static_url_path='')
+else:
+    app = flask.Flask(__name__)
 
 # -----------------------------------------------------------------------------
 # CORS Configuration for Vercel Frontend
@@ -217,10 +232,62 @@ app.config.update(
 )
 
 # =============================================================================
-# API-ONLY BACKEND
+# STANDALONE MODE: Serve static frontend files
 # =============================================================================
-# This backend returns JSON responses only. No HTML rendering.
-# The frontend is a static site deployed separately (e.g., to Vercel).
+# When STANDALONE_MODE=true, the Flask app serves the frontend as static files.
+# This enables "all-in-one" Docker deployment without a separate frontend server.
+# =============================================================================
+
+if STANDALONE_MODE:
+    logger.info("Running in STANDALONE mode - serving frontend files from /frontend")
+    
+    @app.route('/')
+    def serve_index():
+        """Serve the main login page"""
+        return flask.send_from_directory('frontend', 'index.html')
+    
+    @app.route('/grades.html')
+    def serve_grades():
+        """Serve the grades page"""
+        return flask.send_from_directory('frontend', 'grades.html')
+    
+    @app.route('/export.html')
+    def serve_export():
+        """Serve the export page"""
+        return flask.send_from_directory('frontend', 'export.html')
+    
+    @app.route('/settings.html')
+    def serve_settings():
+        """Serve the settings page"""
+        return flask.send_from_directory('frontend', 'settings.html')
+    
+    @app.route('/subject_detail.html')
+    def serve_subject_detail():
+        """Serve the subject detail page"""
+        return flask.send_from_directory('frontend', 'subject_detail.html')
+    
+    @app.route('/overall_average_detail.html')
+    def serve_overall_average_detail():
+        """Serve the overall average detail page"""
+        return flask.send_from_directory('frontend', 'overall_average_detail.html')
+    
+    @app.route('/manifest.json')
+    def serve_manifest():
+        """Serve PWA manifest"""
+        return flask.send_from_directory('frontend', 'manifest.json')
+    
+    @app.route('/sw.js')
+    def serve_sw():
+        """Serve service worker"""
+        return flask.send_from_directory('frontend', 'sw.js')
+else:
+    logger.info("Running in API-ONLY mode - frontend should be deployed separately (e.g., Vercel)")
+
+# =============================================================================
+# API ENDPOINTS
+# =============================================================================
+# JSON-only responses. No HTML rendering.
+# The frontend is either served by Flask (standalone) or deployed separately.
 # =============================================================================
 
 @app.route('/api/session')
