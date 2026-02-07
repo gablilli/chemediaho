@@ -114,8 +114,8 @@ per utenti avanzati: frontend su vercel, api locale.
 STANDALONE_MODE=false HTTPS_ENABLED=true API_KEY=tua-chiave-segreta python app.py
 ```
 
-L'```API_KEY``` non è obbligatoria, ma consigliata.
-[!note]
+> [!NOTE]
+> L'```API_KEY``` non è obbligatoria, ma consigliata.
 > È molto importante che ```HTTPS_ENABLED``` sia true.
 
 #### 2. esponi l'api con tunnel https
@@ -136,7 +136,6 @@ ngrok http 8001
 * generata automaticamente al primo avvio (`secret_key.txt`)
 * permessi **600**
 * persistita via volume docker
-* esclusa da git
 
 ⚠️ **sicurezza**
 
