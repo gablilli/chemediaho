@@ -58,26 +58,29 @@ async function loadSubjectData() {
 
 // Render subject info card
 function renderSubjectInfo() {
-  let subjectAverage = 0;
   let totalGrades = 0;
   let highestGrade = 0;
   let lowestGrade = 10;
-  let firstFound = false;
+  let allGradeValues = [];
   
   for (const period of Object.keys(gradesData).filter(k => k !== 'all_avr')) {
     if (gradesData[period][subjectName]) {
       const subjectData = gradesData[period][subjectName];
-      if (!firstFound) {
-        subjectAverage = subjectData.avr;
-        firstFound = true;
-      }
       totalGrades += subjectData.grades.length;
       for (const grade of subjectData.grades) {
-        if (grade.decimalValue > highestGrade) highestGrade = grade.decimalValue;
-        if (grade.decimalValue < lowestGrade) lowestGrade = grade.decimalValue;
+        if (grade.decimalValue != null) {
+          allGradeValues.push(grade.decimalValue);
+          if (grade.decimalValue > highestGrade) highestGrade = grade.decimalValue;
+          if (grade.decimalValue < lowestGrade) lowestGrade = grade.decimalValue;
+        }
       }
     }
   }
+  
+  // Calculate subject average from all grades across all periods
+  const subjectAverage = allGradeValues.length > 0
+    ? allGradeValues.reduce((sum, val) => sum + val, 0) / allGradeValues.length
+    : 0;
   
   const avgEl = document.getElementById('subjectAverage');
   avgEl.textContent = subjectAverage.toFixed(1);

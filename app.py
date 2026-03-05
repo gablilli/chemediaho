@@ -146,6 +146,17 @@ MAX_SUGGESTIONS = 4
 # Allowed grade values for smart calculator
 ALLOWED_GRADES = [4, 4.25, 4.5, 4.75, 5, 5.25, 5.5, 5.75, 6, 6.25, 6.5, 6.75, 7, 7.25, 7.5, 7.75, 8, 8.25, 8.5, 8.75, 9, 9.25, 9.5, 9.75, 10]
 
+# Mark table: maps display grade notation to decimal values
+# Used for both HTML scraping and as fallback when API decimalValue is missing
+MARK_TABLE = {
+    "1": 1, "1+": 1.25, "1½": 1.5, "2-": 1.75, "2": 2, "2+": 2.25, "2½": 2.5,
+    "3-": 2.75, "3": 3, "3+": 3.25, "3½": 3.5, "4-": 3.75, "4": 4, "4+": 4.25,
+    "4½": 4.5, "5-": 4.75, "5": 5, "5+": 5.25, "5½": 5.5, "6-": 5.75, "6": 6,
+    "6+": 6.25, "6½": 6.5, "7-": 6.75, "7": 7, "7+": 7.25, "7½": 7.5, "8-": 7.75,
+    "8": 8, "8+": 8.25, "8½": 8.5, "9-": 8.75, "9": 9, "9+": 9.25, "9½": 9.5,
+    "10-": 9.75, "10": 10
+}
+
 # Placeholder webidentity for email login when actual identity cannot be extracted
 # This is used when the session is valid but webidentity is not found in the page
 EMAIL_LOGIN_WEBIDENTITY = "_EMAIL_SESSION_"
@@ -500,16 +511,17 @@ def set_blue_grade_preference():
 
 def recalculate_averages(grades_avr, exclude_blue=False):
     """Recalculate subject, period, and overall averages based on blue grade preference"""
-    # recalculate sjubect averages
+    # recalculate subject averages
     for period in grades_avr:
         if period == 'all_avr':
             continue
         for subject in grades_avr[period]:
             if subject == 'period_avr':
                 continue
-            subject_grades = [g['decimalValue'] for g in grades_avr[period][subject]['grades'] 
+            filtered_grades = [g for g in grades_avr[period][subject]['grades'] 
                            if not (exclude_blue and g.get('isBlue', False))]
-            grades_avr[period][subject]["avr"] = sum(subject_grades) / len(subject_grades) if subject_grades else 0
+            effective = _get_effective_grades(filtered_grades)
+            grades_avr[period][subject]["avr"] = sum(effective) / len(effective) if effective else 0
     
     # recalculate period averages
     for period in grades_avr:
@@ -519,8 +531,9 @@ def recalculate_averages(grades_avr, exclude_blue=False):
         for subject in grades_avr[period]:
             if subject == 'period_avr':
                 continue
-            period_grades.extend([g['decimalValue'] for g in grades_avr[period][subject]['grades']
-                                if not (exclude_blue and g.get('isBlue', False))])
+            filtered_grades = [g for g in grades_avr[period][subject]['grades']
+                                if not (exclude_blue and g.get('isBlue', False))]
+            period_grades.extend(_get_effective_grades(filtered_grades))
         grades_avr[period]["period_avr"] = sum(period_grades) / len(period_grades) if period_grades else 0
     
     # recalculate overall average
@@ -531,8 +544,9 @@ def recalculate_averages(grades_avr, exclude_blue=False):
         for subject in grades_avr[period]:
             if subject == 'period_avr':
                 continue
-            all_grades.extend([g['decimalValue'] for g in grades_avr[period][subject]['grades']
-                             if not (exclude_blue and g.get('isBlue', False))])
+            filtered_grades = [g for g in grades_avr[period][subject]['grades']
+                             if not (exclude_blue and g.get('isBlue', False))]
+            all_grades.extend(_get_effective_grades(filtered_grades))
     grades_avr["all_avr"] = sum(all_grades) / len(all_grades) if all_grades else 0
 
 @app.route('/calculate_goal', methods=['POST'])
@@ -581,11 +595,11 @@ def calculate_goal():
         if 'grades' not in subject_data or not isinstance(subject_data['grades'], list):
             return flask.jsonify({'error': 'Dati dei voti non validi'}), 400
         
-        # extract grades
-        current_grades = []
-        for g in subject_data['grades']:
-            if isinstance(g, dict) and 'decimalValue' in g and g['decimalValue'] is not None:
-                current_grades.append(g['decimalValue'])
+        # extract effective grades (component grades averaged per event)
+        current_grades = _get_effective_grades(
+            [g for g in subject_data['grades'] 
+             if isinstance(g, dict) and 'decimalValue' in g and g['decimalValue'] is not None]
+        )
         
         if not current_grades:
             return flask.jsonify({'error': 'Nessun voto disponibile per questa materia'}), 400
@@ -703,10 +717,10 @@ def predict_average():
         if 'grades' not in subject_data or not isinstance(subject_data['grades'], list):
             return flask.jsonify({'error': 'Dati dei voti non validi'}), 400
         
-        current_grades = []
-        for g in subject_data['grades']:
-            if isinstance(g, dict) and 'decimalValue' in g and g['decimalValue'] is not None:
-                current_grades.append(g['decimalValue'])
+        current_grades = _get_effective_grades(
+            [g for g in subject_data['grades']
+             if isinstance(g, dict) and 'decimalValue' in g and g['decimalValue'] is not None]
+        )
         
         if not current_grades:
             return flask.jsonify({'error': 'Nessun voto disponibile per questa materia'}), 400
@@ -757,14 +771,15 @@ def should_exclude_blue_grades():
 
 def get_all_grades(grades_avr, exclude_blue=None):
     """
-    Collect all grades from all subjects in all periods
+    Collect all effective grades from all subjects in all periods.
+    Component grades of the same evaluation are averaged into a single grade.
     
     Args:
         grades_avr: Dictionary containing grades organized by period and subject
         exclude_blue: If True, excludes blue grades. If None, uses session preference.
     
     Returns:
-        List of decimal grade values
+        List of decimal grade values (effective grades)
     """
     # Use session preference if exclude_blue not explicitly provided
     if exclude_blue is None:
@@ -777,10 +792,9 @@ def get_all_grades(grades_avr, exclude_blue=None):
         for subject in grades_avr[period]:
             if subject == 'period_avr':
                 continue
-            for grade in grades_avr[period][subject].get('grades', []):
-                if exclude_blue and grade.get('isBlue', False):
-                    continue
-                all_grades_list.append(grade['decimalValue'])
+            filtered_grades = [g for g in grades_avr[period][subject].get('grades', [])
+                             if not (exclude_blue and g.get('isBlue', False))]
+            all_grades_list.extend(_get_effective_grades(filtered_grades))
     return all_grades_list
 
 @app.route('/calculate_goal_overall', methods=['POST'])
@@ -960,8 +974,9 @@ def calculate_subject_suggestions(grades_avr, target_overall_average, num_grades
                 subject_data = grades_avr[period][subject]
                 if 'grades' in subject_data:
                     exclude_blue = should_exclude_blue_grades()
-                    subject_grades.extend([g['decimalValue'] for g in subject_data['grades'] 
-                                           if not (exclude_blue and g.get('isBlue', False))])
+                    filtered = [g for g in subject_data['grades'] 
+                                if not (exclude_blue and g.get('isBlue', False))]
+                    subject_grades.extend(_get_effective_grades(filtered))
         
         if not subject_grades:
             continue
@@ -1014,17 +1029,15 @@ def calculate_period_subject_suggestions(grades_avr, period, target_average, num
     
     period_subjects = [s for s in grades_avr[period].keys() if s != 'period_avr']
     
-    # Gather all period grades
     # Gather all period grades respecting user preference
     exclude_blue = should_exclude_blue_grades()
     all_period_grades = []
     for subject in period_subjects:
         subject_data = grades_avr[period][subject]
         if 'grades' in subject_data:
-            for g in subject_data['grades']:
-                if exclude_blue and g.get('isBlue', False):
-                    continue
-                all_period_grades.append(g['decimalValue'])
+            filtered = [g for g in subject_data['grades']
+                       if not (exclude_blue and g.get('isBlue', False))]
+            all_period_grades.extend(_get_effective_grades(filtered))
     
     if not all_period_grades:
         return []
@@ -1042,11 +1055,12 @@ def calculate_period_subject_suggestions(grades_avr, period, target_average, num
     for subject in period_subjects:
         subject_data = grades_avr[period][subject]
         
-        # Get grades for this subject respecting user preference
+        # Get effective grades for this subject respecting user preference
         subject_grades = []
         if 'grades' in subject_data:
-            subject_grades = [g['decimalValue'] for g in subject_data['grades'] 
-                              if not (exclude_blue and g.get('isBlue', False))]
+            filtered = [g for g in subject_data['grades'] 
+                        if not (exclude_blue and g.get('isBlue', False))]
+            subject_grades = _get_effective_grades(filtered)
         
         if not subject_grades:
             continue
@@ -1456,14 +1470,7 @@ def get_grades_email(phpsessid, webidentity):
         error_response.status_code = 401
         raise requests.exceptions.HTTPError("Session expired", response=error_response)
     
-    mark_table = {
-        "1": 1, "1+": 1.25, "1½": 1.5, "2-": 1.75, "2": 2, "2+": 2.25, "2½": 2.5,
-        "3-": 2.75, "3": 3, "3+": 3.25, "3½": 3.5, "4-": 3.75, "4": 4, "4+": 4.25,
-        "4½": 4.5, "5-": 4.75, "5": 5, "5+": 5.25, "5½": 5.5, "6-": 5.75, "6": 6,
-        "6+": 6.25, "6½": 6.5, "7-": 6.75, "7": 7, "7+": 7.25, "7½": 7.5, "8-": 7.75,
-        "8": 8, "8+": 8.25, "8½": 8.5, "9-": 8.75, "9": 9, "9+": 9.25, "9½": 9.5,
-        "10-": 9.75, "10": 10
-    }
+    mark_table = MARK_TABLE
     
     grades = []
     
@@ -1568,6 +1575,37 @@ def get_grades(student_id, token):
     else:
         response.raise_for_status()
 
+def _get_effective_grades(grades_list):
+    """Compute effective grade values by averaging component grades of the same evaluation.
+    
+    Grades with non-empty componentDesc that share the same evtDate are components
+    of the same evaluation (e.g., Scritto + Orale). These are averaged into a single
+    effective grade so that multi-component evaluations count as one grade in averages.
+    Standalone grades (empty componentDesc) are kept as-is.
+    
+    Note: This function is always called with grades already filtered by subject and period,
+    so grouping by evtDate alone is sufficient to identify same-evaluation components.
+    
+    Returns a list of decimal grade values for average calculation.
+    """
+    standalone = []
+    component_groups = {}
+    
+    for g in grades_list:
+        if g.get('componentDesc'):
+            key = g['evtDate']
+            if key not in component_groups:
+                component_groups[key] = []
+            component_groups[key].append(g['decimalValue'])
+        else:
+            standalone.append(g['decimalValue'])
+    
+    effective = list(standalone)
+    for values in component_groups.values():
+        effective.append(sum(values) / len(values))
+    
+    return effective
+
 def calculate_avr(grades):
     grades_avr = {}
     for grade in grades["grades"]:
@@ -1579,8 +1617,17 @@ def calculate_avr(grades):
         if period_pos < 1:
             period_pos = 1
         period = str(period_pos)
-        # always skip grades without a decimal value (so we exclude irc)
-        if grade["decimalValue"] is None:
+        # Determine decimal value: use API value, or fall back to displayValue + MARK_TABLE
+        decimal_value = grade["decimalValue"]
+        if decimal_value is None:
+            display_value = grade.get("displayValue", "")
+            decimal_value = MARK_TABLE.get(display_value, None)
+            if decimal_value is not None:
+                logger.debug(f"Recovered grade via displayValue '{display_value}' -> {decimal_value}")
+            elif display_value:
+                logger.warning(f"Grade skipped: decimalValue is null and displayValue '{display_value}' not in MARK_TABLE")
+        # skip grades without a decimal value (so we exclude irc)
+        if decimal_value is None:
             continue
         # Take all grades from Spaggiari as-is without filtering
         if period not in grades_avr:
@@ -1592,7 +1639,8 @@ def calculate_avr(grades):
         
         # append grade as a dictionary with additional fields
         grades_avr[period][grade["subjectDesc"]]["grades"].append({
-            "decimalValue": grade["decimalValue"],
+            "decimalValue": decimal_value,
+            "displayValue": grade.get("displayValue", ""),
             "evtDate": grade["evtDate"],
             "notesForFamily": grade["notesForFamily"],
             "componentDesc": grade["componentDesc"],
@@ -1601,25 +1649,28 @@ def calculate_avr(grades):
         })
     
     # calculate average per subject
+    # Component grades (grades with the same evtDate and non-empty componentDesc within a subject)
+    # are averaged together into a single effective grade before computing the subject average.
+    # This ensures that multi-component evaluations (e.g., Scritto + Orale) count as one grade.
     for period in grades_avr:
         for subject in grades_avr[period]:
-            subject_grades = [g['decimalValue'] for g in grades_avr[period][subject]['grades']]
-            grades_avr[period][subject]["avr"] = sum(subject_grades) / len(subject_grades) if subject_grades else 0
+            effective_grades = _get_effective_grades(grades_avr[period][subject]['grades'])
+            grades_avr[period][subject]["avr"] = sum(effective_grades) / len(effective_grades) if effective_grades else 0
     
-    # Calculate period averages
+    # Calculate period averages (using effective grades per subject)
     for period in grades_avr:
         period_grades = []
         for subject in grades_avr[period]:
-            period_grades.extend([g['decimalValue'] for g in grades_avr[period][subject]['grades']])
+            period_grades.extend(_get_effective_grades(grades_avr[period][subject]['grades']))
         grades_avr[period]["period_avr"] = sum(period_grades) / len(period_grades) if period_grades else 0
     
-    # Calculate overall average - use weighted average of all grades, not average of period averages
+    # Calculate overall average - use weighted average of all effective grades
     # Include all grades (including blue) for consistency with displayed averages
     all_grades = []
     for period in grades_avr:
         for subject in grades_avr[period]:
             if subject != 'period_avr':
-                all_grades.extend([g['decimalValue'] for g in grades_avr[period][subject]['grades']])
+                all_grades.extend(_get_effective_grades(grades_avr[period][subject]['grades']))
     grades_avr["all_avr"] = sum(all_grades) / len(all_grades) if all_grades else 0
     
     return grades_avr
