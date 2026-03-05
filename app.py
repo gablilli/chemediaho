@@ -1583,6 +1583,9 @@ def _get_effective_grades(grades_list):
     effective grade so that multi-component evaluations count as one grade in averages.
     Standalone grades (empty componentDesc) are kept as-is.
     
+    Note: This function is always called with grades already filtered by subject and period,
+    so grouping by evtDate alone is sufficient to identify same-evaluation components.
+    
     Returns a list of decimal grade values for average calculation.
     """
     standalone = []
@@ -1619,6 +1622,10 @@ def calculate_avr(grades):
         if decimal_value is None:
             display_value = grade.get("displayValue", "")
             decimal_value = MARK_TABLE.get(display_value, None)
+            if decimal_value is not None:
+                logger.debug(f"Recovered grade via displayValue '{display_value}' -> {decimal_value}")
+            elif display_value:
+                logger.warning(f"Grade skipped: decimalValue is null and displayValue '{display_value}' not in MARK_TABLE")
         # skip grades without a decimal value (so we exclude irc)
         if decimal_value is None:
             continue

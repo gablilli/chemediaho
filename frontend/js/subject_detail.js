@@ -68,9 +68,11 @@ function renderSubjectInfo() {
       const subjectData = gradesData[period][subjectName];
       totalGrades += subjectData.grades.length;
       for (const grade of subjectData.grades) {
-        allGradeValues.push(grade.decimalValue);
-        if (grade.decimalValue > highestGrade) highestGrade = grade.decimalValue;
-        if (grade.decimalValue < lowestGrade) lowestGrade = grade.decimalValue;
+        if (grade.decimalValue != null) {
+          allGradeValues.push(grade.decimalValue);
+          if (grade.decimalValue > highestGrade) highestGrade = grade.decimalValue;
+          if (grade.decimalValue < lowestGrade) lowestGrade = grade.decimalValue;
+        }
       }
     }
   }
